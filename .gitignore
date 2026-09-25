@@ -1,0 +1,18 @@
+# Local machine files
+.DS_Store
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local experiments and generated artifacts
+/work/
+/outputs/
+/.cache/
