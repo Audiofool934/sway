@@ -1,0 +1,11 @@
+{
+  "name": "sway-camera",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@mediapipe/tasks-vision": "1.0.1"
+  },
+  "devDependencies": {
+    "prettier": "3.9.9"
+  }
+}
