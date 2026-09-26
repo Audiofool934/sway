@@ -40,11 +40,17 @@ PALETTES = {
     "groove": "An instrumental downtempo ensemble, electric piano, warm bass, "
     "subtle drums, a relaxed evolving groove",
 }
+# Mood stays stable while the action can change instrumentation.
+PALETTE_CONTEXT = {
+    "chamber": "Intimate acoustic chamber music, organic room sound, coherent harmony",
+    "nocturne": "A quiet nocturne, spacious gentle phrasing, lyrical harmonic development",
+    "groove": "Instrumental downtempo music, warm bass, a relaxed coherent groove",
+}
 ACTION_STYLES = {
-    "piano": "expressive acoustic piano phrases, articulated keys",
-    "strum": "rhythmic plucked acoustic guitar and strings",
-    "strike": "rhythmic percussion, accented ensemble phrases",
-    "sustain": "bowed strings and sustained flowing melodic lines",
+    "piano": "Expressive acoustic piano performance, clearly articulated piano keys",
+    "strum": "Acoustic guitar-led music, rhythmic guitar strumming, plucked strings",
+    "strike": "Percussion-led music, drum kit, kick and snare, hand drums, sharp rhythmic accents",
+    "sustain": "Bowed strings, legato cello and violin, sustained flowing melodic lines",
     "unknown": "balanced ensemble instrumentation",
     "still": "gentle spacious phrasing with room to breathe",
 }

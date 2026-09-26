@@ -35,13 +35,13 @@ def music_worker(controls, accents, audio, status, stop, initial):
             promote.argtypes = (ctypes.c_uint, ctypes.c_int)
             promote.restype = ctypes.c_int
             interactive = promote(0x21, 0) == 0  # QOS_CLASS_USER_INTERACTIVE, sys/qos.h.
-        from .config import ACTION_STYLES, PALETTES
-        from .music import MusicEngine, NotePlanner
+        from .config import ACTION_STYLES
+        from .music import MusicEngine, NotePlanner, style_prompt
 
         engine = MusicEngine()
         planner = NotePlanner()
         for action in ACTION_STYLES:
-            engine.style.embed(f"{PALETTES[initial['palette']]}, {ACTION_STYLES[action]}")
+            engine.style.embed(style_prompt(initial["palette"], action))
         current = initial
         identity = (current["palette"], current["action"])
         engine.set_style(*identity)
@@ -70,12 +70,20 @@ def music_worker(controls, accents, audio, status, stop, initial):
             except queue.Empty:
                 pass
             notes = planner.next(
-                current["bpm"], current["action"], accent, current.get("articulation", "unknown")
+                current["bpm"],
+                current["action"],
+                accent,
+                current.get("articulation", "unknown"),
+                register=current.get("register", 0.5),
+                guided=current.get("guided", False),
             )
             requested = time.monotonic()
-            samples = engine.generate(notes)
+            note_guidance = 5.0 if current.get("guided") else 1.0
+            samples = engine.generate(notes, note_guidance=note_guidance)
             frame_ms = (time.monotonic() - requested) * 1000
-            expressive_gain = 0.65 + 0.2 * current.get("energy", 0)
+            expressive_gain = (
+                0.3 + 0.6 * current.get("energy", 0) if current.get("guided") else 0.65
+            )
             target = current.get("tracking_gain", 1.0) * expressive_gain
             ramp = np.linspace(gain, target, len(samples), dtype=np.float32)
             samples *= ramp[:, None]
@@ -91,6 +99,9 @@ def music_worker(controls, accents, audio, status, stop, initial):
                     "overruns": overruns,
                     "dropped_frames": dropped,
                     "beat": planner.beat,
+                    "note_cues": planner.cue_count,
+                    "last_pitch": planner.last_pitch,
+                    "note_guidance": note_guidance,
                 },
             )
             try:

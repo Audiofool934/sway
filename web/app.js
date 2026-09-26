@@ -2,8 +2,8 @@ const $ = (id) => document.getElementById(id);
 const names = {
   unknown: "Open",
   piano: "Air piano",
-  strum: "Strumming",
-  strike: "Percussive",
+  strum: "Air guitar",
+  strike: "Air drums",
   sustain: "Flowing",
   still: "Spacious",
 };
@@ -159,12 +159,28 @@ function update(next) {
         ? "Waiting for a steady pulse"
         : "Manual tempo";
   $("action-readout").textContent = names[music.action];
+  const source = music.action_source || "none";
   $("action-note").textContent =
-    $("interpretation").value === "manual"
+    source === "manual"
       ? "Chosen by you"
-      : music.semantic_updates
-        ? "Interpreted from movement"
-        : "Room for interpretation";
+      : source === "gesture"
+        ? "From the gesture map"
+        : source === "ai"
+          ? "AI context, supported by motion"
+          : "Waiting for a clear gesture";
+  const gesture = music.rhythm.gesture;
+  $("gesture-readout").textContent =
+    cameraStream && gesture
+      ? gesture.action === "unknown"
+        ? "Unclear"
+        : names[gesture.action]
+      : "Waiting";
+  $("gesture-reason").textContent =
+    cameraStream && gesture ? gesture.reason : "Show your hands";
+  const register = music.register ?? 0.5;
+  $("register-meter").value = register;
+  $("register-readout").textContent =
+    register < 0.35 ? "Low" : register > 0.65 ? "High" : "Middle";
   $("motion-readout").textContent = cameraStream
     ? music.rhythm.hands
       ? `${music.rhythm.hands} ${music.rhythm.hands === 1 ? "hand" : "hands"}`
@@ -185,7 +201,7 @@ function update(next) {
     notice(`The music engine stopped: ${worker.error}`, true);
   else if (semantic.phase === "error")
     notice(
-      `Music is running, but movement interpretation stopped: ${semantic.error}. End the performance to switch to manual actions.`,
+      `Music is running, but movement interpretation stopped: ${semantic.error}. The gesture map still works. End the performance to select Gesture map only.`,
       true,
     );
   else if (state.recording_error) notice(state.recording_error, true);
@@ -193,22 +209,24 @@ function update(next) {
     notice("Bring your hands back into view to continue the music.");
   else if (live && Number(audioStats.underruns) > 0)
     notice(
-      "Playback has had gaps. End the performance and choose a musical action manually to reduce GPU load.",
+      $("interpretation").value === "auto"
+        ? "Playback has had gaps. Try Gesture map only in a new performance to reduce GPU load."
+        : "Playback has had gaps. Open Session details to check generation timing. Continuous playback is still experimental.",
     );
   else if (live)
     notice(
       cameraStream
-        ? "Try repeated finger taps, a strum, or a flowing sweep. Give each gesture time to settle."
+        ? "Tap your fingers, strum sideways, or make a downstroke. Raise your hands for higher notes."
         : "The ensemble is playing. Enable your camera to guide it.",
     );
   if ($("interpretation").value === "auto") {
     $("semantic-note").textContent = semantic.last_error
-      ? "Could not interpret that movement. Holding the current direction."
+      ? "AI context is uncertain. The gesture map remains active."
       : semantic.phase === "loading"
-        ? "Loading the local vision-language model…"
+        ? "Gesture map ready. Loading optional AI context…"
         : semantic.phase === "ready" && semantic.inference_ms
-          ? `Latest interpretation: ${(semantic.inference_ms / 1000).toFixed(1)} s${semantic.stale ? " · too old to apply" : ""}.`
-          : "Reads a short sequence of movement every few seconds.";
+          ? `Gesture map active · latest AI observation ${(semantic.inference_ms / 1000).toFixed(1)} s${semantic.stale ? " · too old to apply" : ""}.`
+          : "Gestures control the music directly; AI adds slower context.";
   }
   $("diagnostics").textContent = [
     `Music: ${worker.phase} · semantics: ${semantic.phase}`,
@@ -217,6 +235,9 @@ function update(next) {
     `Engine overruns: ${state.metrics.overruns || 0} · dropped frames: ${state.metrics.dropped_frames || 0}`,
     `Playback catch-up: ${Math.round((audioStats.dropped || 0) / 48)} ms`,
     `Audio output: ${audioContext?.sampleRate || "-"} Hz`,
+    `Performed note cues: ${state.metrics.note_cues || 0} · last requested MIDI pitch: ${state.metrics.last_pitch ?? "-"}`,
+    `Direction source: ${source} · note guidance: ${state.metrics.note_guidance ?? "-"}`,
+    `Latest AI suggestion: ${music.last_semantic?.action || "-"} · confidence: ${music.last_semantic?.confidence ?? "-"}`,
   ].join("\n");
   updateControls();
 }
@@ -246,6 +267,7 @@ $("play").onclick = async () => {
         await api("start", {
           palette: $("palette").value,
           semantics: $("interpretation").value === "auto",
+          gesture_mapping: $("interpretation").value !== "manual",
           action:
             $("interpretation").value === "manual"
               ? $("action").value
@@ -288,7 +310,9 @@ $("interpretation").onchange = () => {
   $("manual-actions").hidden = !manual;
   $("semantic-note").textContent = manual
     ? "Choose the action; your movement still supplies the pulse."
-    : "Reads a short sequence of movement every few seconds.";
+    : $("interpretation").value === "mapped"
+      ? "Hand trajectories map to musical actions, register, pulse, and intensity."
+      : "Gestures control the music directly; AI adds slower context.";
 };
 async function control(body) {
   if (!state?.running) return;
@@ -556,7 +580,7 @@ try {
       true,
     );
   if (!assets.semantics) {
-    $("interpretation").value = "manual";
+    $("interpretation").value = "mapped";
     $("interpretation").onchange();
   }
 } catch (error) {

@@ -84,7 +84,7 @@ async def stop():
 @app.post("/api/control")
 async def control(change: ManualControl):
     if change.action is not None:
-        session.controller.action = change.action
+        session.controller.manual(change.action)
     if change.tempo is not None:
         session.controller.tempo = change.tempo
     if change.follow_motion is not None:

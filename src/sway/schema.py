@@ -34,6 +34,7 @@ class SemanticIntent(BaseModel):
 class SessionOptions(BaseModel):
     palette: Literal["chamber", "nocturne", "groove"] = "chamber"
     semantics: bool = True
+    gesture_mapping: bool = True
     action: Action = "unknown"
     tempo: float = Field(default=108, ge=50, le=180, allow_inf_nan=False)
     follow_motion: bool = True

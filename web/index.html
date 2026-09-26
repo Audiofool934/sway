@@ -53,7 +53,7 @@
               <span id="pulse-note" class="readout-note">Starting tempo</span>
             </div>
             <div>
-              <span class="label">MUSICAL ACTION</span>
+              <span class="label">MUSICAL DIRECTION</span>
               <p id="action-readout">Open</p>
               <span id="action-note" class="readout-note"
                 >Room for interpretation</span
@@ -65,6 +65,27 @@
               <span class="energy-track"><i id="energy"></i></span>
             </div>
           </div>
+          <section class="gesture-feedback" aria-label="Gesture mapping">
+            <div>
+              <span class="label">DETECTED GESTURE</span
+              ><strong id="gesture-readout">Waiting</strong
+              ><span id="gesture-reason" class="readout-note"
+                >Show your hands</span
+              >
+            </div>
+            <div>
+              <span class="label">HAND HEIGHT → REGISTER</span
+              ><strong id="register-readout">Middle</strong
+              ><meter
+                id="register-meter"
+                min="0"
+                max="1"
+                value="0.5"
+                aria-label="Requested musical register"
+              ></meter
+              ><span class="readout-note">Lower notes · higher notes</span>
+            </div>
+          </section>
           <div class="transport">
             <button id="play" class="primary">
               <span aria-hidden="true">▶</span> Begin performance
@@ -112,6 +133,29 @@
             </p>
           </section>
           <section class="settings">
+            <details class="gesture-guide" open>
+              <summary>Your gesture map</summary>
+              <dl>
+                <dt>Finger taps, steady wrist</dt>
+                <dd>Piano notes and pulse</dd>
+                <dt>Repeated sideways strokes</dt>
+                <dd>Guitar strums</dd>
+                <dt>Strum with a steady fret hand</dt>
+                <dd>Guitar strums</dd>
+                <dt>Whole-hand downstrokes</dt>
+                <dd>Percussive phrasing</dd>
+                <dt>Slow, flowing sweep</dt>
+                <dd>Sustained strings</dd>
+                <dt>Raise / lower your hands</dt>
+                <dd>Higher / lower note register</dd>
+                <dt>Stronger movement</dt>
+                <dd>Greater musical intensity</dd>
+              </dl>
+              <p>
+                Hold a gesture for 1–2 seconds. These mappings are a playing
+                vocabulary; ambiguous movements may remain unclear.
+              </p>
+            </details>
             <label class="setting-label" for="palette">THE ENSEMBLE</label>
             <select id="palette">
               <option value="chamber">Chamber</option>
@@ -125,7 +169,10 @@
               >INTERPRET MOVEMENT</label
             >
             <select id="interpretation">
-              <option value="auto">Interpret my movement (experimental)</option>
+              <option value="mapped">Gesture map only (recommended)</option>
+              <option value="auto">
+                Gesture map + AI context (experimental)
+              </option>
               <option value="manual">Choose a musical action</option>
             </select>
             <div id="manual-actions" hidden>
@@ -133,14 +180,15 @@
               ><select id="action">
                 <option value="unknown">Open ensemble</option>
                 <option value="piano">Air piano</option>
-                <option value="strum">Strumming</option>
-                <option value="strike">Percussive hits</option>
+                <option value="strum">Air guitar / strumming</option>
+                <option value="strike">Air drums / percussion</option>
                 <option value="sustain">Flowing / bowed</option>
                 <option value="still">Still / spacious</option>
               </select>
             </div>
             <p id="semantic-note" class="setting-note">
-              Reads a short sequence of movement every few seconds.
+              Hand trajectories control musical actions, register, pulse, and
+              intensity.
             </p>
             <label class="toggle"
               ><span>Follow my pulse</span

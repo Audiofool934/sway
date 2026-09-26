@@ -9,7 +9,13 @@ from pathlib import Path
 
 import numpy as np
 
-from .config import ACTION_STYLES, MRT_DIR, PALETTES
+from .config import ACTION_STYLES, MRT_DIR, PALETTE_CONTEXT, PALETTES
+
+
+def style_prompt(palette: str, action: str) -> str:
+    if action in ("unknown", "still"):
+        return f"{PALETTES[palette]}, {ACTION_STYLES[action]}"
+    return f"{ACTION_STYLES[action]}, {PALETTE_CONTEXT[palette]}"
 
 
 class StyleEncoder:
@@ -101,13 +107,15 @@ class MusicEngine:
         self.set_style("chamber", "unknown")
 
     def set_style(self, palette: str, action: str):
-        base = self.style.embed(PALETTES[palette])
-        accent = self.style.embed(f"{PALETTES[palette]}, {ACTION_STYLES[action]}")
-        self.target = (0.35 * base + 0.65 * accent).astype(np.float32)
+        base = self.style.embed(PALETTE_CONTEXT[palette])
+        accent = self.style.embed(style_prompt(palette, action))
+        self.target = (0.1 * base + 0.9 * accent).astype(np.float32)
         if self.current is None:
             self.current = self.target.copy()
 
-    def generate(self, notes: np.ndarray | None = None, drumless=False) -> np.ndarray:
+    def generate(
+        self, notes: np.ndarray | None = None, drumless=False, note_guidance=1.0
+    ) -> np.ndarray:
         mx = self.mx
         started = time.perf_counter()
         if self.frame % 5 == 0:
@@ -121,7 +129,7 @@ class MusicEngine:
             mx.array([1.1], dtype=mx.float32),
             mx.array([40], dtype=mx.int32),
             mx.array([3.0], dtype=mx.float32),
-            mx.array([1.0], dtype=mx.float32),
+            mx.array([note_guidance], dtype=mx.float32),
             mx.array([1.0], dtype=mx.float32),
             mx.array(neg_style.reshape(1, 1, -1)),
             mx.array(neg_notes.reshape(1, 1, -1)),
@@ -150,20 +158,53 @@ class NotePlanner:
         self.beat = 0.0
         self.active = {}
         self.tick = 0
+        self.strum = []
+        self.last_pitch = None
+        self.cue_count = 0
 
     def next(
-        self, bpm: float, action: str, accent: int | None = None, articulation: str = "unknown"
+        self,
+        bpm: float,
+        action: str,
+        accent: int | None = None,
+        articulation: str = "unknown",
+        *,
+        register: float = 0.5,
+        guided: bool = False,
     ) -> np.ndarray:
         before = self.beat
         self.beat += bpm / 60 * 0.04
         self.tick += 1
         chord = self.chords[int(self.beat // 16) % len(self.chords)]
         onsets = []
-        if int(before) != int(self.beat) and int(self.beat) % 2 == 0:
+        mapped = guided and action in ("piano", "strum", "strike", "sustain")
+        if int(before) != int(self.beat) and int(self.beat) % 2 == 0 and not mapped:
             onsets.append(chord[(int(self.beat) // 2) % len(chord)])
-        if accent is not None:
-            onsets.append(chord[accent % len(chord)] + (12 if action == "piano" else 0))
+        # Keep the lower accompaniment free; explicitly control the lead register.
         tokens = np.full(128, -1, dtype=np.int32)
+        if mapped:
+            tokens[48:96] = 0
+        if accent is not None:
+            if mapped:
+                choices = [p for p in range(48, 85) if p % 12 in {n % 12 for n in chord}]
+                center = round(max(0, min(1, register)) * (len(choices) - 4))
+                pitch = choices[min(center + accent % 4, len(choices) - 1)]
+            else:
+                pitch = chord[accent % len(chord)] + (12 if action == "piano" else 0)
+            onsets.append(pitch)
+            self.last_pitch = pitch
+            self.cue_count += 1
+            if action == "strum":
+                chord_tones = [
+                    p
+                    for p in range(pitch + 1, min(96, pitch + 13))
+                    if p % 12 in {n % 12 for n in chord}
+                ]
+                self.strum = [(self.tick + i, p) for i, p in enumerate(chord_tones[:2], 1)]
+        if mapped and action == "sustain" and not self.active:
+            onsets.append(chord[2] + (12 if register > 0.65 else -12 if register < 0.35 else 0))
+        onsets.extend(pitch for tick, pitch in self.strum if tick <= self.tick)
+        self.strum = [(tick, pitch) for tick, pitch in self.strum if tick > self.tick]
         for pitch, expiry in list(self.active.items()):
             if expiry <= self.tick:
                 tokens[pitch] = 0
@@ -172,7 +213,7 @@ class NotePlanner:
                 tokens[pitch] = 1
         for pitch in onsets:
             tokens[pitch] = 2
-            length = 20 if action == "sustain" or articulation == "flowing" else 5
+            length = 35 if action == "sustain" else 20 if articulation == "flowing" else 5
             if articulation == "detached":
                 length = 3
             self.active[pitch] = self.tick + length

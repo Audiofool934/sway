@@ -16,18 +16,19 @@ If the page says another performance window is open, close that window and reloa
 
 ## Try a short performance
 
-1. Leave **Interpret my movement (experimental)** selected and press **Begin performance**.
+1. Choose **Gesture map only (recommended)** and press **Begin performance**.
 2. Wait for the ensemble to start, then press **Enable camera** and allow camera access.
 3. Keep your hands well lit and large enough in the preview to see individual fingers.
-4. Tap your fingers clearly at a steady pace for about 30 seconds.
-5. Change to a broad strumming gesture, then a slow flowing sweep, holding each for about 30 seconds.
+4. Tap your fingers clearly at a steady pace for about 10 seconds.
+5. Change to a broad strumming gesture, then a slow flowing sweep, holding each for about 10 seconds.
 6. Try a faster pulse, then remove your hands from view to hear the fade.
 7. Press **Record**, perform for a minute, then **Finish take** and **Save your recording**.
 8. Press **End performance**, turn the camera off, and stop the server with Ctrl-C when finished.
 
-The model reads short image sequences every few seconds and waits for repeated interpretations before changing musical action.
-A gesture change will take several seconds to settle.
-In the recorded finger-drumming check, the first accepted change took roughly 30 seconds.
+The gesture map reads a short window of hand trajectories and waits briefly before changing musical direction.
+Hold each new gesture for around two seconds.
+Raising your hands selects a higher note register; lowering them selects a lower one.
+The [gesture map](gesture-map.md) describes the supported vocabulary and optional AI context.
 Small finger movements and ambiguous gestures may be misread.
 The displayed tempo is the controller's estimate or request; it is not a measurement of the generated recording's beat.
 
@@ -35,7 +36,7 @@ The displayed tempo is the controller's estimate or request; it is not a measure
 
 End the performance, choose **Choose a musical action**, select **Air piano**, and begin again.
 Your camera still controls pulse and movement energy in this mode.
-This comparison separates rhythm tracking from the experimental semantic model.
+This comparison keeps the chosen action fixed while retaining motion controls.
 Turn off **Follow my pulse** to compare against a steady manual tempo.
 
 Open **Session details** if playback breaks up.

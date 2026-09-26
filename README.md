@@ -12,6 +12,7 @@ The instrument generates real streaming audio, accepts webcam motion, offers man
 Gesture accuracy, musical coherence, and motion-to-audio alignment still need performer evaluation.
 See the [validation notes](docs/prototype-validation.md) for measurements and limitations.
 For the installed prototype on this Mac, follow the [first-play guide](docs/morning-test.md).
+The [gesture map](docs/gesture-map.md) explains how movement, hand height, pulse, and intensity reach the music.
 
 ## Run it
 
@@ -36,12 +37,13 @@ Stop the server with Ctrl-C.
 1. Choose an ensemble and press **Begin performance**.
 2. Enable the camera and keep your hands visible.
 3. Make repeated, deliberate finger taps to establish a pulse.
-4. Hold a new action for several seconds so interpretation can settle.
+4. Hold a new action for around two seconds so the gesture map can settle.
 5. Use **Record**, then **Finish take**, to save a stereo WAV.
 6. Press **End performance** to stop both model workers.
 
-For a controlled baseline, select **Choose a musical action** before starting.
-This keeps rhythm tracking active while bypassing the vision-language model.
+Start with **Gesture map only (recommended)** to map hand trajectories to musical actions without the vision-language model.
+Choose **Gesture map + AI context (experimental)** for optional slower interpretation, or **Choose a musical action** for manual selection.
+All three modes retain rhythm and hand-height controls.
 Turn off **Follow my pulse** to choose a manual tempo.
 The ensemble and interpretation mode can change between performances; manual action and tempo can change while playing.
 After hands disappear, music holds briefly and fades; returning hands restore it.
@@ -71,21 +73,25 @@ flowchart LR
 | Layer | Implementation | Purpose |
 | --- | --- | --- |
 | Tracking | MediaPipe Hand Landmarker and Pose Landmarker Lite in a browser worker | Timestamped hand and body landmarks |
-| Rhythm | Finger strokes, wrist reversals, robust inter-onset intervals | Candidate accents, pulse estimate, movement energy |
+| Rhythm and gesture map | Finger articulation, whole-hand strokes, recent trajectories, robust inter-onset intervals | Musical action, accents, pulse, movement energy, and hand-height register |
 | Semantics | Qwen3.5-0.8B, 4-bit MLX, frozen weights | Piano, strum, strike, sustain, still, or unknown; articulation |
 | Musical state | Stable ensemble prompt, repeating four-chord framework, debounced interpretations | Style blending, sparse note anchors, continuity, tracking-loss fade |
 | Generation | MRT2 Small exported MLX graph with persistent state | Generated arrangement in 40 ms stereo frames |
 | Playback | AudioWorklet with bounded buffering and sample-rate conversion | Browser audio, gap counters, playback volume |
 
 Rhythm reaches the controller directly.
-Semantic inference uses three ordered camera images and measured motion features in a separate process.
+The explicit gesture map handles the fast action changes and maps higher hands to higher note cues.
+Optional semantic inference uses three ordered camera images and measured motion features in a separate process.
 Pauses between semantic tokens leave GPU scheduling opportunities for music.
 The audio process requests macOS interactive scheduling before initializing its model runtime.
-Its output is validated against a small schema; unknown or low-confidence actions preserve the current musical direction.
-Two matching interpretations and visible tracked hands are required for a semantic change.
+AI output is validated against a small schema and checked against measured motion.
+Two matching interpretations and visible tracked hands are required for an AI change, and a fresh mapped gesture takes priority.
+Unsupported mapped actions expire after three seconds; unsupported AI interpretations expire after eight seconds.
 The model's confidence is self-reported, not statistically calibrated.
 
-The controller supplies a sparse C / Am / F / G framework, changing chord every 16 beats.
+The controller supplies a C / Am / F / G framework, changing chord every 16 beats.
+During mapped performances, performed accents control the lead note range while the lower accompaniment remains free.
+Hand height selects a higher or lower register within that harmony.
 The music model supplies the arrangement around it.
 Finger accents map to chord tones, not to an inferred physical keyboard.
 Style changes blend text embeddings without resetting the generator's audio state.
@@ -94,11 +100,12 @@ This is an inference-time system combining frozen models and control logic, not 
 ## What to expect
 
 - **Tempo control:** MRT2 receives scheduled note cues and style conditioning; this adapter has no direct BPM setter.
-- **Slower semantic updates:** Interpretation takes several observations, inference, and debouncing.
+- **Gesture vocabulary:** The fast map uses defined motion patterns; ambiguous air-playing can still be misclassified.
+- **Slower semantic updates:** Optional AI context takes several observations, inference, and debouncing.
 - **Experimental tracking:** Camera angle, occlusion, subtle finger motion, subdivisions, and simultaneous hands can confuse onset detection.
 - **Hand-led rhythm:** Pose landmarks are available and body movement is visible to the semantic model.
 - **Composition planning:** Long-range form and intentional musical endings remain research work.
-- **Shared GPU load:** Session details expose timing and playback gaps; manual interpretation provides a lighter baseline.
+- **Shared GPU load:** Session details expose timing and playback gaps; Gesture map only provides a lighter baseline.
 - **Buffering:** The browser starts with 320 ms of audio, in addition to model and tracking latency; actual motion-to-audio latency has not been measured.
 
 The first design explored a 4B semantic model.
@@ -130,6 +137,7 @@ Model and browser checks are documented separately because they need downloaded 
 | Path | Purpose |
 | --- | --- |
 | `src/sway/motion.py` | Causal rhythm extraction |
+| `src/sway/gestures.py` | Hand trajectories, explicit gesture vocabulary, and register |
 | `src/sway/semantics.py` | Frozen vision-language interpretation |
 | `src/sway/controller.py` | Shared musical state |
 | `src/sway/music.py` | MRT2 adapter and note planner |

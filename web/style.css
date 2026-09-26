@@ -827,3 +827,75 @@ footer details p {
     transition: none !important;
   }
 }
+
+.gesture-feedback {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 24px;
+  padding: 22px 30px;
+  border-top: 1px solid var(--line);
+}
+.gesture-feedback strong {
+  display: block;
+  font-family: Georgia, serif;
+  font-weight: 400;
+  font-size: 23px;
+  margin: 8px 0;
+}
+.gesture-feedback meter {
+  display: block;
+  width: 100%;
+  max-width: 180px;
+  height: 10px;
+  margin: 8px 0;
+  accent-color: var(--ink);
+}
+.gesture-guide {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+}
+.gesture-guide summary {
+  font-family: Georgia, serif;
+  font-size: 19px;
+}
+.gesture-guide dl {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 18px 0;
+}
+.gesture-guide dt {
+  color: var(--ink);
+}
+.gesture-guide dd {
+  margin: 0;
+  color: var(--muted);
+}
+.gesture-guide p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+@media (max-width: 600px) {
+  .gesture-feedback {
+    padding: 20px;
+    gap: 16px;
+  }
+  .gesture-feedback strong {
+    font-size: 20px;
+  }
+}
+.gesture-feedback meter::-webkit-meter-bar {
+  background: var(--line);
+  border: 0;
+  border-radius: 2px;
+}
+.gesture-feedback meter::-webkit-meter-optimum-value {
+  background: var(--ink);
+}
+.gesture-feedback meter::-moz-meter-bar {
+  background: var(--ink);
+}

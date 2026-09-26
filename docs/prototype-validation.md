@@ -2,6 +2,8 @@
 
 Date: 2026-09-26, Singapore time.
 Machine: Apple M2 Pro, 16 GB unified memory, macOS 26.6.2.
+This records the first implementation before the first performer test.
+See the [gesture-map revision](gesture-map.md) for the current mapping, fixes, and validation.
 This is an engineering validation of a research prototype, not a gesture-recognition or musical-quality benchmark.
 
 ## Working implementation
