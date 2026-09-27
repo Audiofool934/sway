@@ -3,7 +3,8 @@
 Date: 2026-09-26, Singapore time.
 Machine: Apple M2 Pro, 16 GB unified memory, macOS 26.6.2.
 This records the first implementation before the first performer test.
-See the [gesture-map revision](gesture-map.md) for the current mapping, fixes, and validation.
+It is a historical snapshot; its test counts, model choice, and controller behavior do not describe the latest revision.
+The subsequent [gesture-map revision](gesture-map.md) records the next experiment; [project status](project-status.md) identifies the paused ensemble implementation.
 This is an engineering validation of a research prototype, not a gesture-recognition or musical-quality benchmark.
 
 ## Working implementation
@@ -34,15 +35,15 @@ It does not affect the passing results.
 The final command-line render used the actual MRT2 Small export with chamber style, piano action, a requested 108 BPM, and seed 7.
 Five warm-up frames were excluded before recording the measurements.
 
-| Measurement | Result |
-| --- | --- |
-| Generated audio | 30.00 seconds, 48 kHz stereo |
-| Timed generation | 13.91 seconds |
-| Median frame generation | 18.15 ms |
-| 95th-percentile frame generation | 19.29 ms |
-| Frames taking over the 40 ms budget | 0 / 750 |
-| Audio RMS | 0.04448 |
-| Peak absolute amplitude | 0.36078 |
+| Measurement                         | Result                       |
+| ----------------------------------- | ---------------------------- |
+| Generated audio                     | 30.00 seconds, 48 kHz stereo |
+| Timed generation                    | 13.91 seconds                |
+| Median frame generation             | 18.15 ms                     |
+| 95th-percentile frame generation    | 19.29 ms                     |
+| Frames taking over the 40 ms budget | 0 / 750                      |
+| Audio RMS                           | 0.04448                      |
+| Peak absolute amplitude             | 0.36078                      |
 
 These are measurements of model generation in isolation.
 They do not establish total performance latency, measured output BPM, or the absence of playback glitches under other workloads.
@@ -140,14 +141,14 @@ Direct musical evaluation remains necessary.
 The immediate goal is a playable prototype for the first performer test.
 The broader research measurements proposed in the initial design are not claimed as completed.
 
-| Requested capability | Delivered evidence | Remaining limitation |
-| --- | --- | --- |
-| Camera captures finger and body motion | Browser camera input and actual MediaPipe inference, including recorded human fingers | The user's own camera and playing position await testing |
-| Motion supplies rhythm | Causal accents and pulse estimation, synthetic timing tests, and live recorded-gesture control | Real-world tempo accuracy and audible beat alignment remain unmeasured |
-| MLLM receives motion and meaning | Qwen receives ordered images and measured features; a real recorded gesture changed the accepted action | Small-model interpretations are inconsistent and can take tens of seconds |
-| Music responds while a piece unfolds | Stateful MRT2 stereo streaming, harmonic cues, style blending, and combined runtime tests | Long-range musical form and intentional endings remain research work |
-| Training-free implementation | Frozen, pinned model weights used only for inference | No new end-to-end model is trained |
-| Ready for local testing | Installed assets, launcher, first-play guide, manual comparison controls, and WAV recording | Implementation remains local and has not been pushed to the public remote |
+| Requested capability                   | Delivered evidence                                                                                      | Remaining limitation                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Camera captures finger and body motion | Browser camera input and actual MediaPipe inference, including recorded human fingers                   | The user's own camera and playing position await testing                  |
+| Motion supplies rhythm                 | Causal accents and pulse estimation, synthetic timing tests, and live recorded-gesture control          | Real-world tempo accuracy and audible beat alignment remain unmeasured    |
+| MLLM receives motion and meaning       | Qwen receives ordered images and measured features; a real recorded gesture changed the accepted action | Small-model interpretations are inconsistent and can take tens of seconds |
+| Music responds while a piece unfolds   | Stateful MRT2 stereo streaming, harmonic cues, style blending, and combined runtime tests               | Long-range musical form and intentional endings remain research work      |
+| Training-free implementation           | Frozen, pinned model weights used only for inference                                                    | No new end-to-end model is trained                                        |
+| Ready for local testing                | Installed assets, launcher, first-play guide, manual comparison controls, and WAV recording             | Implementation remains local and has not been pushed to the public remote |
 
 All task-owned test servers, model processes, and browser sessions were stopped after validation.
 The launcher starts a fresh server for the performer, who stops it with Ctrl-C.

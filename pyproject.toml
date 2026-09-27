@@ -1,7 +1,7 @@
 [project]
 name = "sway-instrument"
 version = "0.1.0"
-description = "A generative theremin: motion-aware, locally generated music."
+description = "A generative instrument: music inspired by movement and visual context."
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "fastapi==0.141.1",

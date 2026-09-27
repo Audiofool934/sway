@@ -2,9 +2,10 @@
 
 **A generative theremin.**
 
-Status: proposal for discussion, researched on 2026-09-26.
+Status: historical proposal, researched on 2026-09-26.
 This document preserves the initial design, written before implementation and measurement.
-The [README](../README.md) and [validation notes](prototype-validation.md) describe the current local Mac prototype and supersede untested assumptions here.
+The [project handoff](project-status.md) and [ensemble guide](gesture-ensemble.md) describe the paused implementation and supersede untested assumptions here.
+The [first validation notes](prototype-validation.md) record the subsequent initial local experiment.
 
 ## Experience and product form
 
@@ -17,12 +18,12 @@ Give it a focused performance view: tracking feedback, the current action interp
 Keep camera calibration and technical diagnostics in a separate setup view.
 A person should be able to listen and move without continually looking at the screen.
 
-| Form | Role in Sway | Decision |
-| --- | --- | --- |
-| Mac app with an existing camera | Establish the complete musical interaction on available hardware. | First playable product. |
-| USB sensor pod with a Mac companion | Give Sway a physical identity, fixed camera placement, and visible tracking feedback. | Develop after identifying a sensing limitation worth solving. |
-| DAW plugin | Fit Sway into a musician's recording and performance setup. | Follow the standalone experience. |
-| Standalone hardware instrument | Combine sensing, compute, controls, and audio output in one enclosure. | Later, after measuring compute, thermal, and audio requirements. |
+| Form                                | Role in Sway                                                                          | Decision                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Mac app with an existing camera     | Establish the complete musical interaction on available hardware.                     | First playable product.                                          |
+| USB sensor pod with a Mac companion | Give Sway a physical identity, fixed camera placement, and visible tracking feedback. | Develop after identifying a sensing limitation worth solving.    |
+| DAW plugin                          | Fit Sway into a musician's recording and performance setup.                           | Follow the standalone experience.                                |
+| Standalone hardware instrument      | Combine sensing, compute, controls, and audio output in one enclosure.                | Later, after measuring compute, thermal, and audio requirements. |
 
 The first session could work like this:
 
@@ -43,12 +44,12 @@ The first version should support a small, legible vocabulary before expanding in
 
 **Recommendation: begin with Magenta RealTime 2 Small and keep the Base model as a quality comparison.**
 
-| Candidate | Documented capabilities relevant to Sway | Assessment |
-| --- | --- | --- |
-| [MRT2 Small, 230M](https://github.com/magenta/magenta-realtime) | Continuous generation and an Apple Silicon inference engine; the hardware table lists real-time support on M2 Pro. | Best initial integration candidate for the available machine. |
-| [MRT2 Base, 2.4B](https://github.com/magenta/magenta-realtime) | Larger model; the hardware table lists M2 Pro as insufficient for real-time streaming, with support on devices including M2 Max and M4 Pro. | Compare sound quality before deciding whether more compute is worthwhile. |
-| [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5/blob/main/docs/en/INFERENCE.md) | Track generation and editing with parameters including BPM, key, and duration. | Useful future comparison for composition quality; its documented render interface does not establish continuous control during playback. |
-| [Stable Audio Open Small](https://huggingface.co/stabilityai/stable-audio-open-small) | Text-to-audio clips up to 11 seconds; the model card reports stronger results for sound effects than music. | Possible source of short textures; a poor match for the central continuous-piece requirement. |
+| Candidate                                                                               | Documented capabilities relevant to Sway                                                                                                    | Assessment                                                                                                                               |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| [MRT2 Small, 230M](https://github.com/magenta/magenta-realtime)                         | Continuous generation and an Apple Silicon inference engine; the hardware table lists real-time support on M2 Pro.                          | Best initial integration candidate for the available machine.                                                                            |
+| [MRT2 Base, 2.4B](https://github.com/magenta/magenta-realtime)                          | Larger model; the hardware table lists M2 Pro as insufficient for real-time streaming, with support on devices including M2 Max and M4 Pro. | Compare sound quality before deciding whether more compute is worthwhile.                                                                |
+| [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5/blob/main/docs/en/INFERENCE.md) | Track generation and editing with parameters including BPM, key, and duration.                                                              | Useful future comparison for composition quality; its documented render interface does not establish continuous control during playback. |
+| [Stable Audio Open Small](https://huggingface.co/stabilityai/stable-audio-open-small)   | Text-to-audio clips up to 11 seconds; the model card reports stronger results for sound effects than music.                                 | Possible source of short textures; a poor match for the central continuous-piece requirement.                                            |
 
 These are suitability judgments from the documented interfaces, not listening-test results or an exhaustive leaderboard.
 Generation faster than playback is only one requirement; new movement must also be able to affect upcoming audio without replacing the session.
@@ -100,13 +101,13 @@ flowchart LR
 
 The following rates are proposed operating points to benchmark, not achieved performance:
 
-| Path | Starting design | Responsibility |
-| --- | --- | --- |
-| Motion | Process available camera frames, initially targeting 30 Hz and testing 60 Hz later. | Track trajectories, movement extent, direction changes, and candidate accents. |
-| Rhythm | Update on each usable observation using actual timestamps. | Estimate periodicity, beat phase, subdivision hypotheses, and confidence. |
-| Semantics | Examine roughly 1-2 seconds of recent movement at about 0.5-1 updates per second. | Select an action family or return unknown. |
-| Musical state | Update continuously; commit major changes at phrase boundaries when pulse confidence permits. | Preserve harmonic context and smooth changes in instrumentation and energy. |
-| Audio | Run independently of semantic requests and UI work. | Sustain generation, playback, and recording. |
+| Path          | Starting design                                                                               | Responsibility                                                                 |
+| ------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Motion        | Process available camera frames, initially targeting 30 Hz and testing 60 Hz later.           | Track trajectories, movement extent, direction changes, and candidate accents. |
+| Rhythm        | Update on each usable observation using actual timestamps.                                    | Estimate periodicity, beat phase, subdivision hypotheses, and confidence.      |
+| Semantics     | Examine roughly 1-2 seconds of recent movement at about 0.5-1 updates per second.             | Select an action family or return unknown.                                     |
+| Musical state | Update continuously; commit major changes at phrase boundaries when pulse confidence permits. | Preserve harmonic context and smooth changes in instrumentation and energy.    |
+| Audio         | Run independently of semantic requests and UI work.                                           | Sustain generation, playback, and recording.                                   |
 
 MediaPipe's asynchronous hand detector can ignore frames while busy, so processing cadence must be measured rather than inferred from camera FPS. [Live-stream behavior](https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker/python)
 
@@ -120,13 +121,13 @@ Treat a model's self-reported confidence as a signal to evaluate, not a calibrat
 The inspected MRT2 engine exposes style blending, note onset/activity, guidance, and drumless controls.
 It does not expose a direct BPM setter in that interface. [Engine interface at the inspected revision](https://github.com/magenta/magenta-realtime/blob/694a545e4ba0b88bf1150137b129582166d3e07f/core/include/magentart/mlx_engine.h)
 
-| Intended influence | Proposed mechanism | What remains to prove |
-| --- | --- | --- |
-| Tempo and pulse | Estimate a beat grid and schedule sparse pitched anchors through note-onset control; include tempo language in style prompts as a secondary cue. | Whether the audible arrangement follows tempo and phase, including generated percussion. |
-| Strumming | Identify the action family, derive rhythmic events from the trajectory, and favor plucked/strummed style anchors. | Whether instrumentation changes clearly while harmonic identity survives. |
-| Striking | Derive accents and favor percussive musical character. | Whether it feels responsive despite the limits on individual generated drum hits. |
-| Sustained sweeping or bowing | Favor sustained articulation and smoother phrasing, with fewer onset events. | Whether the result is repeatable and distinguishable from strumming. |
-| Movement extent and intensity | Smoothly vary a small set of style weights and phrase-density targets. | Whether musical energy changes predictably; intensity is not automatically BPM or loudness. |
+| Intended influence            | Proposed mechanism                                                                                                                               | What remains to prove                                                                       |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Tempo and pulse               | Estimate a beat grid and schedule sparse pitched anchors through note-onset control; include tempo language in style prompts as a secondary cue. | Whether the audible arrangement follows tempo and phase, including generated percussion.    |
+| Strumming                     | Identify the action family, derive rhythmic events from the trajectory, and favor plucked/strummed style anchors.                                | Whether instrumentation changes clearly while harmonic identity survives.                   |
+| Striking                      | Derive accents and favor percussive musical character.                                                                                           | Whether it feels responsive despite the limits on individual generated drum hits.           |
+| Sustained sweeping or bowing  | Favor sustained articulation and smoother phrasing, with fewer onset events.                                                                     | Whether the result is repeatable and distinguishable from strumming.                        |
+| Movement extent and intensity | Smoothly vary a small set of style weights and phrase-density targets.                                                                           | Whether musical energy changes predictably; intensity is not automatically BPM or loudness. |
 
 Use explicit note onsets for the pulse-control experiment, and compare against the model choosing its own onsets.
 Style changes should blend within a compatible musical palette, rather than rewriting an unrestricted prompt on every camera frame.
@@ -159,13 +160,13 @@ An explicit stop control should always work immediately through the output path.
 The inspected development machine is an **M2 Pro MacBook Pro with 16 GB unified memory**.
 That is a reasonable starting point for MRT2 Small according to the published table, but the combined sensing, semantics, and audio workload is unmeasured.
 
-| Component | First prototype | Upgrade condition |
-| --- | --- | --- |
-| Compute | Existing Mac, MRT2 Small, one semantic model at a time. | Upgrade after a listening comparison demonstrates a worthwhile benefit from Base and concurrent-load testing establishes the required headroom. |
-| Camera | Existing RGB camera, positioned to see both hands and upper body in steady light. | Try a wired 60 FPS camera if measured timing or motion blur limits the interaction. |
-| Hand sensor | Camera-based tracking. | Trial an Ultraleap sensor if finger detail, depth, or occlusion is the measured problem. |
-| Audio | Wired headphones or speakers; use the existing audio output first. | Add an interface for routing, connections, or measured audio-buffer problems. |
-| Physical controls | Explicit start/stop and recording controls in the app. | Add a footswitch if hands-free transport helps performance. |
+| Component         | First prototype                                                                   | Upgrade condition                                                                                                                               |
+| ----------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compute           | Existing Mac, MRT2 Small, one semantic model at a time.                           | Upgrade after a listening comparison demonstrates a worthwhile benefit from Base and concurrent-load testing establishes the required headroom. |
+| Camera            | Existing RGB camera, positioned to see both hands and upper body in steady light. | Try a wired 60 FPS camera if measured timing or motion blur limits the interaction.                                                             |
+| Hand sensor       | Camera-based tracking.                                                            | Trial an Ultraleap sensor if finger detail, depth, or occlusion is the measured problem.                                                        |
+| Audio             | Wired headphones or speakers; use the existing audio output first.                | Add an interface for routing, connections, or measured audio-buffer problems.                                                                   |
+| Physical controls | Explicit start/stop and recording controls in the app.                            | Add a footswitch if hands-free transport helps performance.                                                                                     |
 
 A 30 FPS camera has a 33.3 ms frame interval; 60 FPS reduces this to 16.7 ms.
 That helps sensing but cannot eliminate the music engine's response delay.

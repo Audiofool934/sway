@@ -1,21 +1,26 @@
 # Sway's first gesture map
 
+This document records the older single-action gesture mapping.
+Its measurements and vocabulary remain useful for comparison, but it is not the current product contract.
+See [project status](project-status.md) for the paused state and known drum/strum ambiguity.
+The current [Qwen ensemble mode](gesture-ensemble.md) treats these measurements as suggestions and gives the model authority over simultaneous parts and musical timing.
+
 This revision gives hand motion an explicit musical vocabulary and separates it from the experimental AI interpretation.
 It responds to the first performer test: the original version acted mostly as a hand-presence volume gate and kept displaying Air piano.
 
 ## Playing vocabulary
 
-| Movement | Musical control |
-| --- | --- |
-| Repeated finger taps with a relatively steady wrist | Piano direction, note accents, and pulse estimation |
-| Repeated sideways whole-hand strokes | Guitar direction and short strummed chord cues |
-| One hand strumming while the separated fret hand remains steady | Guitar direction |
-| Repeated whole-hand downstrokes | Percussion direction and rhythmic cues |
-| Slow, continuous whole-hand sweep | Sustained string direction and longer notes |
-| Raise or lower the hands | Higher or lower note register, quantized to the current harmony |
-| Move with more energy | A wider expressive volume range |
-| Rest visible hands | Spacious phrasing |
-| Remove hands | The existing two-second hold followed by a two-second fade |
+| Movement                                                        | Musical control                                                 |
+| --------------------------------------------------------------- | --------------------------------------------------------------- |
+| Repeated finger taps with a relatively steady wrist             | Piano direction, note accents, and pulse estimation             |
+| Repeated sideways whole-hand strokes                            | Guitar direction and short strummed chord cues                  |
+| One hand strumming while the separated fret hand remains steady | Guitar direction                                                |
+| Repeated whole-hand downstrokes                                 | Percussion direction and rhythmic cues                          |
+| Slow, continuous whole-hand sweep                               | Sustained string direction and longer notes                     |
+| Raise or lower the hands                                        | Higher or lower note register, quantized to the current harmony |
+| Move with more energy                                           | A wider expressive volume range                                 |
+| Rest visible hands                                              | Spacious phrasing                                               |
+| Remove hands                                                    | The existing two-second hold followed by a two-second fade      |
 
 Hand height changes the register of upcoming note cues.
 It does not pitch-shift the complete recording.
@@ -75,11 +80,11 @@ Five controlled renders ran the real MRT2 model through synthetic hand trajector
 Each saved take contains twelve seconds after a two-second lead-in.
 Median generation time was approximately 19–20 ms per 40 ms audio frame on this Mac.
 
-| Controlled input | Measured result |
-| --- | --- |
-| Low versus high hands, with the same 90 BPM finger taps | Requested MIDI pitches changed from 55/57 to 76; dominant spectral bins changed from approximately 193 Hz to 662 Hz |
-| Slow versus fast tapping, at 90 and 150 BPM | Strongest spectral-flux periods were approximately 0.68 s and 0.40 s |
-| Guitar and drum trajectories | The controller selected strum and strike respectively and supplied different instrumentation prompts and generated audio |
+| Controlled input                                        | Measured result                                                                                                          |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Low versus high hands, with the same 90 BPM finger taps | Requested MIDI pitches changed from 55/57 to 76; dominant spectral bins changed from approximately 193 Hz to 662 Hz      |
+| Slow versus fast tapping, at 90 and 150 BPM             | Strongest spectral-flux periods were approximately 0.68 s and 0.40 s                                                     |
+| Guitar and drum trajectories                            | The controller selected strum and strike respectively and supplied different instrumentation prompts and generated audio |
 
 The spectral measurements support register and pulse influence in these controlled renders.
 They are not a benchmark of arbitrary webcam playing, timbre recognition, or long-form musical quality.
