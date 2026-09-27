@@ -18,15 +18,17 @@ self.onmessage = async ({ data }) => {
         numHands: 2,
         minHandDetectionConfidence: 0.5,
       });
-      pose = await Vision.PoseLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: "/models/pose_landmarker_lite.task",
-          delegate: "CPU",
-        },
-        runningMode: "VIDEO",
-        numPoses: 1,
-        outputSegmentationMasks: false,
-      });
+      pose = data.handsOnly
+        ? null
+        : await Vision.PoseLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: "/models/pose_landmarker_lite.task",
+              delegate: "CPU",
+            },
+            runningMode: "VIDEO",
+            numPoses: 1,
+            outputSegmentationMasks: false,
+          });
       self.postMessage({ type: "ready" });
     } catch (error) {
       self.postMessage({ type: "error", error: error.message });
@@ -37,7 +39,7 @@ self.onmessage = async ({ data }) => {
   try {
     const result = hands.detectForVideo(data.image, data.timestamp);
     const body =
-      ++frame % 3 === 0
+      pose && ++frame % 3 === 0
         ? pose.detectForVideo(data.image, data.timestamp)
         : null;
     const point = ({ x, y, z }) => ({ x, y, z });

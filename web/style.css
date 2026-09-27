@@ -239,6 +239,40 @@ h1 {
   letter-spacing: 1px;
   white-space: nowrap;
 }
+.ensemble-feedback {
+  padding: 22px 28px;
+  border-top: 1px solid var(--line);
+}
+.ensemble-feedback[hidden] {
+  display: none;
+}
+.ensemble-parts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0;
+  margin: 14px 0;
+  list-style: none;
+}
+.ensemble-parts li {
+  padding: 12px 14px;
+  background: var(--green);
+  border-radius: 3px;
+  overflow-wrap: anywhere;
+}
+.ensemble-parts strong,
+.ensemble-parts span {
+  display: block;
+}
+.ensemble-parts strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.ensemble-parts span {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--muted);
+}
 .readouts {
   display: grid;
   grid-template-columns: 1fr 1.2fr 1fr;

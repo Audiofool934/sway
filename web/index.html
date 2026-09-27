@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#eeeee5" />
-    <title>Sway · A generative theremin</title>
+    <title>Sway · Gesture ensemble</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
   </head>
@@ -13,8 +13,10 @@
       <a class="brand" href="/" aria-label="Sway home"
         >sway<span class="brand-mark">∿</span></a
       >
-      <span class="tagline">A generative theremin.</span>
-      <span class="local"><i></i> ON YOUR MAC</span>
+      <a class="tagline" href="/flow.html">Try Flow mode ↗</a>
+      <span class="local"
+        ><i></i> <span id="music-location">LOCAL MUSIC</span></span
+      >
     </header>
     <main>
       <div class="heading">
@@ -23,7 +25,8 @@
           <h1>Music, in your hands.</h1>
         </div>
         <p class="intro">
-          Find a pulse. Suggest an instrument.<br />Let a piece unfold.
+          Bring an idea with each hand.<br />
+          Let the ensemble find the music.
         </p>
       </div>
       <div class="workspace">
@@ -65,27 +68,6 @@
               <span class="energy-track"><i id="energy"></i></span>
             </div>
           </div>
-          <section class="gesture-feedback" aria-label="Gesture mapping">
-            <div>
-              <span class="label">DETECTED GESTURE</span
-              ><strong id="gesture-readout">Waiting</strong
-              ><span id="gesture-reason" class="readout-note"
-                >Show your hands</span
-              >
-            </div>
-            <div>
-              <span class="label">HAND HEIGHT → REGISTER</span
-              ><strong id="register-readout">Middle</strong
-              ><meter
-                id="register-meter"
-                min="0"
-                max="1"
-                value="0.5"
-                aria-label="Requested musical register"
-              ></meter
-              ><span class="readout-note">Lower notes · higher notes</span>
-            </div>
-          </section>
           <div class="transport">
             <button id="play" class="primary">
               <span aria-hidden="true">▶</span> Begin performance
@@ -108,6 +90,45 @@
             Start a piece with or without your camera.
           </div>
           <a id="download" class="download" hidden>↓ Save your recording</a>
+          <section
+            id="ensemble-feedback"
+            class="ensemble-feedback"
+            aria-label="Qwen arrangement"
+            hidden
+          >
+            <div class="section-top">
+              <span class="label">QWEN'S ARRANGEMENT</span>
+              <span id="ensemble-status" class="readout-note"
+                >Listening for inspiration</span
+              >
+            </div>
+            <ul id="ensemble-parts" class="ensemble-parts"></ul>
+            <p id="ensemble-description" class="readout-note"></p>
+          </section>
+          <section class="gesture-feedback" aria-label="Gesture mapping">
+            <div>
+              <span class="label">MOVEMENT SUGGESTS</span
+              ><strong id="gesture-readout">Waiting</strong
+              ><span id="gesture-reason" class="readout-note"
+                >Show your hands</span
+              >
+            </div>
+            <div>
+              <span id="register-label" class="label"
+                >HAND HEIGHT → REGISTER</span
+              ><strong id="register-readout">Middle</strong
+              ><meter
+                id="register-meter"
+                min="0"
+                max="1"
+                value="0.5"
+                aria-label="Requested musical register"
+              ></meter
+              ><span id="register-note" class="readout-note"
+                >Lower notes · higher notes</span
+              >
+            </div>
+          </section>
         </section>
 
         <aside class="controls" aria-label="Performance controls">
@@ -128,32 +149,29 @@
             <button id="camera" class="secondary">
               Enable camera <span aria-hidden="true">↗</span>
             </button>
-            <p class="privacy">
+            <p id="camera-privacy" class="privacy">
               Video stays on your Mac. Only audio is recorded.
             </p>
           </section>
           <section class="settings">
             <details class="gesture-guide" open>
-              <summary>Your gesture map</summary>
+              <summary>Give the music ideas</summary>
               <dl>
-                <dt>Finger taps, steady wrist</dt>
-                <dd>Piano notes and pulse</dd>
-                <dt>Repeated sideways strokes</dt>
-                <dd>Guitar strums</dd>
-                <dt>Strum with a steady fret hand</dt>
-                <dd>Guitar strums</dd>
-                <dt>Whole-hand downstrokes</dt>
-                <dd>Percussive phrasing</dd>
-                <dt>Slow, flowing sweep</dt>
-                <dd>Sustained strings</dd>
-                <dt>Raise / lower your hands</dt>
-                <dd>Higher / lower note register</dd>
-                <dt>Stronger movement</dt>
-                <dd>Greater musical intensity</dd>
+                <dt>Two different movements</dt>
+                <dd>Inspire parts together</dd>
+                <dt>Finger taps / strums / hits</dt>
+                <dd>Suggest musical textures</dd>
+                <dt>Posture, expression, space</dt>
+                <dd>Give Qwen the bigger picture</dd>
+                <dt>Gradually faster / slower</dt>
+                <dd>Suggest a change in pace</dd>
+                <dt>Rest your hands</dt>
+                <dd>Let the ensemble continue</dd>
               </dl>
               <p>
-                Hold a gesture for 1–2 seconds. These mappings are a playing
-                vocabulary; ambiguous movements may remain unclear.
+                With Qwen conducting, your movements are inspiration. It chooses
+                the arrangement; the music keeps a shared pulse. Give a new idea
+                a few seconds to develop.
               </p>
             </details>
             <label class="setting-label" for="palette">THE ENSEMBLE</label>
@@ -165,13 +183,24 @@
             <p id="palette-note" class="setting-note">
               Warm piano, plucked strings, delicate percussion.
             </p>
+            <label class="setting-label" for="music-backend"
+              >GENERATE MUSIC</label
+            >
+            <select id="music-backend">
+              <option value="local">On this Mac / MRT2 Small</option>
+              <option value="colab">Colab / MRT2 Base (experimental)</option>
+            </select>
+            <p id="music-backend-note" class="setting-note">
+              Music is generated on your Mac.
+            </p>
             <label class="setting-label" for="interpretation"
               >INTERPRET MOVEMENT</label
             >
             <select id="interpretation">
-              <option value="mapped">Gesture map only (recommended)</option>
+              <option value="qwen">Qwen conductor / ensemble</option>
+              <option value="mapped">Gesture map only</option>
               <option value="auto">
-                Gesture map + AI context (experimental)
+                Gesture map + local AI (experimental)
               </option>
               <option value="manual">Choose a musical action</option>
             </select>
@@ -187,11 +216,11 @@
               </select>
             </div>
             <p id="semantic-note" class="setting-note">
-              Hand trajectories control musical actions, register, pulse, and
-              intensity.
+              Qwen shapes an ensemble from your hands, body, and the whole
+              scene.
             </p>
             <label class="toggle"
-              ><span>Follow my pulse</span
+              ><span>Allow tempo suggestions</span
               ><input id="follow" type="checkbox" checked /><span
                 class="switch"
                 aria-hidden="true"
@@ -221,8 +250,9 @@
           <summary>Session details</summary>
           <div id="diagnostics">Connecting to the local instrument…</div>
           <p>
-            Pulse is a motion estimate, not a measurement of the generated
-            beat.<br />Semantic changes are slower than rhythmic cues.
+            Pulse is the generator's timing guide; the generated beat may still
+            drift.<br />
+            Qwen develops your ideas over several seconds.
           </p>
         </details>
       </footer>

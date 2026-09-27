@@ -12,6 +12,15 @@ const paletteNotes = {
   nocturne: "Felt piano, long strings, open space.",
   groove: "Electric piano, warm bass, a relaxed groove.",
 };
+const partSources = {
+  left_hand: "Left hand",
+  right_hand: "Right hand",
+  both_hands: "Both hands",
+  body: "Body movement",
+  scene: "Whole scene",
+  accompaniment: "Accompaniment",
+};
+let displayedParts = "";
 let socket,
   state,
   assets,
@@ -63,6 +72,9 @@ async function api(path, body = {}) {
         : "The instrument could not accept that request.",
     );
   return data;
+}
+function interpretsImages() {
+  return ["auto", "qwen"].includes($("interpretation").value);
 }
 function connect() {
   socket = new WebSocket(
@@ -121,12 +133,20 @@ async function prepareAudio() {
 }
 function updateControls() {
   const running = Boolean(state?.running);
-  $("play").disabled = busy || !connected || assets?.music === false;
+  const colab = $("music-backend").value === "colab";
+  const musicReady = colab
+    ? Boolean(
+        assets?.colab?.configured &&
+        assets.colab.expires_at > Date.now() / 1000,
+      )
+    : assets?.music;
+  $("play").disabled = busy || !connected || (!running && musicReady === false);
   $("play").innerHTML = running
     ? '<span aria-hidden="true">■</span> End performance'
     : '<span aria-hidden="true">▶</span> Begin performance';
   $("palette").disabled = running || busy;
   $("interpretation").disabled = running || busy;
+  $("music-backend").disabled = running || busy;
   $("record").disabled =
     busy || !running || state.workers.music.phase !== "ready";
 }
@@ -151,23 +171,62 @@ function update(next) {
   $("phrase").textContent = live
     ? `PHRASE ${String(Math.floor((state.metrics.beat || 0) / 16) + 1).padStart(2, "0")} · ${$("palette").selectedOptions[0].text.toUpperCase()}`
     : "WAITING FOR THE FIRST NOTE";
-  $("bpm").textContent = Math.round(music.bpm);
+  const conducted = music.conducted;
+  const playingBpm = live ? (state.metrics.bpm ?? music.bpm) : music.bpm;
+  $("bpm").textContent = Math.round(playingBpm);
   $("pulse-note").textContent =
-    music.rhythm.confidence >= 0.4 && $("follow").checked
-      ? `${Math.round(music.rhythm.confidence * 100)}% pulse consistency`
+    Math.abs(playingBpm - music.bpm) > 0.1
+      ? `Gradually moving toward ${Math.round(music.bpm)} BPM`
       : $("follow").checked
-        ? "Waiting for a steady pulse"
-        : "Manual tempo";
-  $("action-readout").textContent = names[music.action];
+        ? "Steady pulse · open to pace suggestions"
+        : "Steady pulse · tempo held";
+  const parts =
+    live && state.metrics.ensemble_parts?.length
+      ? state.metrics.ensemble_parts
+      : music.arrangement?.parts || [];
+  $("action-readout").textContent = conducted
+    ? `${parts.length} parts together`
+    : names[music.action];
   const source = music.action_source || "none";
-  $("action-note").textContent =
-    source === "manual"
+  $("action-note").textContent = conducted
+    ? source === "qwen"
+      ? "Arranged by Qwen"
+      : "Opening ensemble · awaiting Qwen"
+    : source === "manual"
       ? "Chosen by you"
       : source === "gesture"
         ? "From the gesture map"
         : source === "ai"
           ? "AI context, supported by motion"
           : "Waiting for a clear gesture";
+  $("ensemble-feedback").hidden = !conducted;
+  if (conducted) {
+    const signature = JSON.stringify(parts);
+    if (signature !== displayedParts) {
+      displayedParts = signature;
+      $("ensemble-parts").replaceChildren(
+        ...parts.map((part) => {
+          const item = document.createElement("li");
+          const name = document.createElement("strong");
+          name.textContent = part.instrument;
+          const detail = document.createElement("span");
+          detail.textContent = `${part.role} · ${partSources[part.source] || "Inspiration"}`;
+          item.append(name, detail);
+          return item;
+        }),
+      );
+    }
+    $("ensemble-description").textContent =
+      state.metrics.arrangement_description ||
+      music.arrangement?.description ||
+      "";
+    $("ensemble-status").textContent =
+      (state.metrics.arrangement_revision ?? 0) < music.arrangement_revision
+        ? "New idea joins at the next bar"
+        : source === "qwen"
+          ? "One shared pulse"
+          : "Listening for inspiration";
+  }
   const gesture = music.rhythm.gesture;
   $("gesture-readout").textContent =
     cameraStream && gesture
@@ -175,8 +234,25 @@ function update(next) {
         ? "Unclear"
         : names[gesture.action]
       : "Waiting";
-  $("gesture-reason").textContent =
-    cameraStream && gesture ? gesture.reason : "Show your hands";
+  if (conducted && Object.keys(music.rhythm.per_hand || {}).length) {
+    $("gesture-readout").textContent = Object.entries(music.rhythm.per_hand)
+      .map(
+        ([side, observation]) =>
+          `${side}: ${names[observation.action] || "Unclear"}`,
+      )
+      .join(" · ");
+  }
+  $("gesture-reason").textContent = conducted
+    ? "Visual suggestions; Qwen chooses the musical parts"
+    : cameraStream && gesture
+      ? gesture.reason
+      : "Show your hands";
+  $("register-label").textContent = conducted
+    ? "MOVEMENT HEIGHT"
+    : "HAND HEIGHT → REGISTER";
+  $("register-note").textContent = conducted
+    ? "Qwen chooses the musical register"
+    : "Lower notes · higher notes";
   const register = music.register ?? 0.5;
   $("register-meter").value = register;
   $("register-readout").textContent =
@@ -201,7 +277,7 @@ function update(next) {
     notice(`The music engine stopped: ${worker.error}`, true);
   else if (semantic.phase === "error")
     notice(
-      `Music is running, but movement interpretation stopped: ${semantic.error}. The gesture map still works. End the performance to select Gesture map only.`,
+      `Movement interpretation stopped: ${semantic.error}. ${conducted ? "The current arrangement continues." : "The gesture map still works."}`,
       true,
     );
   else if (state.recording_error) notice(state.recording_error, true);
@@ -216,28 +292,42 @@ function update(next) {
   else if (live)
     notice(
       cameraStream
-        ? "Tap your fingers, strum sideways, or make a downstroke. Raise your hands for higher notes."
+        ? conducted
+          ? "Give each hand an idea. Qwen develops them together; resting your hands lets the music continue."
+          : "Tap your fingers, strum sideways, or make a downstroke. Raise your hands for higher notes."
         : "The ensemble is playing. Enable your camera to guide it.",
     );
-  if ($("interpretation").value === "auto") {
+  if (interpretsImages() && state.running) {
     $("semantic-note").textContent = semantic.last_error
-      ? "AI context is uncertain. The gesture map remains active."
+      ? semantic.provider === "qwen"
+        ? semantic.last_error
+        : "AI context is uncertain. The gesture map remains active."
       : semantic.phase === "loading"
-        ? "Gesture map ready. Loading optional AI context…"
+        ? conducted
+          ? "Preparing Qwen's musical direction…"
+          : "Gesture map ready. Loading optional AI context…"
         : semantic.phase === "ready" && semantic.inference_ms
-          ? `Gesture map active · latest AI observation ${(semantic.inference_ms / 1000).toFixed(1)} s${semantic.stale ? " · too old to apply" : ""}.`
-          : "Gestures control the music directly; AI adds slower context.";
+          ? `${conducted ? "Qwen conducting" : "Gesture map active"} · latest observation ${(semantic.inference_ms / 1000).toFixed(1)} s${semantic.stale ? " · too old to apply" : ""}.`
+          : conducted
+            ? "Qwen shapes simultaneous parts from your whole scene."
+            : "Gestures control the music directly; AI adds slower context.";
   }
   $("diagnostics").textContent = [
     `Music: ${worker.phase} · semantics: ${semantic.phase}`,
+    `Music engine: ${worker.backend || $("music-backend").value} · ${worker.model || ($("music-backend").value === "local" ? "mrt2_small" : assets?.colab?.model || "-")}`,
+    `Interpretation: ${semantic.provider || "-"} · ${semantic.resolved_model || semantic.model || "-"}`,
+    `Latest API tokens: ${semantic.total_tokens ?? "-"}`,
     `Generation: ${state.metrics.frame_ms ?? "-"} ms / 40 ms frame`,
+    `Control sent → audio received: ${state.metrics.control_to_audio_ms ?? "-"} ms (before playback buffer)`,
+    `Network relay dropped frames: ${state.metrics.network_dropped_frames ?? "-"}`,
     `Playback queue: ${Math.round(audioStats.queuedMs || 0)} ms · gaps: ${audioStats.underruns || 0}`,
     `Engine overruns: ${state.metrics.overruns || 0} · dropped frames: ${state.metrics.dropped_frames || 0}`,
     `Playback catch-up: ${Math.round((audioStats.dropped || 0) / 48)} ms`,
     `Audio output: ${audioContext?.sampleRate || "-"} Hz`,
-    `Performed note cues: ${state.metrics.note_cues || 0} · last requested MIDI pitch: ${state.metrics.last_pitch ?? "-"}`,
+    `${conducted ? "Clocked harmonic" : "Performed note"} cues: ${state.metrics.note_cues || 0} · last requested MIDI pitch: ${state.metrics.last_pitch ?? "-"}`,
     `Direction source: ${source} · note guidance: ${state.metrics.note_guidance ?? "-"}`,
-    `Latest AI suggestion: ${music.last_semantic?.action || "-"} · confidence: ${music.last_semantic?.confidence ?? "-"}`,
+    `Latest AI suggestion: ${music.last_semantic?.description || music.last_semantic?.action || "-"} · confidence: ${music.last_semantic?.confidence ?? "-"}`,
+    `Tempo suggestion: ${music.tempo_cue || "hold"} · target: ${music.bpm} BPM`,
   ].join("\n");
   updateControls();
 }
@@ -266,7 +356,10 @@ $("play").onclick = async () => {
       update(
         await api("start", {
           palette: $("palette").value,
-          semantics: $("interpretation").value === "auto",
+          music_backend: $("music-backend").value,
+          semantics: interpretsImages(),
+          semantic_backend:
+            $("interpretation").value === "qwen" ? "qwen" : "local",
           gesture_mapping: $("interpretation").value !== "manual",
           action:
             $("interpretation").value === "manual"
@@ -305,14 +398,36 @@ $("palette").onchange = () => {
   $("style-label").textContent =
     `${$("palette").selectedOptions[0].text} / a little room to breathe`;
 };
+$("music-backend").onchange = () => {
+  const colab = $("music-backend").value === "colab";
+  const until = assets?.colab?.expires_at
+    ? new Date(assets.colab.expires_at * 1000).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+  $("music-location").textContent = colab ? "COLAB MUSIC" : "LOCAL MUSIC";
+  $("music-backend-note").textContent = colab
+    ? assets?.colab?.configured
+      ? `Music streams from Colab. The GPU session ends automatically at ${until}. Camera frames go only to your selected interpreter.`
+      : "Start the Colab live runner, then reload this page."
+    : "Music is generated on your Mac.";
+  updateControls();
+};
 $("interpretation").onchange = () => {
   const manual = $("interpretation").value === "manual";
+  const cloud = $("interpretation").value === "qwen";
   $("manual-actions").hidden = !manual;
+  $("camera-privacy").textContent = cloud
+    ? "Selected camera frames are sent to Qwen for interpretation. Only audio is recorded by Sway."
+    : "Video stays on your Mac. Only audio is recorded.";
   $("semantic-note").textContent = manual
-    ? "Choose the action; your movement still supplies the pulse."
+    ? "Choose an action; sustained movement can suggest a change in pace."
     : $("interpretation").value === "mapped"
-      ? "Hand trajectories map to musical actions, register, pulse, and intensity."
-      : "Gestures control the music directly; AI adds slower context.";
+      ? "Hand trajectories map to musical actions, register, and intensity. Tempo changes gradually."
+      : cloud
+        ? "Qwen chooses complementary parts, harmony and phrasing from the whole scene."
+        : "Gestures control the music directly; AI adds slower context.";
 };
 async function control(body) {
   if (!state?.running) return;
@@ -426,11 +541,11 @@ async function trackCamera(generation) {
     timestamp - lastCapture >= 500 &&
     video.readyState >= 2 &&
     state?.running &&
-    $("interpretation").value === "auto"
+    interpretsImages()
   ) {
     lastCapture = timestamp;
-    capture.width = 256;
-    capture.height = Math.round((256 * video.videoHeight) / video.videoWidth);
+    capture.width = 384;
+    capture.height = Math.round((384 * video.videoHeight) / video.videoWidth);
     capture
       .getContext("2d")
       .drawImage(video, 0, 0, capture.width, capture.height);
@@ -572,14 +687,33 @@ try {
   if (!response.ok) throw new Error("The local server is not ready.");
   const initial = await response.json();
   assets = initial.assets;
+  if (assets.colab?.model === "mrt2_small")
+    $("music-backend").querySelector('[value="colab"]').textContent =
+      "Colab / MRT2 Small (experimental)";
+  const requested = new URLSearchParams(location.search);
+  if (requested.get("music") === "colab" && assets.colab?.configured)
+    $("music-backend").value = "colab";
+  if (
+    (!requested.has("interpretation") ||
+      requested.get("interpretation") === "qwen") &&
+    assets.qwen?.configured
+  )
+    $("interpretation").value = "qwen";
+  else if (
+    ["mapped", "auto", "manual"].includes(requested.get("interpretation"))
+  )
+    $("interpretation").value = requested.get("interpretation");
+  else $("interpretation").value = "mapped";
+  $("music-backend").onchange();
+  $("interpretation").onchange();
   update(initial);
   connect();
-  if (!assets.music || !assets.vision)
+  if ((!assets.music && $("music-backend").value === "local") || !assets.vision)
     notice(
       "Local model files are missing. Run “uv run sway setup” in the Sway folder, then reload.",
       true,
     );
-  if (!assets.semantics) {
+  if (!assets.semantics && $("interpretation").value === "auto") {
     $("interpretation").value = "mapped";
     $("interpretation").onchange();
   }
