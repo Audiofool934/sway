@@ -15,6 +15,7 @@ dependencies = [
   "ai-edge-litert==2.2.0",
   "sentencepiece==0.2.2",
   "mlx-vlm==0.6.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+  "websockets==17.1",
 ]
 
 [project.scripts]

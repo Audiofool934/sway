@@ -65,6 +65,8 @@ def setup(include_semantics=True):
 
 
 def doctor():
+    from .qwen import qwen_status
+
     missing = [str(MRT_DIR / name) for name in MRT_FILES if not (MRT_DIR / name).is_file()]
     missing += [
         str(VISION_DIR / name) for name in VISION_ASSETS if not (VISION_DIR / name).is_file()
@@ -86,12 +88,50 @@ def doctor():
                 "versions": versions,
                 "missing_required_assets": missing,
                 "semantic_model": (SEMANTIC_DIR / "model.safetensors").is_file(),
+                "qwen": qwen_status(),
                 "free_disk_gb": round(shutil.disk_usage(ROOT).free / 1024**3, 1),
             },
             indent=2,
         )
     )
     return 1 if missing else 0
+
+
+def qwen_check():
+    """Verify the credential with synthetic images, never the user's camera."""
+    import base64
+    import io
+
+    from PIL import Image
+
+    from .qwen import QwenRequestError, QwenSemanticModel
+
+    model = None
+    try:
+        model = QwenSemanticModel()
+        output = io.BytesIO()
+        Image.new("RGB", (64, 64), "white").save(output, format="JPEG")
+        frame = base64.b64encode(output.getvalue()).decode()
+        started = time.monotonic()
+        result = model.interpret([frame, frame], [0, 500], {"hands": 0})
+        print(
+            json.dumps(
+                {
+                    "ok": True,
+                    "inference_ms": round((time.monotonic() - started) * 1000),
+                    "intent": result.model_dump(),
+                    **model.last_metrics,
+                },
+                indent=2,
+            )
+        )
+        return 0
+    except (OSError, ValueError, QwenRequestError) as exc:
+        print(json.dumps({"ok": False, "error": str(exc)}))
+        return 1
+    finally:
+        if model:
+            model.close()
 
 
 def render(args):
@@ -150,6 +190,7 @@ def main():
     install = sub.add_parser("setup", help="Download pinned models and browser dependencies")
     install.add_argument("--music-only", action="store_true", help="Skip the optional VLM")
     sub.add_parser("doctor", help="Check local assets, runtime versions, and disk space")
+    sub.add_parser("qwen-check", help="Make one Qwen vision request using synthetic blank images")
     serve = sub.add_parser("serve", help="Open the local instrument on loopback")
     serve.add_argument("--port", type=int, default=8765)
     audio = sub.add_parser("render", help="Generate a WAV without a camera or browser")
@@ -164,6 +205,8 @@ def main():
         setup(not args.music_only)
     elif args.command == "doctor":
         raise SystemExit(doctor())
+    elif args.command == "qwen-check":
+        raise SystemExit(qwen_check())
     elif args.command == "render":
         if not 50 <= args.tempo <= 180:
             parser.error("Tempo must be between 50 and 180 BPM")

@@ -39,6 +39,7 @@ class Gesture:
     open_fingers: float = 0
     horizontal: float = 0
     vertical: float = 0
+    position_x: float = 0.5
     reason: str = "Show your hands"
 
 
@@ -141,6 +142,7 @@ class GestureMapper:
         result.finger_speed = round(finger, 3)
         result.open_fingers = round(max(s[5] for s in summaries), 1)
         result.horizontal, result.vertical = round(x, 3), round(y, 3)
+        result.position_x = round(moving[4], 3)
         anchored_guitar = False
         if len(summaries) == 2:
             other = min(summaries, key=lambda s: math.hypot(s[0], s[1]))

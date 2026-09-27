@@ -19,6 +19,7 @@ class Rhythm:
     event: bool = False
     finger: int | None = None
     gesture: Gesture = field(default_factory=Gesture)
+    per_hand: dict[str, Gesture] = field(default_factory=dict)
 
 
 class PulseEstimator:
@@ -70,6 +71,8 @@ class MotionAnalyzer:
         self.total_accents = 0
         self.gestures = GestureMapper()
         self.gesture = Gesture()
+        self.hand_mappers = {side: GestureMapper() for side in ("Left", "Right")}
+        self.per_hand = {}
 
     def update(self, frame: MotionFrame) -> Rhythm:
         t = frame.timestamp_ms / 1000
@@ -81,6 +84,7 @@ class MotionAnalyzer:
             self.previous.clear()
         event = False
         finger = None
+        finger_sides = set()
         speeds = []
         present = set()
         for hand in frame.hands:
@@ -114,6 +118,8 @@ class MotionAnalyzer:
                     ):
                         event = True
                         finger = int(channel) if channel not in ("wrist", "sweep") else finger
+                        if channel not in ("wrist", "sweep"):
+                            finger_sides.add(hand.side)
                         self.last_accents[key] = t
                 self.previous[key] = (x, y, velocity, peak_velocity, stroke_distance, scale)
         self.previous = {key: val for key, val in self.previous.items() if key in present}
@@ -124,6 +130,17 @@ class MotionAnalyzer:
             event = self.pulse.observe(t)
             self.total_accents += int(event)
         self.gesture = self.gestures.update(frame, finger_event=event and finger is not None)
+        self.per_hand = {}
+        for side, mapper in self.hand_mappers.items():
+            hands = [hand for hand in frame.hands if hand.side == side]
+            observation = mapper.update(
+                MotionFrame(timestamp_ms=frame.timestamp_ms, hands=hands),
+                finger_event=side in finger_sides,
+            )
+            if hands:
+                # The worker processes unmirrored video; MediaPipe assumes a selfie image.
+                performer_side = "Left" if side == "Right" else "Right"
+                self.per_hand[performer_side] = observation
         self.pulse.expire(t)
         result = self.snapshot(len(frame.hands))
         result.event = event
@@ -138,4 +155,5 @@ class MotionAnalyzer:
             hands=hands,
             accents=self.total_accents,
             gesture=self.gesture,
+            per_hand=self.per_hand,
         )

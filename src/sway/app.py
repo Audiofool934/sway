@@ -14,6 +14,9 @@ from PIL import Image
 from pydantic import ValidationError
 
 from .config import MRT_DIR, MRT_FILES, RECORDINGS, ROOT, SEMANTIC_DIR, VISION_ASSETS, VISION_DIR
+from .flow import router as flow_router
+from .qwen import qwen_status
+from .remote_music import remote_music_status
 from .schema import ManualControl, MotionFrame, SemanticClip, SessionOptions
 from .session import Session
 
@@ -27,6 +30,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="Sway", lifespan=lifespan, docs_url=None, redoc_url=None)
+app.include_router(flow_router)
 
 
 def same_origin(origin, host):
@@ -58,6 +62,8 @@ async def status():
         "assets": {
             "music": not missing_music,
             "semantics": (SEMANTIC_DIR / "model.safetensors").is_file(),
+            "qwen": qwen_status(),
+            "colab": remote_music_status(),
             "vision": not missing_vision,
             "missing": missing_music + missing_vision,
         },
@@ -67,10 +73,20 @@ async def status():
 @app.post("/api/start")
 async def start(options: SessionOptions):
     assets = (await status())["assets"]
-    if not assets["music"] or (options.semantics and not assets["semantics"]):
+    if (options.music_backend == "local" and not assets["music"]) or (
+        options.semantics and options.semantic_backend == "local" and not assets["semantics"]
+    ):
         raise HTTPException(
             409, "Model files are missing. Run sway setup in the project directory."
         )
+    if (
+        options.semantics
+        and options.semantic_backend == "qwen"
+        and not assets["qwen"]["configured"]
+    ):
+        raise HTTPException(409, assets["qwen"]["error"])
+    if options.music_backend == "colab" and not assets["colab"]["configured"]:
+        raise HTTPException(409, assets["colab"]["error"])
     await session.start(options)
     return session.snapshot()
 
@@ -86,9 +102,10 @@ async def control(change: ManualControl):
     if change.action is not None:
         session.controller.manual(change.action)
     if change.tempo is not None:
-        session.controller.tempo = change.tempo
+        session.controller.set_tempo(change.tempo)
     if change.follow_motion is not None:
         session.controller.options.follow_motion = change.follow_motion
+        session.controller.tempo_cue = "hold"
     if change.camera_active is False:
         session.controller.last_seen = None
     return session.snapshot()

@@ -10,6 +10,8 @@ from pathlib import Path
 import numpy as np
 
 from .config import ACTION_STYLES, MRT_DIR, PALETTE_CONTEXT, PALETTES
+from .ensemble import ensemble_prompt
+from .schema import Arrangement
 
 
 def style_prompt(palette: str, action: str) -> str:
@@ -53,6 +55,8 @@ class StyleEncoder:
             .astype(np.float32)
         )
         self.cache[text] = embedding
+        if len(self.cache) > 256:
+            self.cache.pop(next(iter(self.cache)))
         return embedding
 
     def tokens(self, embedding: np.ndarray) -> np.ndarray:
@@ -113,14 +117,24 @@ class MusicEngine:
         if self.current is None:
             self.current = self.target.copy()
 
+    def set_arrangement(self, palette: str, arrangement: Arrangement, bpm: float):
+        self.apply_style(self.prepare_arrangement(palette, arrangement, bpm))
+
+    def prepare_arrangement(self, palette: str, arrangement: Arrangement, bpm: float):
+        # One description of simultaneous parts, not a blend between solo instruments.
+        return self.style.embed(ensemble_prompt(palette, arrangement, bpm)).copy()
+
+    def apply_style(self, embedding):
+        self.target = embedding
+        if self.current is None:
+            self.current = self.target.copy()
+
     def generate(
         self, notes: np.ndarray | None = None, drumless=False, note_guidance=1.0
     ) -> np.ndarray:
         mx = self.mx
         started = time.perf_counter()
-        if self.frame % 5 == 0:
-            self.current += 0.2 * (self.target - self.current)
-            self.style_tokens = self.style.tokens(self.current)
+        self.update_style()
         if notes is None:
             notes = np.full(128, -1, dtype=np.int32)
         cond, neg_style, neg_notes = conditioning(self.style_tokens, notes, drumless=drumless)
@@ -148,6 +162,12 @@ class MusicEngine:
         self.last_ms = (time.perf_counter() - started) * 1000
         return np.clip(samples, -1, 1)
 
+    def update_style(self):
+        """Share style blending between the local MLX and remote JAX engines."""
+        if self.frame % 5 == 0:
+            self.current += 0.2 * (self.target - self.current)
+            self.style_tokens = self.style.tokens(self.current)
+
 
 class NotePlanner:
     """A sparse repeating harmonic framework; the model supplies the arrangement."""
@@ -171,9 +191,10 @@ class NotePlanner:
         *,
         register: float = 0.5,
         guided: bool = False,
+        beat: float | None = None,
     ) -> np.ndarray:
         before = self.beat
-        self.beat += bpm / 60 * 0.04
+        self.beat = self.beat + bpm / 60 * 0.04 if beat is None else beat
         self.tick += 1
         chord = self.chords[int(self.beat // 16) % len(self.chords)]
         onsets = []

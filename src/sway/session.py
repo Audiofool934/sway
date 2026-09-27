@@ -15,7 +15,8 @@ import soundfile as sf
 from .config import RECORDINGS
 from .controller import MusicalController
 from .motion import MotionAnalyzer
-from .schema import MotionFrame, SemanticIntent, SessionOptions
+from .remote_music import remote_music_worker
+from .schema import EnsembleIntent, MotionFrame, SemanticIntent, SessionOptions
 from .workers import latest, music_worker, semantic_worker
 
 
@@ -53,7 +54,9 @@ class Session:
             self.stop_event = ctx.Event()
             self.controls = ctx.Queue(2)
             self.accents = ctx.Queue(32)
-            self.audio = ctx.Queue(8)
+            # Remote packets can arrive in a burst even though GPU generation is paced.
+            # The browser still applies its usual bounded playback latency and catch-up.
+            self.audio = ctx.Queue(32 if options.music_backend == "colab" else 8)
             self.status = ctx.Queue(32)
             self.clips = ctx.Queue(1)
             self.queues = [self.controls, self.accents, self.audio, self.status, self.clips]
@@ -63,7 +66,9 @@ class Session:
             }
             self.processes = [
                 ctx.Process(
-                    target=music_worker,
+                    target=remote_music_worker
+                    if options.music_backend == "colab"
+                    else music_worker,
                     name="sway-music",
                     args=(
                         self.controls,
@@ -80,7 +85,7 @@ class Session:
                     ctx.Process(
                         target=semantic_worker,
                         name="sway-semantics",
-                        args=(self.clips, self.status, self.stop_event),
+                        args=(self.clips, self.status, self.stop_event, options.semantic_backend),
                     )
                 )
             try:
@@ -132,7 +137,7 @@ class Session:
         self.controller.motion(rhythm, now)
         if self.running:
             latest(self.controls, self.controller.snapshot(now))
-            if rhythm.event:
+            if rhythm.event and not self.controller.conducted:
                 try:
                     self.accents.put_nowait({"time": now, "finger": rhythm.finger})
                 except queue.Full:
@@ -149,6 +154,13 @@ class Session:
         self.last_clip = now
         clip["received_at"] = now
         clip["motion"] = self.controller.snapshot(now)["rhythm"]
+        if self.controller.conducted:
+            clip["motion"]["current_music"] = {
+                "bpm": self.metrics.get("bpm", self.controller.tempo),
+                "tempo_target": self.controller.tempo,
+                "palette": self.controller.options.palette,
+                "arrangement": self.controller.arrangement.model_dump(),
+            }
         latest(self.clips, clip)
         return True
 
@@ -213,9 +225,13 @@ class Session:
                     self.workers[worker].update(update)
                     if "intent" in update:
                         age = now - update["received_at"]
-                        self.workers[worker]["stale"] = age > 6
-                        if age <= 6:
-                            self.controller.semantic(SemanticIntent(**update["intent"]), now)
+                        limit = 10 if self.controller.conducted else 6
+                        self.workers[worker]["stale"] = age > limit
+                        if age <= limit:
+                            intent_type = (
+                                EnsembleIntent if self.controller.conducted else SemanticIntent
+                            )
+                            self.controller.semantic(intent_type(**update["intent"]), now)
             except queue.Empty:
                 pass
             for process in self.processes:

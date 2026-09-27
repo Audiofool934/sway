@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from starlette.websockets import WebSocketDisconnect
 
+import sway.app as app_module
 from sway.app import app
 from sway.semantics import parse_intent
 
@@ -83,3 +84,61 @@ def test_parse_semantic_output():
     ):
         with pytest.raises(ValueError):
             parse_intent(text)
+
+
+def test_cloud_mode_does_not_require_local_vlm(client, monkeypatch):
+    async def ready_status():
+        return {"assets": {"music": True, "semantics": False, "qwen": {"configured": True}}}
+
+    options_seen = []
+
+    async def record_start(options):
+        options_seen.append(options)
+
+    monkeypatch.setattr(app_module, "status", ready_status)
+    monkeypatch.setattr(app_module.session, "start", record_start)
+    response = client.post("/api/start", json={"semantics": True, "semantic_backend": "qwen"})
+    assert response.status_code == 200
+    assert options_seen[0].semantic_backend == "qwen"
+    assert client.post("/api/start", json={"semantics": True}).status_code == 409
+
+
+def test_cloud_mode_rejects_missing_config_before_starting_workers(client, monkeypatch):
+    async def ready_status():
+        return {
+            "assets": {
+                "music": True,
+                "semantics": False,
+                "qwen": {"configured": False, "error": "Missing Qwen configuration"},
+            }
+        }
+
+    monkeypatch.setattr(app_module, "status", ready_status)
+    response = client.post("/api/start", json={"semantics": True, "semantic_backend": "qwen"})
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Missing Qwen configuration"
+
+
+def test_colab_music_does_not_require_local_music_assets(client, monkeypatch):
+    assets = {
+        "music": False,
+        "semantics": False,
+        "qwen": {"configured": True},
+        "colab": {"configured": True},
+    }
+
+    async def ready_status():
+        return {"assets": assets}
+
+    seen = []
+
+    async def record_start(options):
+        seen.append(options)
+
+    monkeypatch.setattr(app_module, "status", ready_status)
+    monkeypatch.setattr(app_module.session, "start", record_start)
+    options = {"music_backend": "colab", "semantics": True, "semantic_backend": "qwen"}
+    assert client.post("/api/start", json=options).status_code == 200
+    assert seen[0].music_backend == "colab"
+    assets["colab"] = {"configured": False, "error": "Colab connection is unavailable"}
+    assert client.post("/api/start", json=options).status_code == 409

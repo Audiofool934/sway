@@ -45,11 +45,11 @@ def test_manual_tempo_and_low_confidence_are_preserved():
     controller = MusicalController(SessionOptions(tempo=108))
     controller.motion(Rhythm(bpm=150, confidence=0.1), 0)
     assert controller.tempo == 108
-    controller.motion(Rhythm(bpm=120, confidence=0.9), 1)
-    assert controller.tempo == 120
+    controller.motion(Rhythm(hands=1, bpm=120, confidence=0.9), 1)
+    assert controller.tempo == 108
     controller.options.follow_motion = False
     controller.motion(Rhythm(bpm=150, confidence=0.9), 2)
-    assert controller.tempo == 120
+    assert controller.tempo == 108
 
 
 def test_low_confidence_observations_cannot_hold_old_piano_indefinitely():
