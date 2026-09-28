@@ -1,20 +1,27 @@
 # Documentation
 
-Sway development is paused as of September 27, 2026.
-Start with [project status and handoff](project-status.md).
-Gesture ensemble remains the intended direction, with Qwen as the visual interpreter and musical director.
+Sway development resumed on September 28, 2026 with a first-principles redesign.
+Start with the [V1 plan](v1-plan.md): what the instrument is, the rules it is built by, and the milestones.
 
 ## Current guides
 
-| Document                                        | Read it for                                                                 |
-| ----------------------------------------------- | --------------------------------------------------------------------------- |
-| [Project status and handoff](project-status.md) | Decisions, known issues, checked state, and resume priorities.              |
-| [First play](morning-test.md)                   | Starting the installed prototype, performing, recording, and stopping.      |
-| [Gesture ensemble](gesture-ensemble.md)         | The Qwen arrangement contract, timing, implementation, and measured limits. |
-| [Development](development.md)                   | Source map, checks, runtime constraints, and local data locations.          |
-| [Cloud setup](cloud-setup.md)                   | Private Qwen configuration and bounded Colab use with release verification. |
-| [Flow experiment](flow-mode.md)                 | Operating the retained passage and variation experiment.                    |
-| [Legacy gesture map](gesture-map.md)            | The older single-action vocabulary used for comparisons and motion hints.   |
+| Document                      | Read it for                                                                |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| [V1 plan](v1-plan.md)         | The instrument's design, defaults, architecture, milestones, and progress. |
+| [Development](development.md) | Source map, checks, runtime constraints, and local data locations.         |
+
+## The paused prototype
+
+These guides describe the Qwen and MRT2 prototype that V1 supersedes; its pages remain available for comparison.
+
+| Document                                         | Read it for                                                                 |
+| ------------------------------------------------ | --------------------------------------------------------------------------- |
+| [Project status at the pause](project-status.md) | Decisions, known issues, and checked state on September 27.                 |
+| [First play](morning-test.md)                    | Starting the legacy ensemble page, performing, recording, and stopping.     |
+| [Gesture ensemble](gesture-ensemble.md)          | The Qwen arrangement contract, timing, implementation, and measured limits. |
+| [Cloud setup](cloud-setup.md)                    | Private Qwen configuration and bounded Colab use with release verification. |
+| [Flow experiment](flow-mode.md)                  | Operating the retained passage and variation experiment.                    |
+| [Legacy gesture map](gesture-map.md)             | The older single-action vocabulary used for comparisons and motion hints.   |
 
 ## Validation records
 

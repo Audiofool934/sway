@@ -622,7 +622,10 @@ $("camera").onclick = async () => {
         notice(`Motion tracking stopped: ${data.error}`, true);
       } else if (data.type === "motion") {
         visionBusy = false;
-        const { type, ...motion } = data;
+        const { timestamp_ms, pose } = data;
+        // The server's motion contract predates world landmarks; keep its payload unchanged.
+        const hands = data.hands.map(({ side, points }) => ({ side, points }));
+        const motion = { timestamp_ms, hands, pose };
         drawHands(motion.hands, motion.pose);
         if (connected && socket.bufferedAmount < 64000)
           socket.send(JSON.stringify(motion));

@@ -12,7 +12,7 @@ self.onmessage = async ({ data }) => {
       hands = await Vision.HandLandmarker.createFromOptions(vision, {
         baseOptions: {
           modelAssetPath: "/models/hand_landmarker.task",
-          delegate: "CPU",
+          delegate: data.delegate === "GPU" ? "GPU" : "CPU",
         },
         runningMode: "VIDEO",
         numHands: 2,
@@ -46,9 +46,13 @@ self.onmessage = async ({ data }) => {
     self.postMessage({
       type: "motion",
       timestamp_ms: data.timestamp,
+      capture_ms: data.captureTime,
       hands: result.landmarks.map((points, index) => ({
         side: result.handedness[index][0].categoryName,
+        score: result.handedness[index][0].score,
         points: points.map(point),
+        // Metric 3D landmarks make hand-shape ratios independent of camera distance.
+        world: result.worldLandmarks[index]?.map(point) || [],
       })),
       pose: body?.landmarks[0]?.map(point) || [],
     });

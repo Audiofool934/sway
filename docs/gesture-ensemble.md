@@ -14,7 +14,7 @@ Flow remains a separate experiment; Gesture ensemble is the chosen direction whe
 
 ## Try it
 
-Open `http://127.0.0.1:8765/` and choose **Qwen conductor / ensemble**.
+Open `http://127.0.0.1:8765/ensemble.html` and choose **Qwen conductor / ensemble**.
 This is selected by default when the existing Qwen credential is configured.
 Choose the starting ensemble, press **Begin performance**, then enable the camera.
 Selected camera frames go to Qwen; credentials stay in the backend and recordings contain audio only.

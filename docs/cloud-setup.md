@@ -94,7 +94,7 @@ uv run sway serve
 It does not access the camera.
 A low-confidence arrangement is expected for blank images and confirms connectivity, not recognition quality.
 
-Open `http://127.0.0.1:8765`, choose **Qwen conductor / ensemble**, begin a performance, and enable the camera.
+Open `http://127.0.0.1:8765/ensemble.html`, choose **Qwen conductor / ensemble**, begin a performance, and enable the camera.
 The mode selector and camera notice make the cloud data flow visible.
 This mode is selected automatically when Qwen is configured.
 Cloud mode does not need the downloaded local Qwen model; `uv run sway setup --music-only` is sufficient for a new installation that will use cloud interpretation.
@@ -126,7 +126,7 @@ uv run python scripts/run_colab_live.py --gpu A100 --model mrt2_base --minutes 3
 
 Keep that runner active and wait for `READY`.
 It allocates one GPU, installs the pinned runtime, loads the model, and warms it up before exposing the connection to Sway.
-In another terminal, start or restart `uv run sway serve`, then open `http://127.0.0.1:8765/?music=colab&interpretation=qwen`.
+In another terminal, start or restart `uv run sway serve`, then open `http://127.0.0.1:8765/ensemble.html?music=colab&interpretation=qwen`.
 The URL selects **Colab / MRT2 Base (experimental)** and **Qwen conductor / ensemble** when both are configured.
 Press **Begin performance**, enable the camera, and allow camera access.
 

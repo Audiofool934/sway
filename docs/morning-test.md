@@ -12,7 +12,7 @@ cd ~/Projects/sway
 uv run --locked sway serve
 ```
 
-Leave Terminal open and open **http://127.0.0.1:8765** in Chrome.
+Leave Terminal open and open **http://127.0.0.1:8765/ensemble.html** in Chrome.
 Start with headphones at a comfortable volume.
 If the page says another performance window is open, close that window and reload.
 

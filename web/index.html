@@ -3,260 +3,157 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#eeeee5" />
-    <title>Sway · Gesture ensemble</title>
+    <title>Sway</title>
+    <meta
+      name="description"
+      content="An instrument you play with your hands, kept in time and in key."
+    />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/instrument/style.css" />
   </head>
   <body>
-    <header class="masthead">
-      <a class="brand" href="/" aria-label="Sway home"
-        >sway<span class="brand-mark">∿</span></a
-      >
-      <a class="tagline" href="/flow.html">Try Flow mode ↗</a>
-      <span class="local"
-        ><i></i> <span id="music-location">LOCAL MUSIC</span></span
-      >
-    </header>
-    <main>
-      <div class="heading">
-        <div>
-          <p class="eyebrow">THE PERFORMANCE ROOM</p>
-          <h1>Music, in your hands.</h1>
-        </div>
-        <p class="intro">
-          Bring an idea with each hand.<br />
-          Let the ensemble find the music.
-        </p>
-      </div>
-      <div class="workspace">
-        <section class="instrument" aria-label="Live music">
-          <div class="stage-top">
-            <span class="eyebrow">YOUR COMPOSITION</span
-            ><span id="phase" class="phase">Ready when you are</span>
-          </div>
-          <div class="sound-field">
-            <div class="measure">
-              <span id="elapsed">00:00</span
-              ><span id="phrase">WAITING FOR THE FIRST NOTE</span>
-            </div>
-            <canvas
-              id="waveform"
-              aria-label="Waveform of the generated audio"
-            ></canvas>
-            <div class="field-caption">
-              <span id="style-label">Chamber / a little room to breathe</span
-              ><span>48 kHz · STEREO</span>
-            </div>
-          </div>
-          <div class="readouts">
-            <div>
-              <span class="label">PULSE</span>
-              <p><span id="bpm">108</span><small> BPM</small></p>
-              <span id="pulse-note" class="readout-note">Starting tempo</span>
-            </div>
-            <div>
-              <span class="label">MUSICAL DIRECTION</span>
-              <p id="action-readout">Open</p>
-              <span id="action-note" class="readout-note"
-                >Room for interpretation</span
-              >
-            </div>
-            <div>
-              <span class="label">MOVEMENT</span>
-              <p id="motion-readout">Waiting</p>
-              <span class="energy-track"><i id="energy"></i></span>
-            </div>
-          </div>
-          <div class="transport">
-            <button id="play" class="primary">
-              <span aria-hidden="true">▶</span> Begin performance
-            </button>
-            <button id="record" class="record" disabled>
-              <i></i><span>Record</span>
-            </button>
-            <label class="volume"
-              >Volume<input
-                id="volume"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value="0.35"
-                aria-label="Playback volume"
-            /></label>
-          </div>
-          <div id="notice" class="notice" role="status" aria-live="polite">
-            Start a piece with or without your camera.
-          </div>
-          <a id="download" class="download" hidden>↓ Save your recording</a>
-          <section
-            id="ensemble-feedback"
-            class="ensemble-feedback"
-            aria-label="Qwen arrangement"
-            hidden
-          >
-            <div class="section-top">
-              <span class="label">QWEN'S ARRANGEMENT</span>
-              <span id="ensemble-status" class="readout-note"
-                >Listening for inspiration</span
-              >
-            </div>
-            <ul id="ensemble-parts" class="ensemble-parts"></ul>
-            <p id="ensemble-description" class="readout-note"></p>
-          </section>
-          <section class="gesture-feedback" aria-label="Gesture mapping">
-            <div>
-              <span class="label">MOVEMENT SUGGESTS</span
-              ><strong id="gesture-readout">Waiting</strong
-              ><span id="gesture-reason" class="readout-note"
-                >Show your hands</span
-              >
-            </div>
-            <div>
-              <span id="register-label" class="label"
-                >HAND HEIGHT → REGISTER</span
-              ><strong id="register-readout">Middle</strong
-              ><meter
-                id="register-meter"
-                min="0"
-                max="1"
-                value="0.5"
-                aria-label="Requested musical register"
-              ></meter
-              ><span id="register-note" class="readout-note"
-                >Lower notes · higher notes</span
-              >
-            </div>
-          </section>
-        </section>
+    <main id="stage" class="stage" data-state="intro">
+      <video id="video" playsinline muted></video>
+      <div class="shade" aria-hidden="true"></div>
+      <canvas id="overlay" aria-hidden="true"></canvas>
 
-        <aside class="controls" aria-label="Performance controls">
-          <section class="camera-card">
-            <div class="section-top">
-              <h2>Your movement</h2>
-              <span id="camera-state">CAMERA OFF</span>
-            </div>
-            <div class="camera-view">
-              <video id="video" autoplay muted playsinline></video
-              ><canvas id="landmarks"></canvas>
-              <div id="camera-empty">
-                <span class="hand-symbol" aria-hidden="true">⌁</span>
-                <p>Make room for your hands.</p>
-                <small>Frame your hands and upper body.</small>
-              </div>
-            </div>
-            <button id="camera" class="secondary">
-              Enable camera <span aria-hidden="true">↗</span>
-            </button>
-            <p id="camera-privacy" class="privacy">
-              Video stays on your Mac. Only audio is recorded.
-            </p>
-          </section>
-          <section class="settings">
-            <details class="gesture-guide" open>
-              <summary>Give the music ideas</summary>
-              <dl>
-                <dt>Two different movements</dt>
-                <dd>Inspire parts together</dd>
-                <dt>Finger taps / strums / hits</dt>
-                <dd>Suggest musical textures</dd>
-                <dt>Posture, expression, space</dt>
-                <dd>Give Qwen the bigger picture</dd>
-                <dt>Gradually faster / slower</dt>
-                <dd>Suggest a change in pace</dd>
-                <dt>Rest your hands</dt>
-                <dd>Let the ensemble continue</dd>
-              </dl>
-              <p>
-                With Qwen conducting, your movements are inspiration. It chooses
-                the arrangement; the music keeps a shared pulse. Give a new idea
-                a few seconds to develop.
-              </p>
-            </details>
-            <label class="setting-label" for="palette">THE ENSEMBLE</label>
-            <select id="palette">
-              <option value="chamber">Chamber</option>
-              <option value="nocturne">Nocturne</option>
-              <option value="groove">Slow groove</option>
-            </select>
-            <p id="palette-note" class="setting-note">
-              Warm piano, plucked strings, delicate percussion.
-            </p>
-            <label class="setting-label" for="music-backend"
-              >GENERATE MUSIC</label
-            >
-            <select id="music-backend">
-              <option value="local">On this Mac / MRT2 Small</option>
-              <option value="colab">Colab / MRT2 Base (experimental)</option>
-            </select>
-            <p id="music-backend-note" class="setting-note">
-              Music is generated on your Mac.
-            </p>
-            <label class="setting-label" for="interpretation"
-              >INTERPRET MOVEMENT</label
-            >
-            <select id="interpretation">
-              <option value="qwen">Qwen conductor / ensemble</option>
-              <option value="mapped">Gesture map only</option>
-              <option value="auto">
-                Gesture map + local AI (experimental)
-              </option>
-              <option value="manual">Choose a musical action</option>
-            </select>
-            <div id="manual-actions" hidden>
-              <label class="sr-only" for="action">Musical action</label
-              ><select id="action">
-                <option value="unknown">Open ensemble</option>
-                <option value="piano">Air piano</option>
-                <option value="strum">Air guitar / strumming</option>
-                <option value="strike">Air drums / percussion</option>
-                <option value="sustain">Flowing / bowed</option>
-                <option value="still">Still / spacious</option>
-              </select>
-            </div>
-            <p id="semantic-note" class="setting-note">
-              Qwen shapes an ensemble from your hands, body, and the whole
-              scene.
-            </p>
-            <label class="toggle"
-              ><span>Allow tempo suggestions</span
-              ><input id="follow" type="checkbox" checked /><span
-                class="switch"
-                aria-hidden="true"
-              ></span
-            ></label>
-            <label class="tempo-label" for="tempo"
-              ><span>Starting tempo</span
-              ><output id="tempo-value">108 BPM</output></label
-            >
-            <input
-              id="tempo"
-              type="range"
-              min="50"
-              max="180"
-              value="108"
-              aria-label="Starting tempo"
-            />
-          </section>
-        </aside>
-      </div>
-      <footer>
-        <p>
-          <span class="foot-mark">∿</span> Move naturally. The music has a
-          memory.
+      <header class="hud">
+        <div class="brand">
+          <span class="wordmark">Sway</span>
+          <span id="world" class="world"></span>
+        </div>
+        <div class="harmony" aria-hidden="true">
+          <div class="chord">
+            <span id="chord">Am</span><span id="next-chord" class="next"></span>
+          </div>
+          <div class="meter">
+            <div id="beats" class="beats"><i></i><i></i><i></i><i></i></div>
+            <span id="level-name" class="level-name"></span>
+          </div>
+        </div>
+        <div class="status">
+          <span id="lead-status" class="chip lead">Lead hand</span>
+          <span id="band-status" class="chip band">Band hand</span>
+          <button id="camera-toggle" class="chip action" type="button">
+            Turn camera on
+          </button>
+          <button id="end-piece" class="chip action" type="button" hidden>
+            End piece
+          </button>
+        </div>
+      </header>
+
+      <section id="intro" class="card intro" aria-labelledby="intro-title">
+        <h1 id="intro-title">Play music with your hands</h1>
+        <p class="lede">
+          You decide when and how. Sway keeps every note in time and in key, and
+          a band follows your lead.
         </p>
-        <details>
-          <summary>Session details</summary>
-          <div id="diagnostics">Connecting to the local instrument…</div>
-          <p>
-            Pulse is the generator's timing guide; the generated beat may still
-            drift.<br />
-            Qwen develops your ideas over several seconds.
-          </p>
-        </details>
+        <div class="legend">
+          <div class="role lead">
+            <h2>
+              <span class="dot"></span
+              ><span><span id="lead-name">Right</span> hand · your voice</span>
+            </h2>
+            <ul>
+              <li><b>Height</b> picks the note on the ladder</li>
+              <li>
+                <b>Pinch</b> plays it; move while pinched to draw a melody
+              </li>
+            </ul>
+          </div>
+          <div class="role band">
+            <h2>
+              <span class="dot"></span
+              ><span><span id="band-name">Left</span> hand · the band</span>
+            </h2>
+            <ul>
+              <li><b>Height</b> sets the energy, from air to peak</li>
+              <li><b>Fist</b> cuts the band; open it to bring them back</li>
+              <li><b>Pinch and hold</b> loops the last four bars you played</li>
+            </ul>
+          </div>
+        </div>
+        <p class="both">Hold two fists together to end the piece.</p>
+        <div class="settings">
+          <label>
+            Lead hand
+            <select id="lead-side">
+              <option value="Right">Right</option>
+              <option value="Left">Left</option>
+            </select>
+          </label>
+          <label>
+            Timing help
+            <select id="grid">
+              <option value="0.25">Tight (sixteenths)</option>
+              <option value="0.5">Loose (eighths)</option>
+              <option value="0">Off</option>
+            </select>
+          </label>
+        </div>
+        <div class="actions">
+          <button id="start" class="primary" type="button">
+            Start playing
+          </button>
+          <button id="learn" class="secondary" type="button">
+            Learn to play
+          </button>
+          <button id="camera-intro" class="secondary" type="button">
+            Turn camera on
+          </button>
+        </div>
+        <p class="keys">
+          No camera? Mouse height picks the note and clicking plays it. Keys 1
+          to 5 set the energy, hold Space to cut, hold L to loop, and hold E to
+          end.
+        </p>
+        <p id="camera-error" class="error" role="alert" hidden></p>
+      </section>
+
+      <section
+        id="lesson"
+        class="card lesson"
+        hidden
+        aria-labelledby="lesson-title"
+      >
+        <p id="lesson-step" class="eyebrow"></p>
+        <h1 id="lesson-title"></h1>
+        <p id="lesson-body" class="lede"></p>
+        <ul id="lesson-details" class="lesson-details" hidden></ul>
+        <div id="lesson-actions" class="actions"></div>
+      </section>
+
+      <section
+        id="finished"
+        class="card finished"
+        hidden
+        aria-labelledby="finished-title"
+      >
+        <h1 id="finished-title">That's a piece</h1>
+        <p id="finished-summary" class="lede"></p>
+        <div id="downloads" class="downloads"></div>
+        <div class="actions">
+          <button id="again" class="primary" type="button">Play again</button>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p id="hint" class="hint" aria-live="polite"></p>
+        <div class="loops">
+          <div id="loop-chips" class="loop-chips"></div>
+          <button id="undo-loop" class="chip action" type="button" hidden>
+            Undo loop
+          </button>
+        </div>
       </footer>
+
+      <aside id="details" class="details" hidden aria-label="Timing details">
+        <h2>Timing</h2>
+        <dl id="details-list"></dl>
+        <p>Press D to hide.</p>
+      </aside>
     </main>
-    <script type="module" src="/app.js"></script>
+    <script type="module" src="/instrument/main.js"></script>
   </body>
 </html>

@@ -1,7 +1,8 @@
 # Development
 
-The project is paused; [project status](project-status.md) records the intended direction and unresolved product behavior.
-This guide covers the saved implementation rather than proposing new work.
+Development resumed on September 28, 2026; the [V1 plan](v1-plan.md) defines the instrument and its milestones.
+The V1 instrument is browser code in `web/instrument/`; the Python server only serves its files.
+The Python pipeline below serves the legacy ensemble and Flow pages.
 
 ## Runtime
 
@@ -10,12 +11,14 @@ Use `uv sync --locked` and retain the pinned dependencies.
 The MRT2 MLX export failed to import under MLX 0.32.2 and loaded under the pinned 0.31.2 during the original validation.
 Do not treat a dependency upgrade as routine cleanup without rerunning a real model workload.
 
-`uv run --locked sway setup --music-only` installs music assets, tracking assets, and browser dependencies for cloud Qwen use.
+`uv run --locked sway setup --instrument-only` installs the tracking assets and browser dependencies that V1 needs.
+`uv run --locked sway setup --music-only` also installs MRT2 music assets for the legacy pages.
 Plain `sway setup` also downloads the optional local Qwen model.
-`uv run --locked sway doctor` checks local assets and credential configuration without calling Qwen.
+`uv run --locked sway doctor` checks local assets and credential configuration without calling Qwen; only missing V1 assets make it fail.
 `uv run --locked sway qwen-check` makes one billable request using synthetic blank images and checks connectivity only.
 
 The server listens on `127.0.0.1:8765` by default.
+V1 is served at `/`, the legacy Gesture ensemble at `/ensemble.html`, and Flow at `/flow.html`.
 Gesture ensemble supports one performance window at a time.
 End the performance, turn off its camera, and stop the server with Ctrl-C when finished.
 Colab runners have a separate lifecycle; use the [cloud guide](cloud-setup.md) to stop and verify those allocations.
@@ -27,7 +30,7 @@ uv run --locked pytest -q
 node --test tests/*.test.js
 uv run --locked ruff check src tests scripts
 uv run --locked ruff format --check src tests scripts
-node_modules/.bin/prettier --check 'web/*.{js,css,html}'
+node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,css}'
 git diff --check
 ```
 
@@ -41,6 +44,27 @@ See the [validation index](README.md#validation-records) for hardware and browse
 
 ## Source map
 
+The V1 instrument:
+
+| Path                                                      | Responsibility                                                                     |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `web/index.html`, `web/instrument/style.css`              | The instrument page and its styles.                                                |
+| `web/instrument/theory.js`                                | Pitches, chords, and the V1 musical world.                                         |
+| `web/instrument/clock.js`                                 | Beat and time conversion, swing, and latency-compensated grid alignment.           |
+| `web/instrument/hands.js`                                 | Landmark smoothing, pinch and fist detection, and stable hand roles.               |
+| `web/instrument/controls.js`                              | Hand features to instrument events, shared by camera, pointer, and scripted input. |
+| `web/instrument/band.js`, `looper.js`                     | The band's parts per energy level, and retrospective loop capture.                 |
+| `web/instrument/synth.js`, `engine.js`                    | Web Audio instruments and mix, and the lookahead scheduler.                        |
+| `web/instrument/camera.js`, `web/vision-worker.js`        | Camera capture with capture times, and MediaPipe tracking off the main thread.     |
+| `web/instrument/overlay.js`, `main.js`                    | The drawn instrument, heads-up display, and page wiring.                           |
+| `web/instrument/tutorial.js`, `coach.js`                  | Lesson charts, judging, and timing calibration; the setup and lesson flow.         |
+| `web/instrument/midi.js`, `wav.js`, `recorder-worklet.js` | MIDI and WAV encoding, and recording the mix while a piece plays.                  |
+| `tests/instrument-*.test.js`                              | Timing, harmony, hand, control, band, looper, export, and tutorial checks.         |
+
+In the browser console, `window.sway` exposes the engine, controls, and a scripted `input()` that feeds the same features as a hand.
+
+The legacy Python pipeline:
+
 | Path                                                     | Responsibility                                                                      |
 | -------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `src/sway/config.py`                                     | Local paths, pinned model revisions, and starting palettes.                         |
@@ -53,13 +77,13 @@ See the [validation index](README.md#validation-records) for hardware and browse
 | `src/sway/app.py`, `cli.py`                              | Local HTTP/WebSocket interface, setup, diagnostics, and offline renders.            |
 | `src/sway/remote_music.py`, `remote_server.py`           | Private live music protocol and Colab service.                                      |
 | `src/sway/flow*.py`                                      | Saved passages, Flow protocol, source transformations, and remote service.          |
-| `web/app.js`, `vision-worker.js`, `audio-*.js`           | Gesture ensemble controls, tracking, and playback.                                  |
+| `web/ensemble.html`, `app.js`, `audio-*.js`              | Gesture ensemble page, controls, and playback.                                      |
 | `web/flow*`                                              | Flow interface, hand controls, timeline, and recording.                             |
 | `scripts/run_colab_trial.py`, `run_colab_demon_trial.py` | Bounded evaluation runners.                                                         |
 | `scripts/run_colab_live.py`, `colab_live_bootstrap.py`   | Bounded live GPU service and startup.                                               |
 | `tests/`                                                 | Python and JavaScript regression checks.                                            |
 
-The current [ensemble guide](gesture-ensemble.md) explains how these components compose.
+The [ensemble guide](gesture-ensemble.md) explains how these legacy components compose.
 The separate [Flow guide](flow-mode.md) documents its different playback and generation model.
 
 ## Data and evidence

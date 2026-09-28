@@ -1,48 +1,30 @@
 # Sway
 
-**A generative instrument, inspired by movement.**
+**An instrument you play with your hands.**
 
-**Development paused on September 27, 2026.**
-Start with the [project status and handoff](docs/project-status.md) for decisions, known problems, validation, and where to resume.
-The [documentation index](docs/README.md) separates operating guides from historical experiments and proposals.
+Development resumed on September 28, 2026 with a first-principles redesign.
+The [V1 plan](docs/v1-plan.md) defines the instrument, the rules it is built by, and the milestones.
+The [documentation index](docs/README.md) separates current guides from the paused experiments that came before.
 
-Sway explores music shaped by hands, body movement, and visual context.
-The person supplies inspiration; the models take responsibility for the musical result.
-Precise gestures and an exact human-supplied beat should not be prerequisites.
-The prototype does not yet deliver consistently clear connections between movement and sound.
+Someone with no musical training should be able to make a piece they want to keep.
+One hand plays a melody on a pitch ladder; the other sets the band's energy, cuts it, and loops what was played.
+Sway keeps every note in time and in key, and all real-time sound is synthesized in the browser, so no network request or large model sits between a gesture and its sound.
+V1 is in progress: the instrument, a tutorial with setup and four lessons, recording, and MIDI export work with scripted input, and the first play test with real hands is next.
 
-## What is implemented
-
-| Mode               | Pipeline                                                                                            | Status                                                                                      |
-| ------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Gesture ensemble   | MediaPipe observations and camera images → Qwen3.8-Max → arrangement and musical clock → MRT2 audio | Main direction when work resumes; Qwen remains the chosen interpreter and musical director. |
-| Flow               | Saved passage → local playback and hand controls → optional DEMON variations on Colab               | Retained experiment; further product development is deferred.                               |
-| Legacy comparisons | Gesture map, optional local Qwen, or manually selected musical action → MRT2                        | Available for diagnostics and comparison.                                                   |
-
-Gesture ensemble sends all requested parts into one generated stereo mix.
-Independent instrument stems, exact audible tempo, and reliable drum-versus-strum interpretation are unresolved.
-Qwen responses took 4.68-6.49 seconds in the recorded ensemble test; physical gesture-to-sound latency was not measured.
-Playback gaps also remain unresolved.
-See the [ensemble guide](docs/gesture-ensemble.md) for the implementation and evidence behind these limits.
-
-## Run the installed prototype
+## Play
 
 On the configured development Mac:
 
 ```bash
 cd ~/Projects/sway
-uv run --locked sway doctor
 uv run --locked sway serve
 ```
 
-Open **http://127.0.0.1:8765/?interpretation=qwen** for Gesture ensemble.
-Choose **Qwen conductor / ensemble**, press **Begin performance**, then enable the camera.
-The [first-play guide](docs/morning-test.md) explains controls and recording.
-Press **End performance**, turn off the camera, and stop the server with Ctrl-C when finished.
-
-Music defaults to local MRT2 Small, so a Colab GPU is optional.
-Qwen interpretation uses the configured cloud account.
-The pause checkpoint leaves the local server stopped and Colab with no active assignments.
+Open **http://127.0.0.1:8765** in Chrome, turn the camera on, and press **Learn to play** for setup and four short lessons, or **Start playing** to go straight to a piece.
+Without a camera, the mouse plays the lead and the keyboard steers the band; the start screen lists the keys.
+Two fists or **End piece** finish a piece, which offers its audio, MIDI, and a performance file to save.
+Press D while playing to see measured tracking and audio timing.
+Stop the server with Ctrl-C when finished.
 
 For a fresh checkout, use an Apple Silicon Mac, Python 3.12 through [uv](https://docs.astral.sh/uv/), Node.js/npm, and a recent Chrome browser:
 
@@ -50,19 +32,31 @@ For a fresh checkout, use an Apple Silicon Mac, Python 3.12 through [uv](https:/
 git clone https://github.com/Audiofool934/sway.git
 cd sway
 uv sync --locked
-uv run --locked sway setup --music-only
+uv run --locked sway setup --instrument-only
 uv run --locked sway doctor
 ```
 
-Setup downloads the pinned music and tracking assets and installs browser dependencies.
-Configure Qwen through the [private credential instructions](docs/cloud-setup.md#configure-qwen-privately), then run `uv run --locked sway serve`.
-Use `sway setup` without `--music-only` only when also installing the optional local vision-language model.
-The prototype was developed on an M2 Pro with 16 GB of unified memory.
+`--instrument-only` installs hand tracking and browser dependencies, which is all V1 needs.
+Plain `sway setup --music-only` also downloads MRT2 for the legacy pages, and `sway setup` adds the optional local vision-language model.
+
+## Earlier experiments
+
+The paused prototypes remain available for comparison.
+
+| Page             | Pipeline                                                                                            | Status                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `/ensemble.html` | MediaPipe observations and camera images → Qwen3.8-Max → arrangement and musical clock → MRT2 audio | Superseded by V1; the [ensemble guide](docs/gesture-ensemble.md) records its limits. |
+| `/flow.html`     | Saved passage → local playback and hand controls → optional DEMON variations on Colab               | Retained experiment; the [Flow guide](docs/flow-mode.md) describes it.               |
+
+In the ensemble prototype, a gesture took roughly 8 to 14 seconds to change what was heard, all parts came out as one stereo mix, and drumming could be read as strumming.
+The [project status](docs/project-status.md) records that prototype's state at the pause.
+The [first-play guide](docs/morning-test.md) explains how to run it, and it needs `sway setup --music-only` and a configured Qwen credential.
 
 ## Data and compute
 
 The server listens on loopback.
-Qwen mode sends selected camera images and motion observations to Alibaba; recordings contain generated audio only.
+The V1 instrument sends nothing off the machine: tracking and sound both run in the browser.
+In the legacy ensemble page, Qwen mode sends selected camera images and motion observations to Alibaba; recordings contain generated audio only.
 The Qwen credential stays in backend configuration outside the repository and browser.
 Colab receives musical controls or Flow source audio, depending on the mode, without camera images or the Qwen key.
 
@@ -70,8 +64,7 @@ Models, recordings, generated passages, and experiment outputs are ignored by Gi
 A clone does not include them.
 See [data locations](docs/development.md#data-and-evidence) before moving or archiving the checkout.
 
-The [cloud guide](docs/cloud-setup.md) covers bounded MRT2 and DEMON sessions, setup, and release verification.
-The separate Flow page is **http://127.0.0.1:8765/flow.html**; its [guide](docs/flow-mode.md) describes the retained experiment.
+The [cloud guide](docs/cloud-setup.md) covers the legacy pages' bounded MRT2 and DEMON sessions, setup, and release verification.
 
 ## Development
 
@@ -80,19 +73,22 @@ uv run --locked pytest -q
 node --test tests/*.test.js
 uv run --locked ruff check src tests scripts
 uv run --locked ruff format --check src tests scripts
-node_modules/.bin/prettier --check 'web/*.{js,css,html}'
+node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,css}'
 git diff --check
 ```
 
-At the pause checkpoint, all 89 Python tests and 18 JavaScript tests passed, along with lint and formatting checks.
-These checks do not establish musical quality, recognition accuracy, or gap-free physical playback.
+The JavaScript tests cover the V1 instrument's timing, harmony, hand tracking, controls, band, and looper.
+These checks do not establish musical quality, recognition accuracy, or how the instrument feels to play.
 The [development guide](docs/development.md) maps the source, runtime, and evidence locations.
 
 ## Models and attribution
 
+V1 synthesizes its sound directly and uses only MediaPipe hand tracking.
+The legacy pages use the following models.
+
 - [Magenta RealTime 2](https://github.com/magenta/magenta-realtime): continuous music generation and style resources.
 - [Qwen](https://www.alibabacloud.com/help/en/model-studio/vision): cloud visual interpretation and musical direction.
-- [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js): browser hand and pose tracking.
+- [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js): browser hand and pose tracking, used by V1 and the legacy pages.
 - [DEMON](https://github.com/daydreamlive/DEMON): experimental Flow generation and source transformation on Colab.
 - [Qwen3.5-0.8B via MLX Community](https://huggingface.co/mlx-community/Qwen3.5-0.8B-4bit): optional local interpretation for the older comparison mode.
 

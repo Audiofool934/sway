@@ -31,18 +31,23 @@ def require_mac():
         raise SystemExit("This first prototype requires an Apple Silicon Mac and Python 3.12.")
 
 
-def setup(include_semantics=True):
+def setup(include_music=True, include_semantics=True):
     require_mac()
     import httpx
     from huggingface_hub import snapshot_download
 
     DATA.mkdir(parents=True, exist_ok=True)
-    needed = 6 if include_semantics and not (SEMANTIC_DIR / "model.safetensors").exists() else 2
+    needed = 1
+    if include_music:
+        needed = 2
+    if include_semantics and not (SEMANTIC_DIR / "model.safetensors").exists():
+        needed = 6
     if shutil.disk_usage(DATA).free < needed * 1024**3:
         raise SystemExit(f"Setup needs at least {needed} GB of free space, including a reserve.")
-    snapshot_download(
-        MRT_REPO, revision=MRT_REVISION, local_dir=MRT_DIR, allow_patterns=list(MRT_FILES)
-    )
+    if include_music:
+        snapshot_download(
+            MRT_REPO, revision=MRT_REVISION, local_dir=MRT_DIR, allow_patterns=list(MRT_FILES)
+        )
     if include_semantics:
         snapshot_download(SEMANTIC_REPO, revision=SEMANTIC_REVISION, local_dir=SEMANTIC_DIR)
     VISION_DIR.mkdir(parents=True, exist_ok=True)
@@ -67,13 +72,14 @@ def setup(include_semantics=True):
 def doctor():
     from .qwen import qwen_status
 
-    missing = [str(MRT_DIR / name) for name in MRT_FILES if not (MRT_DIR / name).is_file()]
-    missing += [
+    # The V1 instrument needs only hand tracking; MRT2 serves the legacy ensemble page.
+    missing = [
         str(VISION_DIR / name) for name in VISION_ASSETS if not (VISION_DIR / name).is_file()
     ]
     vendor = ROOT / "node_modules" / "@mediapipe" / "tasks-vision" / "vision_bundle.js"
     if not vendor.exists():
         missing.append(str(vendor))
+    legacy = [str(MRT_DIR / name) for name in MRT_FILES if not (MRT_DIR / name).is_file()]
     versions = {}
     for package in ("mlx", "mlx-vlm", "ai-edge-litert", "fastapi"):
         try:
@@ -87,6 +93,7 @@ def doctor():
                 "python": platform.python_version(),
                 "versions": versions,
                 "missing_required_assets": missing,
+                "missing_legacy_music_assets": legacy,
                 "semantic_model": (SEMANTIC_DIR / "model.safetensors").is_file(),
                 "qwen": qwen_status(),
                 "free_disk_gb": round(shutil.disk_usage(ROOT).free / 1024**3, 1),
@@ -188,7 +195,13 @@ def main():
     parser = argparse.ArgumentParser(description="Sway - a generative theremin")
     sub = parser.add_subparsers(dest="command", required=True)
     install = sub.add_parser("setup", help="Download pinned models and browser dependencies")
-    install.add_argument("--music-only", action="store_true", help="Skip the optional VLM")
+    choice = install.add_mutually_exclusive_group()
+    choice.add_argument("--music-only", action="store_true", help="Skip the optional VLM")
+    choice.add_argument(
+        "--instrument-only",
+        action="store_true",
+        help="Install only hand tracking and browser dependencies for the V1 instrument",
+    )
     sub.add_parser("doctor", help="Check local assets, runtime versions, and disk space")
     sub.add_parser("qwen-check", help="Make one Qwen vision request using synthetic blank images")
     serve = sub.add_parser("serve", help="Open the local instrument on loopback")
@@ -202,7 +215,10 @@ def main():
     audio.add_argument("--seed", type=int, default=7)
     args = parser.parse_args()
     if args.command == "setup":
-        setup(not args.music_only)
+        setup(
+            include_music=not args.instrument_only,
+            include_semantics=not (args.music_only or args.instrument_only),
+        )
     elif args.command == "doctor":
         raise SystemExit(doctor())
     elif args.command == "qwen-check":

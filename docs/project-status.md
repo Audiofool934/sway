@@ -1,8 +1,9 @@
 # Project status and handoff
 
 Updated: September 27, 2026, Asia/Singapore.
-Status: paused at Everett's request.
-This is the starting point for returning to Sway; the [documentation index](README.md) links the implementation guides and dated evidence.
+Status: historical record of the pause.
+Development resumed on September 28 with a first-principles redesign; the [V1 plan](v1-plan.md) is now the starting point.
+This note records the Qwen and MRT2 prototype as it stood at the pause, which remains available at `/ensemble.html`.
 
 ## Product direction
 
