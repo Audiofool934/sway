@@ -129,7 +129,8 @@ export class Camera {
         [image],
       );
     } catch (error) {
-      this.busy = false;
+      if (epoch !== this.epoch) return;
+      this.stop();
       this.onStatus("error", `Camera processing stopped: ${error.message}`);
     }
   }

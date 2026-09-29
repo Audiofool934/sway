@@ -75,6 +75,16 @@ test("without a camera, setup goes straight to timing", () => {
   assert.equal(card().title, "Find your timing");
 });
 
+test("leaving a lesson introduction resumes free play", () => {
+  const { coach, card, press } = harness({ camera: false });
+  coach.begin();
+  press("Skip");
+  press("Back to free play");
+  assert.equal(coach.active, false);
+  assert.equal(coach.judge, null);
+  assert.equal(card().title, "free play");
+});
+
 test("timing calibration measures the offset and moves on to lesson 1", () => {
   const { coach, log, card, press } = harness({ camera: false });
   coach.begin();

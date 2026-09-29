@@ -1,9 +1,11 @@
-// The instrument drawn over the camera view. Each hand has a timeline beside it:
+// The instrument and light hand accents share the mirrored camera coordinates.
+// Each hand has a timeline beside it:
 // the future arrives from the centre, meets a "now" line near the hand, and
 // leaves toward the edge. The lead side is the pitch ladder; the band side shows
 // energy zones. Everything is positioned in the mirrored view's coordinates.
 
 import { isChordTone, noteName } from "./theory.js";
+import { HandVisuals } from "./hand-visual.js";
 
 const COLORS = {
   lead: [255, 181, 71],
@@ -26,6 +28,7 @@ export class Overlay {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.size = { width: 0, height: 0, dpr: 1 };
+    this.hands = new HandVisuals(COLORS);
   }
 
   resize() {
@@ -83,8 +86,11 @@ export class Overlay {
     const band = side(!leadRight);
     this.#grid(scene, lead, top, bottom);
     this.#grid(scene, band, top, bottom);
-    this.#ladder(scene, lead, top, bottom, view);
-    this.#energy(scene, band, top, bottom, view);
+    this.#ladder(scene, lead, top, bottom);
+    this.#energy(scene, band, top, bottom);
+    this.hands.draw(ctx, scene, view);
+    this.#leadCursor(scene, lead, top, bottom, view);
+    this.#bandCursor(scene, band, top, bottom, view);
     if (scene.endProgress > 0)
       this.#endRing(scene.endProgress, width / 2, height - 120);
   }
@@ -117,7 +123,7 @@ export class Overlay {
     ctx.stroke();
   }
 
-  #ladder(scene, side, top, bottom, view) {
+  #ladder(scene, side, top, bottom) {
     const { ctx } = this;
     const rungs = scene.ladder.length;
     const rowHeight = (bottom - top) / rungs;
@@ -226,12 +232,16 @@ export class Overlay {
       previous = { rung: note.rung, end };
     }
     ctx.restore();
+  }
 
+  #leadCursor(scene, side, top, bottom, view) {
     // The hand, joined to "now" on its row.
+    const { ctx } = this;
+    const { hand, rung: current, gate } = scene.lead;
     if (!hand) return;
     const hx = view.x(hand.x);
     const hy = view.y(hand.y);
-    const y = rowY(current);
+    const y = bottom - ((current + 0.5) * (bottom - top)) / scene.ladder.length;
     ctx.strokeStyle = rgba(COLORS.lead, gate ? 0.9 : 0.45);
     ctx.lineWidth = gate ? 2.5 : 1.5;
     ctx.setLineDash(gate ? [] : [4, 6]);
@@ -240,7 +250,7 @@ export class Overlay {
     ctx.lineTo(side.now, y);
     ctx.stroke();
     ctx.setLineDash([]);
-    this.#cursor(hx, hy, COLORS.lead, gate);
+    this.#cursor(hx, hy, COLORS.lead, gate, false, Boolean(hand.landmarks));
     if (scene.leadHold > 0) this.#ring(hx, hy, 27, scene.leadHold, COLORS.lead);
     ctx.fillStyle = rgba(COLORS.lead, 1);
     ctx.beginPath();
@@ -248,14 +258,14 @@ export class Overlay {
     ctx.fill();
   }
 
-  #energy(scene, side, top, bottom, view) {
+  #energy(scene, side, top, bottom) {
     const { ctx } = this;
     const levels = scene.levels.length;
     const zone = (bottom - top) / levels;
     const zoneY = (level) => bottom - (level + 0.5) * zone;
     const left = Math.min(side.inner, side.outer);
     const right = Math.max(side.inner, side.outer);
-    const { hand, level: handLevel, cut } = scene.band;
+    const { hand, level: handLevel } = scene.band;
 
     for (let level = 0; level < levels; level++) {
       const y = zoneY(level);
@@ -347,11 +357,18 @@ export class Overlay {
       ctx.arc(x, bottom + 16, 5, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
 
+  #bandCursor(scene, side, top, bottom, view) {
+    const { ctx } = this;
+    const { hand, level: handLevel, cut } = scene.band;
     if (!hand) return;
     const hx = view.x(hand.x);
     const hy = view.y(hand.y);
-    const y = zoneY(handLevel ?? scene.level);
+    const y =
+      bottom -
+      (((handLevel ?? scene.level) + 0.5) * (bottom - top)) /
+        scene.levels.length;
     ctx.strokeStyle = rgba(COLORS.band, 0.55);
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 6]);
@@ -360,18 +377,18 @@ export class Overlay {
     ctx.lineTo(side.now, y);
     ctx.stroke();
     ctx.setLineDash([]);
-    this.#cursor(hx, hy, COLORS.band, hand.pinch, cut);
+    this.#cursor(hx, hy, COLORS.band, hand.pinch, cut, Boolean(hand.landmarks));
     if (scene.captureProgress > 0)
       this.#ring(hx, hy, 27, scene.captureProgress, COLORS.loop);
   }
 
-  #cursor(x, y, color, filled, crossed = false) {
+  #cursor(x, y, color, filled, crossed = false, tracked = false) {
     const { ctx } = this;
     ctx.fillStyle = rgba(color, filled ? 0.9 : 0.12);
     ctx.strokeStyle = rgba(color, 0.95);
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = tracked ? 1.8 : 2.5;
     ctx.beginPath();
-    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.arc(x, y, tracked ? 13 : 18, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     if (crossed) {

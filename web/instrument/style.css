@@ -43,9 +43,15 @@ select {
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: radial-gradient(120% 90% at 50% 40%, #12171b 0%, var(--bg) 70%);
+  background: radial-gradient(
+    ellipse at 50% 32%,
+    #0c1822 0%,
+    #080e15 48%,
+    #05080c 100%
+  );
 }
 
+/* Keep the performer and room visible as the spatial reference for the hands. */
 .stage video {
   position: absolute;
   inset: 0;
@@ -53,13 +59,23 @@ select {
   height: 100%;
   object-fit: cover;
   transform: scaleX(-1);
-  filter: grayscale(0.6) brightness(0.4) contrast(1.05);
+  filter: saturate(0.6) brightness(0.6) contrast(1.04);
   opacity: 0;
   transition: opacity 400ms ease;
+  pointer-events: none;
 }
 
 .stage[data-camera="on"] video {
   opacity: 1;
+}
+
+.stage::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(132, 170, 190, 0.13);
+  border-radius: 22px;
+  pointer-events: none;
 }
 
 .shade {

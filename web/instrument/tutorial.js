@@ -141,7 +141,9 @@ export class Judge {
     const found = this.#nearest("note", beat, 0.5);
     if (!found) return null;
     const { target, error } = found;
-    const grade = target.rung !== rung ? "wrong" : this.#grade(error);
+    const matches =
+      target.rung === rung && Boolean(target.legato) === Boolean(legato);
+    const grade = matches ? this.#grade(error) : "wrong";
     if (grade === "late" || (grade === "wrong" && Math.abs(error) > 0.25))
       return null;
     target.result = {

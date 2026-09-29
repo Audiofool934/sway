@@ -21,6 +21,8 @@ uv run --locked sway serve
 ```
 
 Open **http://127.0.0.1:8765** in Chrome, turn the camera on, and press **Learn to play** for setup and four short lessons, or **Start playing** to go straight to a piece.
+The mirrored camera keeps your body, hands, and room visible for a sense of space.
+Subtle hand skeletons and small fingertip markers show which hand controls each part of the instrument.
 Without a camera, the mouse plays the lead and the keyboard steers the band; the start screen lists the keys.
 Two fists or **End piece** finish a piece, which offers its audio, MIDI, and a performance file to save.
 Press D while playing to see measured tracking and audio timing.
@@ -77,7 +79,7 @@ node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,c
 git diff --check
 ```
 
-The JavaScript tests cover the V1 instrument's timing, harmony, hand tracking, controls, band, and looper.
+The JavaScript tests cover the V1 instrument's timing, harmony, hand tracking, controls, band, looper, camera, engine, exports, and lessons.
 These checks do not establish musical quality, recognition accuracy, or how the instrument feels to play.
 The [development guide](docs/development.md) maps the source, runtime, and evidence locations.
 

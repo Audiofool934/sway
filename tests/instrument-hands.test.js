@@ -44,13 +44,12 @@ function worldHand(shape) {
   return points;
 }
 
-// Image landmarks are only used for position here: a small hand centred at (x, y)
-// in the unmirrored camera frame.
+// A small hand centred at (x, y) in the unmirrored camera frame.
 function hand({
   shape = "open",
   x = 0.5,
   y = 0.5,
-  side = "Left",
+  side = "Right",
   score = 0.95,
 }) {
   const world = worldHand(shape);
@@ -86,23 +85,73 @@ test("the tracker reports pinch and fist, never both", () => {
   );
 });
 
+test("rendered landmarks mirror the camera once and keep all 21 measured joints", () => {
+  const tracker = new HandTracker({ aspect: 16 / 9 });
+  const raw = hand({ x: 0.3 });
+  const original = structuredClone(raw);
+  const { lead } = tracker.update([raw], 0);
+  assert.equal(lead.landmarks.length, 21);
+  for (let i = 0; i < 21; i++) {
+    assert.ok(Math.abs(lead.landmarks[i].x - (1 - raw.points[i].x)) < 1e-12);
+    assert.ok(Math.abs(lead.landmarks[i].y - raw.points[i].y) < 1e-12);
+    assert.ok(Math.abs(lead.landmarks[i].z - raw.points[i].z) < 1e-12);
+  }
+  assert.deepEqual(
+    raw,
+    original,
+    "rendering must not mutate the detector result",
+  );
+});
+
+test("the smoothed skeleton stays centred on the musical cursor during movement and a dropout", () => {
+  const tracker = new HandTracker();
+  let id;
+  for (let i = 0; i < 50; i++) {
+    if (i > 20 && i < 28) {
+      assert.deepEqual(tracker.update([], i / 30), {});
+      continue;
+    }
+    const { lead } = tracker.update(
+      [
+        hand({
+          x: 0.3 + i * 0.003,
+          y: 0.5 + i * 0.003,
+          shape: i > 30 ? "pinch" : "open",
+        }),
+      ],
+      i / 30,
+    );
+    id ??= lead.id;
+    assert.equal(lead.id, id);
+    const palm = [0, 5, 9, 13, 17].reduce(
+      (centre, joint) => ({
+        x: centre.x + lead.landmarks[joint].x / 5,
+        y: centre.y + lead.landmarks[joint].y / 5,
+      }),
+      { x: 0, y: 0 },
+    );
+    assert.ok(Math.abs(palm.x - lead.x) < 1e-12);
+    assert.ok(Math.abs(palm.y - lead.y) < 1e-12);
+  }
+});
+
 test("the performer's right hand leads and roles survive a label flicker", () => {
   const tracker = new HandTracker();
-  // MediaPipe's "Left" is the performer's right hand; it appears on the right of
-  // the mirrored view, which is the left of the raw frame.
+  // Tasks HandLandmarker labels the unmirrored camera input anatomically.
+  // The performer's right hand appears on the left of that raw frame.
   const frame = (rightLabel, t) =>
     tracker.update(
       [
         hand({ side: rightLabel, x: 0.3, y: 0.5 }),
-        hand({ side: "Right", x: 0.7, y: 0.5, score: 0.9 }),
+        hand({ side: "Left", x: 0.7, y: 0.5, score: 0.9 }),
       ],
       t,
     );
   let roles;
-  for (let i = 0; i < 20; i++) roles = frame("Left", i / 30);
+  for (let i = 0; i < 20; i++) roles = frame("Right", i / 30);
   assert.ok(roles.lead.x > 0.6 && roles.band.x < 0.4);
-  // Both hands briefly labelled "Right": the established roles hold.
-  for (let i = 20; i < 23; i++) roles = frame("Right", i / 30);
+  // Both hands briefly labelled "Left": the established roles hold.
+  for (let i = 20; i < 23; i++) roles = frame("Left", i / 30);
   assert.ok(roles.lead.x > 0.6 && roles.band.x < 0.4);
 });
 
@@ -111,10 +160,57 @@ test("left-handed players lead with the left hand", () => {
   let roles;
   for (let i = 0; i < 10; i++)
     roles = tracker.update(
-      [hand({ side: "Left", x: 0.3 }), hand({ side: "Right", x: 0.7 })],
+      [hand({ side: "Right", x: 0.3 }), hand({ side: "Left", x: 0.7 })],
       i / 30,
     );
   assert.ok(roles.lead.x < 0.4 && roles.band.x > 0.6);
+});
+
+test("a lone hand keeps its anatomical role on either side of the screen", () => {
+  for (const leadSide of ["Right", "Left"])
+    for (const side of ["Right", "Left"])
+      for (const x of [0.25, 0.75]) {
+        const tracker = new HandTracker({ leadSide });
+        let roles;
+        for (let i = 0; i < 30; i++)
+          roles = tracker.update([hand({ side, x })], i / 30);
+        const role = side === leadSide ? "lead" : "band";
+        assert.equal(
+          roles[role]?.side,
+          side,
+          `${leadSide} lead, ${side} at ${x}`,
+        );
+        assert.equal(Object.keys(roles).length, 1);
+      }
+});
+
+test("the selected lead hand plays notes and the other hand captures loops", () => {
+  for (const leadSide of ["Right", "Left"])
+    for (const pinchingSide of ["Right", "Left"]) {
+      const tracker = new HandTracker({ leadSide });
+      const controls = new Controls();
+      const events = [];
+      for (let i = 0; i < 60; i++) {
+        const time = i / 30;
+        const hands = ["Right", "Left"].map((side) =>
+          hand({
+            side,
+            x: side === "Right" ? 0.3 : 0.7,
+            shape: i >= 20 && side === pinchingSide ? "pinch" : "open",
+          }),
+        );
+        events.push(...controls.update(tracker.update(hands, time), time));
+      }
+      const playsLead = pinchingSide === leadSide;
+      assert.equal(
+        events.filter((e) => e.type === "noteOn").length,
+        playsLead ? 1 : 0,
+      );
+      assert.equal(
+        events.filter((e) => e.type === "capture").length,
+        playsLead ? 0 : 1,
+      );
+    }
 });
 
 test("the one-euro filter settles on a steady value", () => {

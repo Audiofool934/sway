@@ -65,6 +65,7 @@ export class Coach {
     this.judge = null;
     this.hooks.stopEngine();
     this.hooks.hideCard();
+    this.hooks.freePlay();
   }
 
   // Setup, step 1 and 2: the comfortable top and bottom of the lead hand's reach.

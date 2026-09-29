@@ -64,6 +64,22 @@ test("legato notes are reported separately from struck notes", () => {
   assert.ok(kinds.legato.total > kinds.note.total);
 });
 
+test("re-pinching every melody target does not pass the legato lesson", () => {
+  const judge = new Judge(lesson("melody"), { beatSeconds });
+  for (const target of lesson("melody").targets)
+    judge.note({ beat: target.beat, rung: target.rung, legato: false });
+  const summary = judge.summary();
+  assert.equal(summary.kinds.note.rate, 1);
+  assert.equal(summary.kinds.legato.hit, 0);
+  assert.equal(passed(summary), false);
+});
+
+test("a legato move does not count as a new pinch at a phrase start", () => {
+  const judge = new Judge(lesson("melody"), { beatSeconds });
+  const target = judge.note({ beat: 0, rung: 4, legato: true });
+  assert.equal(target.result.grade, "wrong");
+});
+
 test("energy is judged by the level the band plays once its downbeat passes", () => {
   const judge = new Judge(lesson("band"), { beatSeconds });
   // Target 0 wants level 2 at beat 8; before then nothing is decided.

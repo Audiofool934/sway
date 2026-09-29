@@ -1,6 +1,6 @@
 // Tracker landmarks to stable, smoothed hand features in the mirrored view.
-// MediaPipe labels handedness as if the image were mirrored; the tracker receives
-// unmirrored camera frames, so its "Left" is the performer's right hand.
+// Tasks HandLandmarker labels unmirrored camera frames by anatomical side.
+// Mirror positions to match the preview, but keep the handedness labels unchanged.
 
 const WRIST = 0,
   THUMB_TIP = 4,
@@ -148,12 +148,17 @@ export class HandTracker {
       { x: 0, y: 0 },
     );
     const shapePoints = hand.world?.length === 21 ? hand.world : points;
-    // MediaPipe's label is flipped for unmirrored input; its score is its certainty.
+    // The preview's mirror changes coordinates, not which hand was detected.
     const score = hand.score ?? 0.75;
-    const right = hand.side === "Left" ? score : 1 - score;
+    const right = hand.side === "Right" ? score : 1 - score;
     return {
       x: palm.x / this.aspect,
       y: palm.y,
+      landmarks: points.map((p) => ({
+        x: p.x / this.aspect,
+        y: p.y,
+        z: p.z / this.aspect,
+      })),
       shape: handShape(shapePoints),
       right,
     };
@@ -189,6 +194,34 @@ export class HandTracker {
     track.x = track.filters.x.filter(detection.x, time);
     track.y = track.filters.y.filter(detection.y, time);
     const dt = time - previousTime;
+    // Smooth finger motion relative to the palm. Recentring keeps the visible
+    // hand attached to the exact palm position that drives the instrument.
+    if (!track.landmarkFilters || dt > 0.2)
+      track.landmarkFilters = detection.landmarks.map(() =>
+        Object.fromEntries(
+          ["x", "y", "z"].map((axis) => [
+            axis,
+            new OneEuro({ minCutoff: 4, beta: 8 }),
+          ]),
+        ),
+      );
+    const offsets = detection.landmarks.map((point, i) => ({
+      x: track.landmarkFilters[i].x.filter(point.x - detection.x, time),
+      y: track.landmarkFilters[i].y.filter(point.y - detection.y, time),
+      z: track.landmarkFilters[i].z.filter(point.z, time),
+    }));
+    const centre = PALM.reduce(
+      (sum, i) => ({
+        x: sum.x + offsets[i].x / PALM.length,
+        y: sum.y + offsets[i].y / PALM.length,
+      }),
+      { x: 0, y: 0 },
+    );
+    track.landmarks = offsets.map((point) => ({
+      x: track.x + point.x - centre.x,
+      y: track.y + point.y - centre.y,
+      z: point.z,
+    }));
     track.vy = dt > 0 && dt < 0.2 ? (track.y - previousY) / dt : 0;
     track.rightBelief += 0.15 * (detection.right - track.rightBelief);
     track.shape = shape;
@@ -246,6 +279,7 @@ export class HandTracker {
       pinch: track.pinch,
       fist: track.fist,
       shape: track.shape,
+      landmarks: track.landmarks,
     };
   }
 }

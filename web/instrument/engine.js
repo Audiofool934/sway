@@ -378,9 +378,11 @@ export class Engine {
     this.#choke(time);
     this.#releaseLead(time);
     const beatSeconds = this.beatSeconds;
+    const tail = time + 2 * this.world.beatsPerBar * beatSeconds + 1.5;
     for (const event of bandEnding(this.world)) {
-      this.synth.play(event, time, beatSeconds);
-      this.#logEvent(event, time);
+      const handle = this.synth.play(event, time, beatSeconds);
+      const notes = this.#logEvent(event, time);
+      if (handle) this.voices.push({ handle, notes, end: tail });
     }
     this.bars.set(bar, {
       level: this.level,
@@ -393,7 +395,6 @@ export class Engine {
     });
     this.state = "finished";
     clearInterval(this.timer);
-    const tail = time + 2 * this.world.beatsPerBar * beatSeconds + 1.5;
     this.finishedAt = tail;
     this.#emit({ type: "finished", time, tail });
   }
