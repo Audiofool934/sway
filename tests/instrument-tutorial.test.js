@@ -26,6 +26,17 @@ test("every lesson chart fits its bars and the ladder", () => {
     // Notes never overlap, so each can be played in turn.
     for (let i = 1; i < notes.length; i++)
       assert.ok(notes[i].beat >= notes[i - 1].beat + notes[i - 1].beats - 1e-9);
+    // A slide continues a held pinch: it starts as the note before it ends, on
+    // another rung, so the chart can join the two.
+    assert.ok(!notes[0]?.legato);
+    for (let i = 1; i < notes.length; i++) {
+      if (!notes[i].legato) continue;
+      const previous = notes[i - 1];
+      assert.ok(
+        Math.abs(notes[i].beat - previous.beat - previous.beats) < 1e-9,
+      );
+      assert.notEqual(notes[i].rung, previous.rung);
+    }
   }
 });
 
@@ -50,8 +61,12 @@ test("timing grades follow the millisecond windows", () => {
   assert.equal(judge.note({ beat: 4.4, rung: 3 }), null);
   judge.expire(4.6);
   assert.equal(judge.targets[2].result.grade, "miss");
-  // Target 3 at beat 6: the wrong rung on time is marked wrong.
-  assert.equal(judge.note({ beat: 6, rung: 9 }).result.grade, "wrong");
+  // Target 3 at beat 6: the wrong rung on time does not hit it, and it stays open
+  // for the right note until it expires.
+  assert.equal(judge.note({ beat: 6, rung: 9 }), null);
+  assert.equal(judge.targets[3].result, null);
+  judge.expire(6.6);
+  assert.equal(judge.targets[3].result.grade, "miss");
 });
 
 test("legato notes are reported separately from struck notes", () => {
@@ -76,8 +91,22 @@ test("re-pinching every melody target does not pass the legato lesson", () => {
 
 test("a legato move does not count as a new pinch at a phrase start", () => {
   const judge = new Judge(lesson("melody"), { beatSeconds });
-  const target = judge.note({ beat: 0, rung: 4, legato: true });
-  assert.equal(target.result.grade, "wrong");
+  assert.equal(judge.note({ beat: 0, rung: 4, legato: true }), null);
+  assert.equal(judge.targets[0].result, null);
+  // A fresh pinch in time still plays it.
+  const target = judge.note({ beat: 0.05, rung: 4, legato: false });
+  assert.equal(target.result.grade, "perfect");
+});
+
+test("a slide through other rungs hits its target on time", () => {
+  const judge = new Judge(lesson("melody"), { beatSeconds });
+  judge.note({ beat: 0, rung: 4, legato: false });
+  judge.note({ beat: 1, rung: 5, legato: true });
+  // From rung 5 to rung 7 on beat 2, the hand crosses rung 6 just before the beat.
+  assert.equal(judge.note({ beat: 1.84, rung: 6, legato: true }), null);
+  const target = judge.note({ beat: 1.94, rung: 7, legato: true });
+  assert.equal(target.beat, 2);
+  assert.equal(target.result.grade, "perfect");
 });
 
 test("energy is judged by the level the band plays once its downbeat passes", () => {

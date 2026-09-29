@@ -41,7 +41,7 @@ export const LESSONS = [
   {
     id: "melody",
     title: "Draw a melody",
-    goal: "Keep the pinch and move to each new note without letting go.",
+    goal: "Notes joined by a line are played in one pinch: hold it and move to each new note. Let go between phrases, and pinch again to start the next.",
     level: 2,
     bars: 8,
     targets: [
@@ -136,22 +136,28 @@ export class Judge {
         : "late";
   }
 
-  /** A played note: `beat` is when the gesture happened, before grid alignment. */
+  /**
+   * A played note: `beat` is when the gesture happened, before grid alignment.
+   * Only the target's rung, struck or slid as charted, can hit it. Any other note
+   * leaves it open, since a slide passes other rungs on the way to its target.
+   */
   note({ beat, rung, legato }) {
-    const found = this.#nearest("note", beat, 0.5);
+    const found = this.#nearest(
+      "note",
+      beat,
+      0.5,
+      (target) =>
+        target.rung === rung && Boolean(target.legato) === Boolean(legato),
+    );
     if (!found) return null;
-    const { target, error } = found;
-    const matches =
-      target.rung === rung && Boolean(target.legato) === Boolean(legato);
-    const grade = matches ? this.#grade(error) : "wrong";
-    if (grade === "late" || (grade === "wrong" && Math.abs(error) > 0.25))
-      return null;
-    target.result = {
+    const grade = this.#grade(found.error);
+    if (grade === "late") return null;
+    found.target.result = {
       grade,
-      errorMs: error * this.beatMs,
+      errorMs: found.error * this.beatMs,
       legato: Boolean(legato),
     };
-    return target;
+    return found.target;
   }
 
   /**

@@ -22,6 +22,9 @@ export const VIEWS = {
   lesson: { future: 4, now: 0.55 },
 };
 const PAST_BEATS = 4;
+// The centre of row `index` of `count` equal rows between top and bottom, counted upward.
+const rowCentre = (index, count, top, bottom) =>
+  bottom - ((index + 0.5) * (bottom - top)) / count;
 
 export class Overlay {
   constructor(canvas) {
@@ -127,7 +130,7 @@ export class Overlay {
     const { ctx } = this;
     const rungs = scene.ladder.length;
     const rowHeight = (bottom - top) / rungs;
-    const rowY = (rung) => bottom - (rung + 0.5) * rowHeight;
+    const rowY = (rung) => rowCentre(rung, rungs, top, bottom);
     const { hand, rung: current, gate } = scene.lead;
     const left = Math.min(side.inner, side.outer);
     const right = Math.max(side.inner, side.outer);
@@ -186,6 +189,8 @@ export class Overlay {
         3,
       );
     // Lesson targets: outlined notes that fill when hit and redden when missed.
+    // A slide is joined to the note before it, as the melody trail joins legato notes.
+    let before = null;
     for (const target of scene.targets ?? []) {
       if (target.kind !== "note") continue;
       let x1 = side.x(target.beat),
@@ -195,19 +200,27 @@ export class Overlay {
       const y = rowY(target.rung) - height / 2;
       const grade = target.result?.grade;
       const soon = !grade && Math.abs(target.beat - scene.beat) < 1;
-      ctx.beginPath();
-      ctx.roundRect(x1, y, Math.max(height, x2 - x1), height, height / 2);
-      ctx.fillStyle = HIT.has(grade)
-        ? rgba(COLORS.lead, 0.4)
-        : rgba(COLORS.ink, soon ? 0.2 : 0.08);
-      ctx.fill();
       ctx.lineWidth = 2;
       ctx.strokeStyle = HIT.has(grade)
         ? rgba(COLORS.lead, 0.9)
         : grade
           ? rgba(COLORS.miss, 0.55)
           : rgba(COLORS.ink, soon ? 0.95 : 0.6);
+      if (target.legato && before) {
+        const x = side.x(target.beat);
+        ctx.beginPath();
+        ctx.moveTo(x, rowY(before.rung));
+        ctx.lineTo(x, rowY(target.rung));
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.roundRect(x1, y, Math.max(height, x2 - x1), height, height / 2);
+      ctx.fillStyle = HIT.has(grade)
+        ? rgba(COLORS.lead, 0.4)
+        : rgba(COLORS.ink, soon ? 0.2 : 0.08);
+      ctx.fill();
       ctx.stroke();
+      before = target;
     }
     const thick = Math.max(5, rowHeight * 0.18);
     let previous = null;
@@ -241,7 +254,7 @@ export class Overlay {
     if (!hand) return;
     const hx = view.x(hand.x);
     const hy = view.y(hand.y);
-    const y = bottom - ((current + 0.5) * (bottom - top)) / scene.ladder.length;
+    const y = rowCentre(current, scene.ladder.length, top, bottom);
     ctx.strokeStyle = rgba(COLORS.lead, gate ? 0.9 : 0.45);
     ctx.lineWidth = gate ? 2.5 : 1.5;
     ctx.setLineDash(gate ? [] : [4, 6]);
@@ -262,7 +275,7 @@ export class Overlay {
     const { ctx } = this;
     const levels = scene.levels.length;
     const zone = (bottom - top) / levels;
-    const zoneY = (level) => bottom - (level + 0.5) * zone;
+    const zoneY = (level) => rowCentre(level, levels, top, bottom);
     const left = Math.min(side.inner, side.outer);
     const right = Math.max(side.inner, side.outer);
     const { hand, level: handLevel } = scene.band;
@@ -365,10 +378,12 @@ export class Overlay {
     if (!hand) return;
     const hx = view.x(hand.x);
     const hy = view.y(hand.y);
-    const y =
-      bottom -
-      (((handLevel ?? scene.level) + 0.5) * (bottom - top)) /
-        scene.levels.length;
+    const y = rowCentre(
+      handLevel ?? scene.level,
+      scene.levels.length,
+      top,
+      bottom,
+    );
     ctx.strokeStyle = rgba(COLORS.band, 0.55);
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 6]);
