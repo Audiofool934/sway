@@ -72,14 +72,15 @@ def setup(include_music=True, include_semantics=True):
 def doctor():
     from .qwen import qwen_status
 
-    # The V1 instrument needs only hand tracking; MRT2 serves the legacy ensemble page.
+    # The V1 instrument needs only hand tracking. MRT2 is optional: it renders V1's generated
+    # harmony, and the legacy ensemble page needs it.
     missing = [
         str(VISION_DIR / name) for name in VISION_ASSETS if not (VISION_DIR / name).is_file()
     ]
     vendor = ROOT / "node_modules" / "@mediapipe" / "tasks-vision" / "vision_bundle.js"
     if not vendor.exists():
         missing.append(str(vendor))
-    legacy = [str(MRT_DIR / name) for name in MRT_FILES if not (MRT_DIR / name).is_file()]
+    music = [str(MRT_DIR / name) for name in MRT_FILES if not (MRT_DIR / name).is_file()]
     versions = {}
     for package in ("mlx", "mlx-vlm", "ai-edge-litert", "fastapi"):
         try:
@@ -93,7 +94,7 @@ def doctor():
                 "python": platform.python_version(),
                 "versions": versions,
                 "missing_required_assets": missing,
-                "missing_legacy_music_assets": legacy,
+                "missing_music_assets": music,
                 "semantic_model": (SEMANTIC_DIR / "model.safetensors").is_file(),
                 "qwen": qwen_status(),
                 "free_disk_gb": round(shutil.disk_usage(ROOT).free / 1024**3, 1),
@@ -200,7 +201,7 @@ def main():
     choice.add_argument(
         "--instrument-only",
         action="store_true",
-        help="Install only hand tracking and browser dependencies for the V1 instrument",
+        help="Install only hand tracking and browser dependencies: V1 without generated harmony",
     )
     sub.add_parser("doctor", help="Check local assets, runtime versions, and disk space")
     sub.add_parser("qwen-check", help="Make one Qwen vision request using synthetic blank images")

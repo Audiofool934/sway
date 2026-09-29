@@ -34,6 +34,7 @@
         <div class="status">
           <span id="lead-status" class="chip lead">Lead hand</span>
           <span id="band-status" class="chip band">Band hand</span>
+          <span id="harmony-status" class="chip generated" hidden></span>
           <button id="camera-toggle" class="chip action" type="button">
             Turn camera on
           </button>
@@ -91,7 +92,17 @@
               <option value="0">Off</option>
             </select>
           </label>
+          <label>
+            Harmony
+            <select id="harmony">
+              <option value="strings">Generated strings</option>
+              <option value="piano">Generated piano</option>
+              <option value="choir">Generated choir</option>
+              <option value="off">Synthesized</option>
+            </select>
+          </label>
         </div>
+        <p id="harmony-note" class="note" hidden></p>
         <div class="actions">
           <button id="start" class="primary" type="button">
             Start playing

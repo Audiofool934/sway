@@ -6,6 +6,7 @@
   --lead: #ffb547;
   --band: #4fd1c5;
   --loop: #ffd699;
+  --generated: #b9a7ff;
   --panel: rgba(12, 14, 17, 0.78);
   --font: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
   color-scheme: dark;
@@ -283,6 +284,15 @@ select {
   background: var(--band);
 }
 
+/* Lit while the bar playing now is generated; dim while the synthesized pad stands in. */
+.chip.generated.seen {
+  color: var(--ink);
+}
+
+.chip.generated.seen::before {
+  background: var(--generated);
+}
+
 /* Cards */
 
 .card {
@@ -446,6 +456,13 @@ select {
 .settings select:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
+}
+
+.note {
+  margin: -12px 0 20px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(244, 241, 234, 0.45);
 }
 
 .keys {

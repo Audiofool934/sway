@@ -110,6 +110,17 @@ class MusicEngine:
         self.last_ms = 0.0
         self.set_style("chamber", "unknown")
 
+    def reset(self, seed: int):
+        """Start a fresh stream whose random choices follow `seed`."""
+        mx = self.mx
+        state = list(self.initial)
+        for i, tensor in enumerate(state):
+            if tensor.dtype == mx.uint32 and tensor.shape[-1:] == (2,):
+                state[i] = mx.broadcast_to(mx.random.key(seed), tensor.shape)
+        mx.eval(state)
+        self.state = state
+        self.frame = 0
+
     def set_style(self, palette: str, action: str):
         base = self.style.embed(PALETTE_CONTEXT[palette])
         accent = self.style.embed(style_prompt(palette, action))

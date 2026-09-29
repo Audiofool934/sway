@@ -3,22 +3,34 @@
 import asyncio
 import base64
 import io
+import logging
 import math
+import time
 from contextlib import asynccontextmanager
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 from pydantic import ValidationError
 
+from . import harmony
 from .config import MRT_DIR, MRT_FILES, RECORDINGS, ROOT, SEMANTIC_DIR, VISION_ASSETS, VISION_DIR
 from .flow import router as flow_router
 from .qwen import qwen_status
 from .remote_music import remote_music_status
-from .schema import ManualControl, MotionFrame, SemanticClip, SessionOptions
+from .schema import (
+    HarmonyBar,
+    HarmonyStart,
+    ManualControl,
+    MotionFrame,
+    SemanticClip,
+    SessionOptions,
+)
 from .session import Session
+
+log = logging.getLogger(__name__)
 
 session = Session()
 
@@ -68,6 +80,72 @@ async def status():
             "missing": missing_music + missing_vision,
         },
     }
+
+
+MISSING_MRT2 = (
+    "MRT2 is not installed. Run `uv run --locked sway setup --music-only` to add generated harmony."
+)
+
+
+async def on_harmony_thread(function, *args):
+    return await asyncio.get_running_loop().run_in_executor(harmony.EXECUTOR, function, *args)
+
+
+@app.get("/api/harmony/status")
+async def harmony_status():
+    return {
+        "available": harmony.assets_ready(),
+        "palettes": list(harmony.PALETTES),
+        **harmony.RENDERER.status(),
+    }
+
+
+@app.post("/api/harmony/start")
+async def harmony_start(body: HarmonyStart):
+    if not harmony.assets_ready():
+        raise HTTPException(503, MISSING_MRT2)
+    harmony.RENDERER.stream = body.seed
+    try:
+        return await on_harmony_thread(harmony.RENDERER.start, body.palette, body.seed)
+    except Exception as exc:
+        log.exception("Generated harmony could not start")
+        raise HTTPException(500, "Generated harmony could not start") from exc
+
+
+@app.post("/api/harmony/bar")
+async def harmony_bar(body: HarmonyBar):
+    """One bar of the chord as 16-bit stereo PCM; the page decides when it plays."""
+    if not harmony.assets_ready():
+        raise HTTPException(503, MISSING_MRT2)
+    try:
+        frames = harmony.frames_per_bar(body.tempo, body.beats_per_bar)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+    def render():
+        if body.stream != harmony.RENDERER.stream:
+            raise harmony.StaleStream
+        started = time.perf_counter()
+        audio = harmony.RENDERER.render(body.voicing, body.tones, body.palette, frames)
+        return audio, (time.perf_counter() - started) * 1000
+
+    try:
+        audio, ms = await on_harmony_thread(render)
+    except harmony.StaleStream:
+        raise HTTPException(409, "That piece has ended") from None
+    except Exception as exc:
+        log.exception("Generated harmony could not render bar %d", body.bar)
+        raise HTTPException(500, "Generated harmony could not render this bar") from exc
+    return Response(
+        harmony.to_pcm(audio),
+        media_type="application/octet-stream",
+        headers={
+            "X-Bar": str(body.bar),
+            "X-Sample-Rate": str(harmony.SAMPLE_RATE),
+            "X-Channels": str(audio.shape[1]),
+            "X-Render-Ms": str(round(ms)),
+        },
+    )
 
 
 @app.post("/api/start")

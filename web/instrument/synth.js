@@ -147,6 +147,8 @@ export class Synth {
     bus("riser", 0.25, { reverb: 0.3 });
     bus("bass", 0.16, { ducked: true });
     bus("pad", 1.3, { reverb: 0.45, ducked: true });
+    // Generated harmony stands in for the pad; its audio already carries a room.
+    bus("harmony", 1, { reverb: 0.15, ducked: true });
     bus("keys", 0.75, { reverb: 0.25, pan: -0.12, ducked: true });
     bus("arp", 0.16, { delay: 0.4, reverb: 0.2, pan: 0.25, ducked: true });
     bus("lead", 0.65, { delay: 0.28, reverb: 0.22 });

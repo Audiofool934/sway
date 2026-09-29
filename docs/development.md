@@ -1,7 +1,7 @@
 # Development
 
 Development resumed on September 28, 2026; the [V1 plan](v1-plan.md) defines the instrument and its milestones.
-The V1 instrument is browser code in `web/instrument/`; the Python server only serves its files.
+The V1 instrument is browser code in `web/instrument/`; the Python server serves its files and renders its generated harmony with MRT2.
 The Python pipeline below serves the legacy ensemble and Flow pages.
 
 ## Runtime
@@ -11,8 +11,8 @@ Use `uv sync --locked` and retain the pinned dependencies.
 The MRT2 MLX export failed to import under MLX 0.32.2 and loaded under the pinned 0.31.2 during the original validation.
 Do not treat a dependency upgrade as routine cleanup without rerunning a real model workload.
 
-`uv run --locked sway setup --instrument-only` installs the tracking assets and browser dependencies that V1 needs.
-`uv run --locked sway setup --music-only` also installs MRT2 music assets for the legacy pages.
+`uv run --locked sway setup --instrument-only` installs the tracking assets and browser dependencies that V1 needs to play.
+`uv run --locked sway setup --music-only` also installs MRT2, which renders V1's generated harmony and drives the legacy pages.
 Plain `sway setup` also downloads the optional local Qwen model.
 `uv run --locked sway doctor` checks local assets and credential configuration without calling Qwen; only missing V1 assets make it fail.
 `uv run --locked sway qwen-check` makes one billable request using synthetic blank images and checks connectivity only.
@@ -56,16 +56,20 @@ The V1 instrument:
 | `web/instrument/controls.js`                              | Hand features to instrument events, shared by camera, pointer, and scripted input.       |
 | `web/instrument/band.js`, `looper.js`                     | The band's parts per energy level, and retrospective loop capture.                       |
 | `web/instrument/synth.js`, `engine.js`                    | Web Audio instruments and mix, and the lookahead scheduler.                              |
+| `web/instrument/harmony.js`                               | Generated harmony: requests MRT2 bars ahead and starts each on its bar line.             |
+| `src/sway/harmony.py`, `/api/harmony/*` in `app.py`       | Renders a bar's chord with MRT2 from one continuous model stream.                        |
 | `web/instrument/camera.js`, `web/vision-worker.js`        | Camera capture with capture times, and MediaPipe tracking off the main thread.           |
 | `web/instrument/overlay.js`, `main.js`                    | The drawn instrument, heads-up display, and page wiring.                                 |
 | `web/instrument/tutorial.js`, `coach.js`                  | Lesson charts, judging, and timing calibration; the setup and lesson flow.               |
 | `web/instrument/midi.js`, `wav.js`, `recorder-worklet.js` | MIDI and WAV encoding, and recording the mix while a piece plays.                        |
-| `tests/instrument-*.test.js`                              | Timing, harmony, hand, control, band, looper, camera, engine, export, and lesson checks. |
+| `tests/instrument-*.test.js`, `tests/test_harmony.py`     | Timing, harmony, hand, control, band, looper, camera, engine, export, and lesson checks. |
 
 In the browser console, `window.sway` exposes the engine, controls, and a scripted `input()` that feeds the same features as a hand.
 Hand features carry 21 mirrored, smoothed image landmarks, centred on the same palm position that drives the controls.
 The mirrored live video remains visible with reduced saturation and brightness so the performer and room provide spatial context behind the instrument.
 Hand accents use only the tracked bones and six small markers per hand; no inferred surfaces, particles, or trails are drawn.
+`POST /api/harmony/start` begins a piece's model stream, and `POST /api/harmony/bar` returns one bar of 16-bit stereo PCM at 48 kHz; bars for a piece that has since been replaced get HTTP 409.
+With real MRT2 assets present, `tests/test_harmony.py` also renders two bars and checks that they stay in key.
 
 The legacy Python pipeline:
 

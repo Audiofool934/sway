@@ -10,6 +10,8 @@ import { WORLD, chordAt, cycleBeats } from "./theory.js";
 
 const LOOKAHEAD = 0.12;
 const TICK_MS = 20;
+// The least time before a generated bar starts for it to be placed.
+const PLACE_MARGIN = 0.05;
 const STEP = 0.25;
 const LOOP_PANS = [-0.35, 0.35, -0.15, 0.15];
 
@@ -17,7 +19,13 @@ export class Engine {
   constructor(
     ctx,
     synth,
-    { world = WORLD, grid = 0.25, compensation = 0.02, level = 1 } = {},
+    {
+      world = WORLD,
+      grid = 0.25,
+      compensation = 0.02,
+      level = 1,
+      harmony = null,
+    } = {},
   ) {
     this.ctx = ctx;
     this.synth = synth;
@@ -28,6 +36,11 @@ export class Engine {
     this.level = level;
     this.pendingLevel = null;
     this.progression = progressionFor(level);
+    // Each cycle's progression, settled two bars before the cycle begins.
+    this.plans = new Map();
+    // Generated harmony (see harmony.js), and the bars it will play instead of the pad.
+    this.harmony = harmony;
+    this.generated = new Map();
     this.cut = { requested: false, active: false, release: false };
     this.looper = new Looper(cycleBeats(world));
     this.step = 0;
@@ -88,6 +101,7 @@ export class Engine {
     const now = this.ctx.currentTime;
     this.#releaseLead(now);
     this.#choke(now);
+    this.harmony?.stop();
     this.state = "finished";
   }
 
@@ -237,7 +251,14 @@ export class Engine {
     if (this.state !== "playing") return;
     this.state = "ending";
     this.endStep = Math.ceil(this.step / STEPS_PER_BAR) * STEPS_PER_BAR;
-    this.#emit({ type: "ending", bar: this.endStep / STEPS_PER_BAR });
+    const bar = this.endStep / STEPS_PER_BAR;
+    // The final chord replaces a generated bar already waiting to start on that bar line.
+    for (const [at, voice] of this.generated)
+      if (at >= bar) {
+        voice.handle.release(this.ctx.currentTime);
+        this.generated.delete(at);
+      }
+    this.#emit({ type: "ending", bar });
   }
 
   // Scheduling.
@@ -254,6 +275,7 @@ export class Engine {
       this.#schedule(this.step, time);
       this.step++;
     }
+    if (this.harmony) this.#placeGenerated();
     const now = this.ctx.currentTime;
     this.voices = this.voices.filter((voice) => voice.end > now);
   }
@@ -274,6 +296,7 @@ export class Engine {
       this.#choke(time);
       this.bars.get(bar).cutAt ??= within;
     }
+    if (within === 0 && this.harmony) this.#generate(bar, time);
     if (this.cut.active) return;
     const beatSeconds = this.beatSeconds;
     const rising =
@@ -293,6 +316,12 @@ export class Engine {
       this.crashNext = false;
     }
     for (const event of events) {
+      // A generated bar already plays this chord; the pad still goes into the log.
+      const generated = event.part === "pad" && this.generated.get(bar);
+      if (generated) {
+        generated.notes = this.#logEvent(event, time);
+        continue;
+      }
       const handle = this.synth.play(event, time, beatSeconds);
       const notes = event.part === "riser" ? [] : this.#logEvent(event, time);
       if (handle)
@@ -317,18 +346,67 @@ export class Engine {
       this.level = this.pendingLevel;
       this.pendingLevel = null;
     }
-    if (bar % this.world.cycleBars === 0)
-      this.progression = progressionFor(this.level);
+    const cycle = Math.floor(bar / this.world.cycleBars);
+    if (bar % this.world.cycleBars === 0) this.progression = this.#planned(bar);
+    // The next progression is settled two bars ahead, which gives generated harmony
+    // time to render it; it is settled whether or not anything renders it.
+    this.#planned(bar + 2);
+    this.plans.delete(cycle - 1);
     this.crashNext = crash;
     this.bars.set(bar, {
       level: this.level,
       progression: this.progression,
       chord: chordAt(this.world, this.progression, bar),
-      next: chordAt(this.world, this.progression, bar + 1),
+      next: chordAt(this.world, this.#planned(bar + 1), bar + 1),
       cut: this.cut.active,
       cutAt: this.cut.active ? 0 : null,
     });
     this.bars.delete(bar - 16);
+  }
+
+  /** The progression of the cycle containing `bar`, settled at the energy level then. */
+  #planned(bar) {
+    const cycle = Math.floor(bar / this.world.cycleBars);
+    if (!this.plans.has(cycle))
+      this.plans.set(cycle, progressionFor(this.level));
+    return this.plans.get(cycle);
+  }
+
+  // Generated harmony. At each bar line: follow the energy, count what the bar played,
+  // and ask for the chords of the next two bars (each is rendered once).
+  #generate(bar, time) {
+    const { harmony, world } = this;
+    for (const at of this.generated.keys())
+      if (at < bar) this.generated.delete(at);
+    harmony.setLevel(this.level, time);
+    if (!this.cut.active) harmony.passed(bar, this.generated.has(bar));
+    for (const ahead of [bar + 1, bar + 2])
+      harmony.request(ahead, chordAt(world, this.#planned(ahead), ahead));
+  }
+
+  // A generated bar starts as soon as its audio arrives, while there is still time for
+  // it to start cleanly before its bar line. A bar that misses keeps the synthesized pad.
+  #placeGenerated() {
+    const { harmony } = this;
+    const cutting =
+      this.cut.requested || (this.cut.active && !this.cut.release);
+    if (this.state !== "playing" || cutting) return;
+    const now = this.ctx.currentTime;
+    const first = Math.ceil(this.step / STEPS_PER_BAR);
+    for (const bar of [first, first + 1, first + 2]) {
+      if (this.generated.has(bar) || !harmony.ready(bar)) continue;
+      const time = this.#stepTime(bar * STEPS_PER_BAR);
+      if (time - harmony.lead - now < PLACE_MARGIN) continue;
+      const handle = harmony.play(bar, time);
+      if (!handle) continue;
+      const voice = {
+        handle,
+        notes: [],
+        end: time + this.world.beatsPerBar * this.beatSeconds + 1,
+      };
+      this.voices.push(voice);
+      this.generated.set(bar, voice);
+    }
   }
 
   #playLoop(note) {
@@ -372,11 +450,15 @@ export class Engine {
         note.beats = Math.max(0.05, Math.min(note.beats, beat - note.start));
     }
     this.voices = [];
+    // Generated bars were among the voices. Bars whose audio is still waiting in
+    // harmony.js can start once the band plays again.
+    this.generated.clear();
   }
 
   #finish(bar, time) {
     this.#choke(time);
     this.#releaseLead(time);
+    this.harmony?.stop();
     const beatSeconds = this.beatSeconds;
     const tail = time + 2 * this.world.beatsPerBar * beatSeconds + 1.5;
     for (const event of bandEnding(this.world)) {

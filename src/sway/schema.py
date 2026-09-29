@@ -77,3 +77,24 @@ class ManualControl(BaseModel):
     tempo: float | None = Field(default=None, ge=50, le=180, allow_inf_nan=False)
     follow_motion: bool | None = None
     camera_active: bool | None = None
+
+
+# The V1 instrument's generated harmony: the page sends each bar's chord to be rendered.
+HarmonyPalette = Literal["strings", "piano", "choir"]
+
+
+class HarmonyStart(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    palette: HarmonyPalette
+    seed: int = Field(ge=0, le=2**31 - 1)
+
+
+class HarmonyBar(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    bar: int = Field(ge=0, le=1_000_000)
+    voicing: list[Annotated[int, Field(ge=21, le=108)]] = Field(min_length=1, max_length=8)
+    tones: list[Annotated[int, Field(ge=0, le=11)]] = Field(min_length=1, max_length=7)
+    palette: HarmonyPalette
+    stream: int = Field(ge=0, le=2**31 - 1)  # The seed its piece started with.
+    tempo: float = Field(ge=40, le=240, allow_inf_nan=False)
+    beats_per_bar: int = Field(ge=1, le=12)

@@ -8,7 +8,8 @@ The [documentation index](docs/README.md) separates current guides from the paus
 
 Someone with no musical training should be able to make a piece they want to keep.
 One hand plays a melody on a pitch ladder; the other sets the band's energy, cuts it, and loops what was played.
-Sway keeps every note in time and in key, and all real-time sound is synthesized in the browser, so no network request or large model sits between a gesture and its sound.
+Sway keeps every note in time and in key, and the notes you play are synthesized in the browser, so no network request or large model sits between a gesture and its sound.
+The band's harmony is generated: MRT2, a music model running on the same Mac, renders each bar's chords two bars ahead, and the engine starts that audio on the bar line.
 V1 is in progress: the instrument, a tutorial with setup and four lessons, recording, and MIDI export work with scripted input, and the first play test with real hands is next.
 
 ## Play
@@ -25,7 +26,8 @@ The mirrored camera keeps your body, hands, and room visible for a sense of spac
 Subtle hand skeletons and small fingertip markers show which hand controls each part of the instrument.
 Without a camera, the mouse plays the lead and the keyboard steers the band; the start screen lists the keys.
 Two fists or **End piece** finish a piece, which offers its audio, MIDI, and a performance file to save.
-Press D while playing to see measured tracking and audio timing.
+The **Harmony** setting on the start screen picks generated strings, piano, or choir, or the synthesized pad; a chip at the top lights while the generated harmony is playing.
+Press D while playing to see measured tracking, audio timing, and how many bars were generated.
 Stop the server with Ctrl-C when finished.
 
 For a fresh checkout, use an Apple Silicon Mac, Python 3.12 through [uv](https://docs.astral.sh/uv/), Node.js/npm, and a recent Chrome browser:
@@ -34,12 +36,12 @@ For a fresh checkout, use an Apple Silicon Mac, Python 3.12 through [uv](https:/
 git clone https://github.com/Audiofool934/sway.git
 cd sway
 uv sync --locked
-uv run --locked sway setup --instrument-only
+uv run --locked sway setup --music-only
 uv run --locked sway doctor
 ```
 
-`--instrument-only` installs hand tracking and browser dependencies, which is all V1 needs.
-Plain `sway setup --music-only` also downloads MRT2 for the legacy pages, and `sway setup` adds the optional local vision-language model.
+`--music-only` installs hand tracking, browser dependencies, and MRT2 for the generated harmony.
+`--instrument-only` skips MRT2, and V1 then plays its synthesized pad; plain `sway setup` adds the optional local vision-language model used by the legacy pages.
 
 ## Earlier experiments
 
@@ -79,7 +81,7 @@ node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,c
 git diff --check
 ```
 
-The JavaScript tests cover the V1 instrument's timing, harmony, hand tracking, controls, band, looper, camera, engine, exports, and lessons.
+The JavaScript tests cover the V1 instrument's timing, harmony, hand tracking, controls, band, looper, camera, engine, generated harmony scheduling, exports, and lessons.
 These checks do not establish musical quality, recognition accuracy, or how the instrument feels to play.
 The [development guide](docs/development.md) maps the source, runtime, and evidence locations.
 
