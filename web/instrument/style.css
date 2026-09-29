@@ -78,6 +78,8 @@ select {
   pointer-events: none;
 }
 
+/* The side edges hold the note and energy labels; darkening only those columns
+   keeps the labels readable over a bright room while the performer stays bright. */
 .shade {
   position: absolute;
   inset: 0;
@@ -88,6 +90,15 @@ select {
       transparent 18%,
       transparent 80%,
       rgba(7, 9, 11, 0.8)
+    ),
+    linear-gradient(
+      to right,
+      rgba(7, 9, 11, 0.68),
+      rgba(7, 9, 11, 0.42) min(70px, 12%),
+      transparent min(150px, 22%),
+      transparent max(calc(100% - 150px), 78%),
+      rgba(7, 9, 11, 0.42) max(calc(100% - 70px), 88%),
+      rgba(7, 9, 11, 0.68)
     ),
     radial-gradient(80% 70% at 50% 50%, transparent 55%, rgba(7, 9, 11, 0.55));
   pointer-events: none;
