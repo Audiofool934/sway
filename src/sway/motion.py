@@ -138,9 +138,8 @@ class MotionAnalyzer:
                 finger_event=side in finger_sides,
             )
             if hands:
-                # The worker processes unmirrored video; MediaPipe assumes a selfie image.
-                performer_side = "Left" if side == "Right" else "Right"
-                self.per_hand[performer_side] = observation
+                # MediaPipe labels the unmirrored camera frames by the performer's own hands.
+                self.per_hand[side] = observation
         self.pulse.expire(t)
         result = self.snapshot(len(frame.hands))
         result.event = event

@@ -4,8 +4,8 @@ import { FlowHands } from "../web/flow-hands.js";
 
 const hand = (side, x, y) => ({ side, points: [{ x, y }] });
 const pose = (y = 0.55, x = 0.65) => [
-  hand("Left", 0.3, y),
-  hand("Right", x, 0.6),
+  hand("Right", 0.3, y),
+  hand("Left", x, 0.6),
 ];
 const values = { morph: 0, intensity: 0.6 };
 const close = (actual, expected) =>
@@ -21,10 +21,10 @@ test("hands take control automatically from the current sound, with no calibrati
 
 test("either hand works alone and does not change the other hand's control", () => {
   const controls = new FlowHands();
-  assert.deepEqual(controls.update([hand("Left", 0.3, 0.5)], values, 0), {
+  assert.deepEqual(controls.update([hand("Right", 0.3, 0.5)], values, 0), {
     intensity: 0.6,
   });
-  close(controls.update([hand("Left", 0.3, 0.4)], values, 50).intensity, 0.8);
+  close(controls.update([hand("Right", 0.3, 0.4)], values, 50).intensity, 0.8);
   assert.deepEqual(controls.visible, { intensity: true, morph: false });
 });
 
@@ -82,7 +82,7 @@ test("keyboard slider changes and return-to-original preserve the other hand and
 
 test("malformed tracking output cannot send non-finite musical controls", () => {
   const controls = new FlowHands();
-  const bad = [{ side: "Left", points: [] }, hand("Right", NaN, 0.5)];
+  const bad = [{ side: "Right", points: [] }, hand("Left", NaN, 0.5)];
   assert.deepEqual(controls.update(bad, values, 0), {});
   assert.deepEqual(controls.visible, { intensity: false, morph: false });
 });

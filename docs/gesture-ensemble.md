@@ -34,7 +34,7 @@ Press **End performance** to stop the model workers.
 
 The former contract contained one action for the entire scene, and the largest wrist movement could suppress the other hand's evidence.
 The motion analyzer now also retains separate temporal observations for each hand, including finger articulation, wrist direction, position and confidence.
-Labels are normalized to the performer's anatomical left/right because the camera worker processes unmirrored images.
+Labels are the performer's anatomical left and right: MediaPipe labels the camera worker's unmirrored images by each hand's actual side.
 
 Qwen receives three ordered frames, 384 pixels wide, sampled at half-second intervals, plus motion observations and the current arrangement.
 It returns one to four parts with an instrument, role and source of inspiration; a musical description; chord pitches; harmonic cue spacing; energy; confidence; and a hold/faster/slower suggestion.

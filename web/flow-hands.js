@@ -1,10 +1,11 @@
 const roles = {
-  intensity: { side: "Left", coordinate: "y", scale: 2 },
-  morph: { side: "Right", coordinate: "x", scale: 2.5 },
+  intensity: { side: "Right", coordinate: "y", scale: 2 },
+  morph: { side: "Left", coordinate: "x", scale: 2.5 },
 };
 
-// MediaPipe receives unmirrored video; these roles match the mirrored preview.
-// Each hand picks up the current musical value where it enters the frame.
+// MediaPipe labels the unmirrored video by the performer's own hands; positions
+// stay in that unmirrored frame. Each hand picks up the current musical value
+// where it enters the frame.
 export class FlowHands {
   constructor() {
     this.references = {};

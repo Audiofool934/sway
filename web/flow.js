@@ -570,7 +570,7 @@ function drawHands(hands) {
   canvas.height = video.videoHeight;
   const ctx = canvas.getContext("2d");
   for (const hand of mappedHands(hands)) {
-    const isRight = hand.side === "Left";
+    const isRight = hand.side === "Right";
     ctx.fillStyle = isRight ? "#d8edb6" : "#f0c5a8";
     for (const p of hand.points) {
       ctx.beginPath();

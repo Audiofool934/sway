@@ -15,7 +15,7 @@ from sway.workers import music_worker
 
 
 def two_hand_frame(t, second="strum"):
-    frame = gesture_frame(t, "piano")  # Raw Right is the performer's left in unmirrored video.
+    frame = gesture_frame(t, "piano")  # MediaPipe labels the performer's own right hand "Right".
     other = gesture_frame(t, second).hands[0]
     other.side = "Left"
     frame.hands.append(other)
@@ -25,8 +25,8 @@ def two_hand_frame(t, second="strum"):
 def duet(**changes):
     values = {
         "parts": [
-            {"instrument": "acoustic piano", "role": "melody", "source": "left_hand"},
-            {"instrument": "acoustic guitar", "role": "harmony", "source": "right_hand"},
+            {"instrument": "acoustic piano", "role": "melody", "source": "right_hand"},
+            {"instrument": "acoustic guitar", "role": "harmony", "source": "left_hand"},
         ],
         "description": "Warm interlocking phrases",
         "chords": [[48, 64, 67], [45, 60, 64]],
@@ -45,8 +45,8 @@ def test_simultaneous_hand_trajectories_survive_as_independent_observations(seco
         t = frame / 30
         rhythm = analyzer.update(two_hand_frame(t, second))
         controller.motion(rhythm, t)
-    assert rhythm.per_hand["Left"].action == "piano"
-    assert rhythm.per_hand["Right"].action == second
+    assert rhythm.per_hand["Right"].action == "piano"
+    assert rhythm.per_hand["Left"].action == second
     assert controller.action == "unknown"  # The classifier cannot decide Qwen's arrangement.
     assert controller.semantic(duet(), 5)
     for frame in range(150, 180):
@@ -64,7 +64,7 @@ def test_a_missing_hand_does_not_leak_a_stale_gesture_into_the_next_observation(
     for frame in range(150):
         analyzer.update(two_hand_frame(frame / 30))
     observation = analyzer.update(gesture_frame(5, "piano"))
-    assert set(observation.per_hand) == {"Left"}
+    assert set(observation.per_hand) == {"Right"}
     assert not analyzer.update(MotionFrame(timestamp_ms=5100)).per_hand
 
 
