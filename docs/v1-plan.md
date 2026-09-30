@@ -1,7 +1,7 @@
 # Sway V1: design and execution plan
 
 Started: September 28, 2026, Asia/Singapore.
-Status: in progress.
+Status: merged into `main` on October 1, 2026; the play tests in the V1 checklist are still open.
 This plan supersedes the paused Gesture ensemble direction as the definition of the product.
 The earlier Qwen and MRT2 pipeline remains available as a legacy experiment at `/ensemble.html`.
 
@@ -267,6 +267,20 @@ Known unknowns for the generated band:
 - It has been checked by measurement, not by ear, including whether Qwen's choices make better music than the built-in progressions.
 - MRT2 keeps the GPU busy about half the time while a piece plays; with a real camera, its effect on tracking and on the page has not been measured.
 - The composer makes one Qwen request per four bars, about six a minute while playing.
+
+### October 1
+
+V1 was merged into `main`.
+Everett played it with a camera and reported:
+
+- Pinch and fist detection worked, and the delay from gesture to sound felt fast enough; it was not measured.
+- Drumming fingers play stray lead notes, as the recorded clips suggested.
+- The generated parts were hard to pick out until a temporary listening build could mute each part.
+  In one measured piece at the Pulse level, MRT2's harmony was about 3.5 dB quieter than the synthesized bass, because it is matched to the pad it replaces.
+- Qwen's choices change what the band plays but not how it sounds, so its part was hard to notice.
+- The lead synthesizer is not lively: every note plays at the same velocity, and its vibrato is automatic.
+
+These findings start the [V2 design proposal](v2-design.md).
 
 ## V1 checklist
 
