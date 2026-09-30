@@ -1,84 +1,103 @@
 # Sway
 
-**A generative theremin.**
+**An instrument you play with your hands.**
 
-Sway explores **training-free, real-time, motion-aware music generation**.
-The goal is to turn the rhythm and meaning of human movement into a continuously unfolding piece of music.
-The performer guides the music through motion, while pretrained models develop the arrangement.
+Development resumed on September 28, 2026 with a first-principles redesign.
+The [V1 plan](docs/v1-plan.md) defines the instrument, the rules it is built by, and the milestones.
+The [documentation index](docs/README.md) separates current guides from the paused experiments that came before.
 
-> **Status:** Concept and architecture stage.
-> This repository contains the initial project direction; a runnable prototype and performance measurements are still to come.
+Someone with no musical training should be able to make a piece they want to keep.
+One hand plays a melody on a pitch ladder; the other sets the band's energy, cuts it, and loops what was played.
+Sway keeps every note in time and in key, and the notes you play are synthesized in the browser, so no network request or large model sits between a gesture and its sound.
+The band is generative: Qwen writes its next four bars while the current four play, from what you just played and the energy you set, and MRT2, a music model running on the same Mac, performs the harmony and Qwen's answering lines.
+The engine checks every plan and keeps it in key and on the beat, and the built-in band steps in whenever a model is late.
+V1 is in progress: the instrument, a tutorial with setup and four lessons, recording, and MIDI export work with scripted input, and the first play test with real hands is next.
 
-## The experience
+## Play
 
-Imagine strumming an invisible guitar.
-Sway would interpret both the rhythm of your strumming and the musical character suggested by that action, then develop a piece around them.
-Changing your movement could influence the instrumentation, rhythmic feel, intensity, and texture as the music continues.
+On the configured development Mac:
 
-Two kinds of information matter:
-
-| Information in motion | Examples | Intended musical influence |
-| --- | --- | --- |
-| Rhythm and dynamics | Pulse, tempo, accents, pauses, repetition, movement intensity | Timing, groove, energy, and phrasing |
-| Semantics | Drumming, strumming, bowing, and other expressive gestures | Instrumentation, articulation, texture, and musical direction |
-
-These interpretations need to work together.
-A fast movement could be a drum hit, a strum, or vibrato; its meaning determines how its timing should affect the music.
-The aim is to preserve the performer's influence while giving the model room to develop a coherent composition.
-
-## Proposed approach
-
-The initial approach is training-free: reuse pretrained models with frozen weights and build the motion-to-music control at inference time.
-No Sway-specific model training or fine-tuning is planned for the first prototype.
-
-```mermaid
-flowchart LR
-    motion[Live motion] --> rhythm[Rhythm and dynamics]
-    motion --> semantics[Action and gesture semantics]
-    rhythm --> control[Musical control and state]
-    semantics --> control
-    control --> generation[Frozen streaming music model]
-    generation --> music[Continuous music]
+```bash
+cd ~/Projects/sway
+uv run --locked sway serve
 ```
 
-The proposed rhythm path uses tracking and signal processing to retain precise motion timing.
-The semantic path interprets short sequences of movement with a pretrained video-language model.
-Both update a shared musical state that steers an ongoing generation session.
-Semantic updates can run less frequently than rhythmic analysis, allowing each path to operate at a suitable pace.
+Open **http://127.0.0.1:8765** in Chrome, turn the camera on, and press **Learn to play** for setup and four short lessons, or **Start playing** to go straight to a piece.
+The mirrored camera keeps your body, hands, and room visible for a sense of space.
+Subtle hand skeletons and small fingertip markers show which hand controls each part of the instrument.
+Without a camera, the mouse plays the lead and the keyboard steers the band; the start screen lists the keys.
+Two fists or **End piece** finish a piece, which offers its audio, MIDI, and a performance file to save.
+The **Harmony** setting on the start screen picks generated strings, piano, or choir, or the synthesized pad; a chip at the top lights while the generated harmony is playing.
+**Band** chooses whether Qwen composes the band's cycles or the built-in patterns play; while a composed cycle plays, "by Qwen" shows under the beat and its caption appears at the bottom.
+Qwen needs a DashScope API key in `~/.config/sway/qwen.json`, and `sway doctor` shows whether it is configured; only musical data is sent to it, never camera images.
+Press D while playing to see measured tracking, audio timing, and how many bars were generated.
+Stop the server with Ctrl-C when finished.
 
-Real-time operation is a design goal: the system should respond to incoming motion using only the information observed so far and continue generating music as new input arrives.
-End-to-end responsiveness and musical continuity need to be measured in the complete system.
+For a fresh checkout, use an Apple Silicon Mac, Python 3.12 through [uv](https://docs.astral.sh/uv/), Node.js/npm, and a recent Chrome browser:
 
-The following are candidate building blocks, with integration still to be evaluated:
+```bash
+git clone https://github.com/Audiofool934/sway.git
+cd sway
+uv sync --locked
+uv run --locked sway setup --music-only
+uv run --locked sway doctor
+```
 
-| Component | Candidate | Role |
-| --- | --- | --- |
-| Motion tracking | [MediaPipe Hand Landmarker](https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker) and [Pose Landmarker](https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker) | Extract hand and body landmarks from video. |
-| Semantic interpretation | [Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) | Interpret actions and movement context from video sequences. |
-| Music generation | [Magenta RealTime 2](https://github.com/magenta/magenta-realtime) | Generate streaming music through existing style and note controls. |
+`--music-only` installs hand tracking, browser dependencies, and MRT2 for the generated harmony.
+`--instrument-only` skips MRT2, and V1 then plays its synthesized pad; plain `sway setup` adds the optional local vision-language model used by the legacy pages.
 
-Sway's central work is translating motion into effective musical control: combining rhythmic and semantic cues, handling transitions, and maintaining the context of the music already playing.
+## Earlier experiments
 
-## First milestone
+The paused prototypes remain available for comparison.
 
-A webcam-driven prototype that generates an evolving piece of music while responding to both rhythmic and semantic changes in movement.
+| Page             | Pipeline                                                                                            | Status                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `/ensemble.html` | MediaPipe observations and camera images → Qwen3.8-Max → arrangement and musical clock → MRT2 audio | Superseded by V1; the [ensemble guide](docs/gesture-ensemble.md) records its limits. |
+| `/flow.html`     | Saved passage → local playback and hand controls → optional DEMON variations on Colab               | Retained experiment; the [Flow guide](docs/flow-mode.md) describes it.               |
 
-- [ ] Capture a timestamped stream of hand and body motion.
-- [ ] Extract rhythmic cues and interpret a small set of musical actions.
-- [ ] Connect both to a persistent music-generation session.
-- [ ] Evaluate the experience with recorded motion sequences and live interaction.
+In the ensemble prototype, a gesture took roughly 8 to 14 seconds to change what was heard, all parts came out as one stereo mix, and drumming could be read as strumming.
+The [project status](docs/project-status.md) records that prototype's state at the pause.
+The [first-play guide](docs/morning-test.md) explains how to run it, and it needs `sway setup --music-only` and a configured Qwen credential.
 
-Evaluation will focus on:
+## Data and compute
 
-- **Responsiveness:** Delay and variation between an action and an audible change.
-- **Rhythmic alignment:** Whether generated tempo and beat timing follow the intended motion cues.
-- **Semantic response:** Whether changes in action produce appropriate musical changes.
-- **Continuity:** Whether the music remains coherent through transitions, pauses, and tracking loss.
-- **Performer control:** Whether a person can intentionally repeat and vary a musical idea.
+The server listens on loopback.
+The V1 instrument sends nothing off the machine: tracking and sound both run in the browser.
+In the legacy ensemble page, Qwen mode sends selected camera images and motion observations to Alibaba; recordings contain generated audio only.
+The Qwen credential stays in backend configuration outside the repository and browser.
+Colab receives musical controls or Flow source audio, depending on the mode, without camera images or the Qwen key.
 
-Estimating a tempo from motion does not establish that a generator will follow it accurately.
-Likewise, recognizing a gesture does not establish that the generated music will reflect its intended meaning.
-These are central questions for the prototype.
+Models, recordings, generated passages, and experiment outputs are ignored by Git and remain on the development machine.
+A clone does not include them.
+See [data locations](docs/development.md#data-and-evidence) before moving or archiving the checkout.
 
-The [MRT2 technical description](https://magenta.withgoogle.com/magenta-realtime-2) documents control latency and limits on direct drum-hit control that will inform the experiments.
-The first milestone will establish which parts of the intended experience can be achieved with the available pretrained models and controls.
+The [cloud guide](docs/cloud-setup.md) covers the legacy pages' bounded MRT2 and DEMON sessions, setup, and release verification.
+
+## Development
+
+```bash
+uv run --locked pytest -q
+node --test tests/*.test.js
+uv run --locked ruff check src tests scripts
+uv run --locked ruff format --check src tests scripts
+node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,css}'
+git diff --check
+```
+
+The JavaScript tests cover the V1 instrument's timing, harmony, hand tracking, controls, band, looper, camera, engine, generated harmony scheduling, exports, and lessons.
+These checks do not establish musical quality, recognition accuracy, or how the instrument feels to play.
+The [development guide](docs/development.md) maps the source, runtime, and evidence locations.
+
+## Models and attribution
+
+V1 synthesizes its sound directly and uses only MediaPipe hand tracking.
+The legacy pages use the following models.
+
+- [Magenta RealTime 2](https://github.com/magenta/magenta-realtime): continuous music generation and style resources.
+- [Qwen](https://www.alibabacloud.com/help/en/model-studio/vision): cloud visual interpretation and musical direction.
+- [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js): browser hand and pose tracking, used by V1 and the legacy pages.
+- [DEMON](https://github.com/daydreamlive/DEMON): experimental Flow generation and source transformation on Colab.
+- [Qwen3.5-0.8B via MLX Community](https://huggingface.co/mlx-community/Qwen3.5-0.8B-4bit): optional local interpretation for the older comparison mode.
+
+See [third-party notices](THIRD_PARTY_NOTICES.md) for attribution and model licensing references.
+No license for original Sway code has been selected.

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sway</title>
+    <meta
+      name="description"
+      content="An instrument you play with your hands, kept in time and in key."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/instrument/style.css" />
+  </head>
+  <body>
+    <main id="stage" class="stage" data-state="intro">
+      <video id="video" playsinline muted aria-hidden="true"></video>
+      <div class="shade" aria-hidden="true"></div>
+      <canvas id="overlay" aria-hidden="true"></canvas>
+
+      <header class="hud">
+        <div class="brand">
+          <span class="wordmark">Sway</span>
+          <span id="world" class="world"></span>
+        </div>
+        <div class="harmony" aria-hidden="true">
+          <div class="chord">
+            <span id="chord">Am</span><span id="next-chord" class="next"></span>
+          </div>
+          <div class="meter">
+            <div id="beats" class="beats"><i></i><i></i><i></i><i></i></div>
+            <span id="level-name" class="level-name"></span>
+          </div>
+          <span id="composed-by" class="composed-by" hidden>by Qwen</span>
+        </div>
+        <div class="status">
+          <span id="lead-status" class="chip lead">Lead hand</span>
+          <span id="band-status" class="chip band">Band hand</span>
+          <span id="harmony-status" class="chip generated" hidden></span>
+          <button id="camera-toggle" class="chip action" type="button">
+            Turn camera on
+          </button>
+          <button id="end-piece" class="chip action" type="button" hidden>
+            End piece
+          </button>
+        </div>
+      </header>
+
+      <section id="intro" class="card intro" aria-labelledby="intro-title">
+        <h1 id="intro-title">Play music with your hands</h1>
+        <p class="lede">
+          You decide when and how. Sway keeps every note in time and in key, and
+          a band follows your lead.
+        </p>
+        <div class="legend">
+          <div class="role lead">
+            <h2>
+              <span class="dot"></span
+              ><span><span id="lead-name">Right</span> hand · your voice</span>
+            </h2>
+            <ul>
+              <li><b>Height</b> picks the note on the ladder</li>
+              <li>
+                <b>Pinch</b> plays it; move while pinched to draw a melody
+              </li>
+            </ul>
+          </div>
+          <div class="role band">
+            <h2>
+              <span class="dot"></span
+              ><span><span id="band-name">Left</span> hand · the band</span>
+            </h2>
+            <ul>
+              <li><b>Height</b> sets the energy, from air to peak</li>
+              <li><b>Fist</b> cuts the band; open it to bring them back</li>
+              <li><b>Pinch and hold</b> loops the last four bars you played</li>
+            </ul>
+          </div>
+        </div>
+        <p class="both">Hold two fists together to end the piece.</p>
+        <div class="settings">
+          <label>
+            Lead hand
+            <select id="lead-side">
+              <option value="Right">Right</option>
+              <option value="Left">Left</option>
+            </select>
+          </label>
+          <label>
+            Timing help
+            <select id="grid">
+              <option value="0.25">Tight (sixteenths)</option>
+              <option value="0.5">Loose (eighths)</option>
+              <option value="0">Off</option>
+            </select>
+          </label>
+          <label>
+            Harmony
+            <select id="harmony">
+              <option value="strings">Generated strings</option>
+              <option value="piano">Generated piano</option>
+              <option value="choir">Generated choir</option>
+              <option value="off">Synthesized</option>
+            </select>
+          </label>
+          <label>
+            Band
+            <select id="composer">
+              <option value="qwen">Composed by Qwen</option>
+              <option value="off">Built-in patterns</option>
+            </select>
+          </label>
+        </div>
+        <p id="harmony-note" class="note" hidden></p>
+        <p id="composer-note" class="note" hidden></p>
+        <div class="actions">
+          <button id="start" class="primary" type="button">
+            Start playing
+          </button>
+          <button id="learn" class="secondary" type="button">
+            Learn to play
+          </button>
+          <button id="camera-intro" class="secondary" type="button">
+            Turn camera on
+          </button>
+        </div>
+        <p class="keys">
+          No camera? Mouse height picks the note and clicking plays it. Keys 1
+          to 5 set the energy, hold Space to cut, hold L to loop, and hold E to
+          end.
+        </p>
+        <p id="camera-error" class="error" role="alert" hidden></p>
+      </section>
+
+      <section
+        id="lesson"
+        class="card lesson"
+        hidden
+        aria-labelledby="lesson-title"
+      >
+        <p id="lesson-step" class="eyebrow"></p>
+        <h1 id="lesson-title"></h1>
+        <p id="lesson-body" class="lede"></p>
+        <ul id="lesson-details" class="lesson-details" hidden></ul>
+        <div id="lesson-actions" class="actions"></div>
+      </section>
+
+      <section
+        id="finished"
+        class="card finished"
+        hidden
+        aria-labelledby="finished-title"
+      >
+        <h1 id="finished-title">That's a piece</h1>
+        <p id="finished-summary" class="lede"></p>
+        <div id="downloads" class="downloads"></div>
+        <div class="actions">
+          <button id="again" class="primary" type="button">Play again</button>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p id="hint" class="hint" aria-live="polite"></p>
+        <div class="loops">
+          <div id="loop-chips" class="loop-chips"></div>
+          <button id="undo-loop" class="chip action" type="button" hidden>
+            Undo loop
+          </button>
+        </div>
+      </footer>
+
+      <aside id="details" class="details" hidden aria-label="Timing details">
+        <h2>Timing</h2>
+        <dl id="details-list"></dl>
+        <p>Press D to hide.</p>
+      </aside>
+    </main>
+    <script type="module" src="/instrument/main.js"></script>
+  </body>
+</html>

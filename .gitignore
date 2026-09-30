@@ -16,3 +16,8 @@ __pycache__/
 /work/
 /outputs/
 /.cache/
+node_modules/
+*.egg-info/
+.ruff_cache/
+/dist/
+/build/

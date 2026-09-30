@@ -1,0 +1,731 @@
+:root {
+  --bg: #07090b;
+  --ink: #f4f1ea;
+  --muted: rgba(244, 241, 234, 0.62);
+  --faint: rgba(244, 241, 234, 0.14);
+  --lead: #ffb547;
+  --band: #4fd1c5;
+  --loop: #ffd699;
+  --generated: #b9a7ff;
+  --panel: rgba(12, 14, 17, 0.78);
+  --font: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow: hidden;
+}
+
+button,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+.stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at 50% 32%,
+    #0c1822 0%,
+    #080e15 48%,
+    #05080c 100%
+  );
+}
+
+/* Keep the performer and room visible as the spatial reference for the hands. */
+.stage video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  filter: saturate(0.6) brightness(0.6) contrast(1.04);
+  opacity: 0;
+  transition: opacity 400ms ease;
+  pointer-events: none;
+}
+
+.stage[data-camera="on"] video {
+  opacity: 1;
+}
+
+.stage::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(132, 170, 190, 0.13);
+  border-radius: 22px;
+  pointer-events: none;
+}
+
+/* The side edges hold the note and energy labels; darkening only those columns
+   keeps the labels readable over a bright room while the performer stays bright. */
+.shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(7, 9, 11, 0.75),
+      transparent 18%,
+      transparent 80%,
+      rgba(7, 9, 11, 0.8)
+    ),
+    linear-gradient(
+      to right,
+      rgba(7, 9, 11, 0.68),
+      rgba(7, 9, 11, 0.42) min(70px, 12%),
+      transparent min(150px, 22%),
+      transparent max(calc(100% - 150px), 78%),
+      rgba(7, 9, 11, 0.42) max(calc(100% - 70px), 88%),
+      rgba(7, 9, 11, 0.68)
+    ),
+    radial-gradient(80% 70% at 50% 50%, transparent 55%, rgba(7, 9, 11, 0.55));
+  pointer-events: none;
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 400ms ease;
+}
+
+.stage[data-state="intro"] #overlay,
+.stage[data-state="finished"] #overlay {
+  opacity: 0.3;
+}
+
+/* Heads-up display */
+
+.hud {
+  position: absolute;
+  inset: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 16px;
+  padding: 20px 28px;
+  pointer-events: none;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wordmark {
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.world {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.harmony {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 300ms ease;
+}
+
+.stage[data-state="intro"] .harmony,
+.stage[data-state="finished"] .harmony,
+.stage[data-state="lesson"] .harmony {
+  opacity: 0;
+}
+
+.stage[data-state="finished"] .loops,
+.stage[data-state="finished"] .hint,
+.stage[data-state="lesson"] .loops,
+.stage[data-state="lesson"] .hint {
+  visibility: hidden;
+}
+
+.chord {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.chord .next {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.beats {
+  display: flex;
+  gap: 8px;
+}
+
+.beats i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--faint);
+  transition:
+    background 80ms linear,
+    transform 80ms linear;
+}
+
+.beats i.on {
+  background: var(--ink);
+  transform: scale(1.25);
+}
+
+.beats i.bar.on {
+  background: var(--lead);
+}
+
+.level-name {
+  min-width: 64px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--band);
+}
+
+.status {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--faint);
+  border-radius: 999px;
+  background: rgba(12, 14, 17, 0.55);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  backdrop-filter: blur(8px);
+}
+
+.chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.chip.action::before {
+  display: none;
+}
+
+.chip.action {
+  pointer-events: auto;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.chip.action:hover {
+  border-color: rgba(244, 241, 234, 0.4);
+}
+
+.chip.lead.seen {
+  color: var(--ink);
+}
+
+.chip.lead.seen::before {
+  background: var(--lead);
+}
+
+.chip.band.seen {
+  color: var(--ink);
+}
+
+.chip.band.seen::before {
+  background: var(--band);
+}
+
+/* Under the meter while the cycle playing now was written by Qwen; a line of its own
+   adds height, not width, so the chips beside it keep their row. */
+.composed-by {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--generated);
+}
+
+/* Lit while the bar playing now is generated; dim while the synthesized pad stands in. */
+.chip.generated.seen {
+  color: var(--ink);
+}
+
+.chip.generated.seen::before {
+  background: var(--generated);
+}
+
+/* Cards */
+
+.card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(760px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  transform: translate(-50%, -50%);
+  padding: 36px 40px 30px;
+  border: 1px solid var(--faint);
+  border-radius: 22px;
+  background: var(--panel);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+}
+
+.card h1 {
+  margin: 0 0 10px;
+  font-size: 40px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.lede {
+  margin: 0 0 26px;
+  max-width: 560px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.role {
+  padding: 18px 20px 16px;
+  border-radius: 14px;
+  background: rgba(244, 241, 234, 0.04);
+  border-top: 2px solid var(--role);
+}
+
+.role.lead {
+  --role: var(--lead);
+}
+
+.role.band {
+  --role: var(--band);
+}
+
+.role h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.role .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--role);
+}
+
+.role ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.role b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.both {
+  margin: 16px 0 22px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Two columns: the hand settings, then the sound settings. */
+.settings {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 12px 28px;
+  margin-bottom: 24px;
+}
+
+.settings label {
+  justify-content: space-between;
+}
+
+.settings label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.settings select {
+  padding: 7px 30px 7px 12px;
+  border: 1px solid var(--faint);
+  border-radius: 10px;
+  background: rgba(244, 241, 234, 0.06)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23f4f1ea' stroke-width='1.5' fill='none' opacity='.7'/%3E%3C/svg%3E")
+    no-repeat right 11px center;
+  appearance: none;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.primary,
+.secondary {
+  padding: 13px 24px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    background 120ms ease;
+}
+
+.primary {
+  border: 0;
+  background: var(--lead);
+  color: #1a1206;
+}
+
+.primary:hover {
+  transform: translateY(-1px);
+  background: #ffc36b;
+}
+
+.secondary {
+  border: 1px solid var(--faint);
+  background: transparent;
+}
+
+.secondary:hover {
+  border-color: rgba(244, 241, 234, 0.4);
+}
+
+.primary:focus-visible,
+.secondary:focus-visible,
+.chip.action:focus-visible,
+.settings select:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.note {
+  margin: -12px 0 20px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(244, 241, 234, 0.45);
+}
+
+.keys {
+  margin: 20px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(244, 241, 234, 0.45);
+}
+
+.error {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: #ff9a8b;
+}
+
+.finished {
+  text-align: center;
+  width: min(520px, calc(100% - 32px));
+}
+
+.finished .lede {
+  margin-inline: auto;
+}
+
+.finished .actions {
+  justify-content: center;
+}
+
+.downloads {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: -6px 0 22px;
+}
+
+.downloads a {
+  padding: 9px 16px;
+  border: 1px solid var(--faint);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.downloads a:hover {
+  border-color: rgba(244, 241, 234, 0.4);
+}
+
+.downloads a:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.downloads .preparing {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.stage[data-state="playing"] .intro,
+.stage[data-state="finished"] .intro,
+.stage[data-state="lesson"] .intro {
+  display: none;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lead);
+}
+
+.lesson {
+  width: min(600px, calc(100% - 32px));
+}
+
+/* During setup the card sits at the top, so the hands and the ladder stay visible. */
+.lesson.compact {
+  top: 96px;
+  transform: translate(-50%, 0);
+  padding: 22px 26px 20px;
+}
+
+.lesson.compact h1 {
+  font-size: 26px;
+}
+
+.lesson.compact .lede {
+  margin-bottom: 16px;
+  font-size: 15px;
+}
+
+.lesson-details {
+  display: grid;
+  gap: 6px;
+  margin: -10px 0 24px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Footer */
+
+.footer {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 16px;
+  padding: 18px 28px 22px;
+  pointer-events: none;
+}
+
+.hint {
+  grid-column: 2;
+  margin: 0;
+  max-width: 560px;
+  font-size: 15px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--ink);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+  transition: opacity 200ms ease;
+}
+
+.hint:empty {
+  opacity: 0;
+}
+
+.loops {
+  grid-column: 3;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.loop-chips {
+  display: flex;
+  gap: 6px;
+}
+
+.loop-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 214, 153, 0.35);
+  background: rgba(255, 214, 153, 0.08);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--loop);
+  transition: background 120ms linear;
+}
+
+.loop-chip.pulse {
+  background: rgba(255, 214, 153, 0.3);
+}
+
+/* Details */
+
+.details {
+  position: absolute;
+  top: 110px;
+  right: 28px;
+  width: 290px;
+  padding: 16px 18px;
+  border: 1px solid var(--faint);
+  border-radius: 14px;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  font-size: 12px;
+}
+
+.details h2 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.details dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  margin: 0 0 10px;
+}
+
+.details dt {
+  color: var(--muted);
+}
+
+.details dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.details p {
+  margin: 0;
+  color: rgba(244, 241, 234, 0.4);
+}
+
+@media (max-width: 860px) {
+  .settings {
+    grid-template-columns: max-content;
+  }
+  .hud {
+    grid-template-columns: 1fr auto;
+    padding: 16px;
+  }
+  .harmony {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+  .card {
+    padding: 26px 22px 22px;
+  }
+  .card h1 {
+    font-size: 30px;
+  }
+  .legend {
+    grid-template-columns: 1fr;
+  }
+  .footer {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .hint,
+  .loops {
+    grid-column: 1;
+  }
+  .loops {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
