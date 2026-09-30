@@ -20,6 +20,11 @@ def main():
     parser.add_argument(
         "--timeout", type=int, default=1200, help="VM work limit, 120 to 1800 seconds"
     )
+    parser.add_argument(
+        "--conditioning",
+        type=Path,
+        help="Render this Sway harmony conditioning (.npz) in each of its palettes instead",
+    )
     args = parser.parse_args()
     if not 10 <= args.seconds <= 60 or not 120 <= args.timeout <= 1800:
         parser.error("Use 10-60 seconds of audio and a 120-1800 second work limit")
@@ -66,6 +71,10 @@ def main():
                     "/content/sway_music_trial.py",
                 ]
             )
+            if args.conditioning:
+                run(
+                    ["upload", "-s", name, str(args.conditioning), "/content/sway_conditioning.npz"]
+                )
             remaining = max(1, int(deadline - time.monotonic() - 90))
             launcher = state / "launch.py"
             remote_command = [
@@ -75,6 +84,11 @@ def main():
                 args.model,
                 "--seconds",
                 str(args.seconds),
+                *(
+                    ["--conditioning", "/content/sway_conditioning.npz"]
+                    if args.conditioning
+                    else []
+                ),
             ]
             launcher.write_text(
                 "import subprocess, json\nfrom pathlib import Path\n"
@@ -104,7 +118,14 @@ def main():
             remote_status = json.loads((output / "remote-status.json").read_text())
             if remote_status.get("returncode") != 0:
                 raise RuntimeError(f"Remote trial failed; see {output / 'run.log'}")
-            for filename in ("metrics.json", "control-trace.json", "performance.wav"):
+            if args.conditioning:
+                import numpy as np
+
+                palettes = [str(value) for value in np.load(args.conditioning)["palettes"]]
+                filenames = ["metrics.json", *(f"harmony-{palette}.wav" for palette in palettes)]
+            else:
+                filenames = ["metrics.json", "control-trace.json", "performance.wav"]
+            for filename in filenames:
                 run(
                     [
                         "download",

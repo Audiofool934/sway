@@ -202,6 +202,9 @@ Check `session.json` for `"released": true` and confirm assignments with `colab 
 If release fails, use the exact recovery command printed by the runner; it includes the isolated state file and session name.
 Do not stop unrelated sessions.
 
+To compare models on the V1 instrument's own music, pass `--conditioning` with a `.npz` holding `tokens` (one row of 128 note states per 40 ms frame, from Sway's arrangement and `sway.harmony.bar_tokens`), `palettes`, and `prompts`.
+The remote script then renders that conditioning in each palette with the Mac engine's sampling settings, and the runner downloads `harmony-PALETTE.wav` files and per-palette timings instead of the benchmark.
+
 MRT2 Base was too slow for this one-frame workload on L4.
 A100 was slightly faster than playback, leaving limited headroom for a live transport experiment.
 The live runner connects streaming controls and audio; sustained playback and full input-to-sound delay require separate measurement.

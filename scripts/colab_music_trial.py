@@ -72,6 +72,7 @@ def prepare_runtime():
 
 def bootstrap(args):
     python = prepare_runtime()
+    extra = ["--conditioning", args.conditioning] if args.conditioning else []
     subprocess.run(
         [
             str(python),
@@ -81,6 +82,7 @@ def bootstrap(args):
             args.model,
             "--seconds",
             str(args.seconds),
+            *extra,
         ],
         check=True,
     )
@@ -115,6 +117,8 @@ def benchmark(args):
         ],
     )
     style = MusicCoCa()
+    if args.conditioning:
+        return harmony(args, devices, output, style, MagentaRT2Jax)
     prompts = [
         "Expressive acoustic piano, warm bass, intimate acoustic chamber music, coherent harmony",
         "Acoustic guitar-led music, rhythmic guitar strumming, warm bass, coherent harmony",
@@ -205,11 +209,88 @@ def benchmark(args):
     )
 
 
+def harmony(args, devices, output, style, model_class):
+    """Render the V1 instrument's written notes, frame by frame, in each palette.
+
+    The conditioning file holds one row of 128 note states per 40 ms frame, made by Sway's
+    own arrangement code, so this model hears exactly what the Mac's model hears. Sampling
+    matches the Mac: temperature 1.1, top-k 40, style guidance 3, note guidance 1, no drums.
+    """
+    import numpy as np
+    import soundfile as sf
+    from magenta_rt.config import DRUM_PIANOROLL, MUSICCOCA, PIANOROLL_WITH_ONSETS
+
+    data = np.load(args.conditioning)
+    rows = data["tokens"].astype(int)
+    palettes = [str(value) for value in data["palettes"]]
+    prompts = [str(value) for value in data["prompts"]]
+    started = time.monotonic()
+    model = model_class(
+        size=args.model,
+        style_model=style,
+        temperature=1.1,
+        top_k=40,
+        cfg_scales={"musiccoca": 3.0, "notes": 1.0, "drums": 1.0},
+    )
+    load_and_compile_seconds = time.monotonic() - started
+    quiet = {PIANOROLL_WITH_ONSETS.key: [0] * 128, DRUM_PIANOROLL.key: [0]}
+    state = None
+    for _ in range(50):
+        _, state = model.generate(conditioning=quiet, frames=1, state=state)
+    results = {}
+    for palette, prompt in zip(palettes, prompts, strict=True):
+        tokens = style.tokenize(style.embed(prompt, use_mapper=False)).tolist()[:12]
+        tokens[6:] = [-1] * 6
+        state, samples, frame_times = None, [], []
+        for row in rows:
+            conditioning = {
+                MUSICCOCA.key: tokens,
+                PIANOROLL_WITH_ONSETS.key: row.tolist(),
+                DRUM_PIANOROLL.key: [0],
+            }
+            begun = time.monotonic()
+            wav, state = model.generate(conditioning=conditioning, frames=1, state=state)
+            frame_times.append((time.monotonic() - begun) * 1000)
+            if wav.samples.shape != (1920, 2) or not np.isfinite(wav.samples).all():
+                raise RuntimeError("MRT2 returned an invalid stereo frame")
+            samples.append(wav.samples)
+        audio = np.concatenate(samples)
+        sf.write(output / f"harmony-{palette}.wav", audio, 48000, subtype="PCM_16")
+        results[palette] = {
+            "prompt": prompt,
+            "frame_ms_p50": float(np.percentile(frame_times, 50)),
+            "frame_ms_p95": float(np.percentile(frame_times, 95)),
+            "frame_ms_max": max(frame_times),
+            "realtime_factor": len(frame_times) * 40 / sum(frame_times),
+            "rms": float(np.sqrt(np.mean(audio**2))),
+            "peak": float(np.max(np.abs(audio))),
+        }
+        print(palette, json.dumps(results[palette]), flush=True)
+    metrics = {
+        "scope": "GPU generation of Sway's written harmony; network and playback not measured",
+        "model": args.model,
+        "source_revision": SOURCE_REVISION,
+        "asset_revision": ASSET_REVISION,
+        "gpu": [str(device) for device in devices],
+        "nvidia_smi": subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader"],
+            text=True,
+        ).strip(),
+        "load_and_compile_seconds": load_and_compile_seconds,
+        "frames": len(rows),
+        "palettes": results,
+    }
+    (output / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--model", choices=("mrt2_base", "mrt2_small"), default="mrt2_base")
     parser.add_argument("--seconds", type=int, default=30, help="Audio duration, 10 to 60 seconds")
+    parser.add_argument(
+        "--conditioning", help="Sway harmony conditioning (.npz) to render instead of the benchmark"
+    )
     arguments = parser.parse_args()
     if not 10 <= arguments.seconds <= 60:
         parser.error("Use 10-60 seconds of audio")

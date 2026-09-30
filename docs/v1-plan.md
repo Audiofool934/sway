@@ -254,6 +254,13 @@ Later the same day, Qwen began composing the band's cycles:
 - Captions appeared as their cycles began. The performance file records each composed cycle, and the MIDI file carries the answering line as its own track.
 - With MRT2 loaded when the page opens, it generated 19 of 20 bars in that piece.
 
+MRT2 Base on Colab was then compared with the Mac's MRT2 Small on the same 16 bars of written harmony, in all three palettes:
+
+- Base is ten times larger, but on an A100 it rendered a 40 ms frame in 37 ms, 1.07 times faster than playback, against 20 ms for Small on the Mac. This account has no H100.
+- Neither model followed the written notes better across the board: Base kept more of the piano's energy on the bar's notes (96% against 92%), and less of the strings' (84% against 95%) and choir's (91% against 95%).
+- With a network hop and several minutes of startup, Base on Colab cannot keep the live harmony in time with room to spare, so live playing stays on the Mac. Whether Base sounds better is a question for listening; if it does, it suits re-rendering a finished take, where speed does not matter.
+- The trial used 0.35 compute units, and its VM was released.
+
 Known unknowns for the generated band:
 
 - It has been checked by measurement, not by ear, including whether Qwen's choices make better music than the built-in progressions.
