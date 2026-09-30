@@ -337,10 +337,11 @@ function band(t) {
   t.mock.method(globalThis, "clearInterval", () => {});
   const ctx = { currentTime: 0 };
   const pads = [];
+  const shadows = [];
   const synth = {
     setTempo() {},
     play(event, time) {
-      if (event.part === "pad") pads.push(time);
+      if (event.part === "pad") (event.shadow ? shadows : pads).push(time);
       return null;
     },
   };
@@ -355,13 +356,13 @@ function band(t) {
       tick();
     }
   };
-  return { ctx, engine, harmony, pads, until };
+  return { ctx, engine, harmony, pads, shadows, until };
 }
 
 const near = (a, b) => Math.abs(a - b) < 1e-6;
 
 test("a generated bar is placed ahead of its bar line and replaces the pad", (t) => {
-  const { engine, harmony, pads, until } = band(t);
+  const { engine, harmony, pads, shadows, until } = band(t);
   harmony.arrived.add(1);
   until(0.1);
   assert.equal(harmony.played.length, 1);
@@ -369,6 +370,8 @@ test("a generated bar is placed ahead of its bar line and replaces the pad", (t)
   until(BAR + 0.1);
   // The synthesized pad played bar 0 only; bar 1's chord still went into the log.
   assert.deepEqual(pads, [0]);
+  // The listening test's stand-in plays under bar 1, silent until MRT2 is muted.
+  assert.deepEqual(shadows, [BAR]);
   const logged = engine.log.filter((note) => note.part === "pad");
   assert.deepEqual(new Set(logged.map((note) => note.start)), new Set([0, 4]));
   assert.deepEqual(harmony.passedBars, [

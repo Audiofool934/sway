@@ -123,6 +123,7 @@ export class Synth {
     this.duck = ctx.createGain();
     this.duck.connect(this.master);
     this.buses = {};
+    this.levels = {}; // Each bus's own gain, which the listening test mutes and restores.
     const bus = (
       name,
       gain,
@@ -136,6 +137,7 @@ export class Synth {
       if (reverb) this.#send(node, this.reverb, reverb);
       if (delay) this.#send(node, this.delay, delay);
       this.buses[name] = node;
+      this.levels[name] = gain;
     };
     bus("kick", 0.36);
     bus("snare", 1.2, { reverb: 0.18 });
@@ -150,6 +152,8 @@ export class Synth {
     // Generated harmony stands in for the pad; its audio already carries a room.
     bus("harmony", 1, { reverb: 0.15, ducked: true });
     bus("keys", 0.75, { reverb: 0.25, pan: -0.12, ducked: true });
+    // The composer's answering line in the keys' sound, on a bus of its own.
+    bus("answer", 0.75, { reverb: 0.25, pan: -0.12, ducked: true });
     bus("arp", 0.16, { delay: 0.4, reverb: 0.2, pan: 0.25, ducked: true });
     bus("lead", 0.65, { delay: 0.28, reverb: 0.22 });
     bus("loop", 0.36, { delay: 0.18, reverb: 0.3 });
@@ -158,6 +162,16 @@ export class Synth {
     this.kickDrive = saturation(ctx, 1.6);
     this.kickDrive.connect(this.buses.kick);
     this.openHat = null;
+    // TEMPORARY listening test: on bars MRT2 plays, the pad and answering line still play
+    // into these, silent until MRT2 is muted, so the two can be compared on the same bar.
+    this.shadows = {};
+    for (const name of ["pad", "answer"]) {
+      const node = ctx.createGain();
+      node.gain.value = 0;
+      node.connect(this.buses[name]);
+      this.shadows[name] = node;
+    }
+    this.ducking = true; // Off while the drums are muted, so nothing pumps without a kick.
   }
 
   /** Insert a node, such as the recorder, between the finished mix and the speakers. */
@@ -229,12 +243,19 @@ export class Synth {
           event.pitches,
           seconds,
           event.brightness,
+          event.shadow ? this.shadows.pad : this.buses.pad,
         );
       case "keys":
         return this.keys(t, event.velocity, event.pitches, seconds);
       // The composer's answering line, when generated harmony is not playing it.
       case "answer":
-        return this.keys(t, event.velocity, [event.pitch], seconds);
+        return this.keys(
+          t,
+          event.velocity,
+          [event.pitch],
+          seconds,
+          event.shadow ? this.shadows.answer : this.buses.answer,
+        );
       case "arp":
         return this.arp(t, event.velocity, event.pitch, seconds);
     }
@@ -262,6 +283,7 @@ export class Synth {
       .connect(clickAmp)
       .connect(this.buses.kick);
     // Duck the harmony bus with the kick.
+    if (!this.ducking) return;
     const duck = this.duck.gain;
     duck.cancelScheduledValues(t);
     duck.setTargetAtTime(1 - 0.35 * velocity, t, 0.005);
@@ -402,13 +424,20 @@ export class Synth {
     return this.#handle([amp.gain], [sub, body], 0.02);
   }
 
-  pad(t, velocity, pitches, seconds, brightness = 0.4) {
+  pad(
+    t,
+    velocity,
+    pitches,
+    seconds,
+    brightness = 0.4,
+    destination = this.buses.pad,
+  ) {
     const ctx = this.ctx;
     const filter = this.#filter("lowpass", 350 + 2600 * brightness, 0.5);
     const amp = this.#gain();
     const end = t + seconds;
     envelope(amp.gain, t, { attack: 0.45, peak: velocity, release: 0.9, end });
-    filter.connect(amp).connect(this.buses.pad);
+    filter.connect(amp).connect(destination);
     const oscillators = [];
     for (const pitch of pitches)
       for (const detune of [-9, 7]) {
@@ -426,7 +455,7 @@ export class Synth {
   }
 
   // Two-operator FM electric piano: a bright attack that mellows as it rings.
-  keys(t, velocity, pitches, seconds) {
+  keys(t, velocity, pitches, seconds, destination = this.buses.keys) {
     const ctx = this.ctx;
     const amp = this.#gain();
     const end = t + seconds;
@@ -438,7 +467,7 @@ export class Synth {
       release: 0.35,
       end,
     });
-    amp.connect(this.buses.keys);
+    amp.connect(destination);
     const oscillators = [];
     for (const pitch of pitches) {
       const f = frequency(pitch);
