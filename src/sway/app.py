@@ -288,4 +288,21 @@ app.mount(
     name="vendor",
 )
 app.mount("/models", StaticFiles(directory=VISION_DIR, check_dir=False), name="vision-models")
-app.mount("/", StaticFiles(directory=ROOT / "web", html=True, check_dir=False), name="performance")
+
+
+class RevalidatedFiles(StaticFiles):
+    """The page's own files, which browsers check on every load.
+
+    Without this, Chrome may reuse cached modules for hours after an update and run old
+    and new code together. Unchanged files still cost only a 304 response.
+    """
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount(
+    "/", RevalidatedFiles(directory=ROOT / "web", html=True, check_dir=False), name="performance"
+)

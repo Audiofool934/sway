@@ -142,3 +142,11 @@ def test_colab_music_does_not_require_local_music_assets(client, monkeypatch):
     assert seen[0].music_backend == "colab"
     assets["colab"] = {"configured": False, "error": "Colab connection is unavailable"}
     assert client.post("/api/start", json=options).status_code == 409
+
+
+def test_the_page_files_are_revalidated_on_every_load(client):
+    response = client.get("/instrument/main.js")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-cache"
+    again = client.get("/instrument/main.js", headers={"If-None-Match": response.headers["etag"]})
+    assert again.status_code == 304
