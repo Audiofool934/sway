@@ -15,12 +15,13 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 from pydantic import ValidationError
 
-from . import harmony
+from . import composer, harmony
 from .config import MRT_DIR, MRT_FILES, RECORDINGS, ROOT, SEMANTIC_DIR, VISION_ASSETS, VISION_DIR
 from .flow import router as flow_router
 from .qwen import qwen_status
 from .remote_music import remote_music_status
 from .schema import (
+    ComposeRequest,
     HarmonyBar,
     HarmonyStart,
     ManualControl,
@@ -35,10 +36,16 @@ log = logging.getLogger(__name__)
 session = Session()
 
 
+# Created on first use, once Qwen is configured, so a key added later is picked up.
+COMPOSER = None
+
+
 @asynccontextmanager
 async def lifespan(app):
     yield
     await session.stop()
+    if COMPOSER is not None:
+        await COMPOSER.aclose()
 
 
 app = FastAPI(title="Sway", lifespan=lifespan, docs_url=None, redoc_url=None)
@@ -126,7 +133,9 @@ async def harmony_bar(body: HarmonyBar):
         if body.stream != harmony.RENDERER.stream:
             raise harmony.StaleStream
         started = time.perf_counter()
-        audio = harmony.RENDERER.render(body.voicing, body.tones, body.palette, frames)
+        audio = harmony.RENDERER.render(
+            body.notes, body.tones, body.palette, frames, body.beats_per_bar
+        )
         return audio, (time.perf_counter() - started) * 1000
 
     try:
@@ -146,6 +155,27 @@ async def harmony_bar(body: HarmonyBar):
             "X-Render-Ms": str(round(ms)),
         },
     )
+
+
+@app.get("/api/compose/status")
+async def compose_status():
+    """Whether Qwen can compose; never includes the key or workspace."""
+    return qwen_status()
+
+
+@app.post("/api/compose")
+async def compose(body: ComposeRequest):
+    """Qwen's plan for the band's next cycle, or an error the page falls back from."""
+    global COMPOSER
+    if COMPOSER is None:
+        try:
+            COMPOSER = composer.Composer()
+        except (OSError, ValueError) as exc:
+            raise HTTPException(503, f"Qwen is not configured: {exc}") from None
+    try:
+        return await COMPOSER.compose(body)
+    except composer.ComposerError as exc:
+        raise HTTPException(exc.status, str(exc)) from None
 
 
 @app.post("/api/start")

@@ -9,7 +9,8 @@ The [documentation index](docs/README.md) separates current guides from the paus
 Someone with no musical training should be able to make a piece they want to keep.
 One hand plays a melody on a pitch ladder; the other sets the band's energy, cuts it, and loops what was played.
 Sway keeps every note in time and in key, and the notes you play are synthesized in the browser, so no network request or large model sits between a gesture and its sound.
-The band's harmony is generated: MRT2, a music model running on the same Mac, renders each bar's chords two bars ahead, and the engine starts that audio on the bar line.
+The band is generative: Qwen writes its next four bars while the current four play, from what you just played and the energy you set, and MRT2, a music model running on the same Mac, performs the harmony and Qwen's answering lines.
+The engine checks every plan and keeps it in key and on the beat, and the built-in band steps in whenever a model is late.
 V1 is in progress: the instrument, a tutorial with setup and four lessons, recording, and MIDI export work with scripted input, and the first play test with real hands is next.
 
 ## Play
@@ -27,6 +28,8 @@ Subtle hand skeletons and small fingertip markers show which hand controls each 
 Without a camera, the mouse plays the lead and the keyboard steers the band; the start screen lists the keys.
 Two fists or **End piece** finish a piece, which offers its audio, MIDI, and a performance file to save.
 The **Harmony** setting on the start screen picks generated strings, piano, or choir, or the synthesized pad; a chip at the top lights while the generated harmony is playing.
+**Band** chooses whether Qwen composes the band's cycles or the built-in patterns play; while a composed cycle plays, "by Qwen" shows under the beat and its caption appears at the bottom.
+Qwen needs a DashScope API key in `~/.config/sway/qwen.json`, and `sway doctor` shows whether it is configured; only musical data is sent to it, never camera images.
 Press D while playing to see measured tracking, audio timing, and how many bars were generated.
 Stop the server with Ctrl-C when finished.
 

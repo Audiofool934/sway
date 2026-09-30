@@ -1,7 +1,7 @@
 # Development
 
 Development resumed on September 28, 2026; the [V1 plan](v1-plan.md) defines the instrument and its milestones.
-The V1 instrument is browser code in `web/instrument/`; the Python server serves its files and renders its generated harmony with MRT2.
+The V1 instrument is browser code in `web/instrument/`; the Python server serves its files, renders its generated harmony with MRT2, and asks Qwen for the band's composer.
 The Python pipeline below serves the legacy ensemble and Flow pages.
 
 ## Runtime
@@ -46,23 +46,25 @@ See the [validation index](README.md#validation-records) for hardware and browse
 
 The V1 instrument:
 
-| Path                                                      | Responsibility                                                                           |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `web/index.html`, `web/instrument/style.css`              | The instrument page and its styles.                                                      |
-| `web/instrument/theory.js`                                | Pitches, chords, and the V1 musical world.                                               |
-| `web/instrument/clock.js`                                 | Beat and time conversion, swing, and latency-compensated grid alignment.                 |
-| `web/instrument/hands.js`                                 | Landmark smoothing, pinch and fist detection, and stable hand roles.                     |
-| `web/instrument/hand-visual.js`                           | Fine hand skeletons and wrist/fingertip markers over the live camera image.              |
-| `web/instrument/controls.js`                              | Hand features to instrument events, shared by camera, pointer, and scripted input.       |
-| `web/instrument/band.js`, `looper.js`                     | The band's parts per energy level, and retrospective loop capture.                       |
-| `web/instrument/synth.js`, `engine.js`                    | Web Audio instruments and mix, and the lookahead scheduler.                              |
-| `web/instrument/harmony.js`                               | Generated harmony: requests MRT2 bars ahead and starts each on its bar line.             |
-| `src/sway/harmony.py`, `/api/harmony/*` in `app.py`       | Renders a bar's chord with MRT2 from one continuous model stream.                        |
-| `web/instrument/camera.js`, `web/vision-worker.js`        | Camera capture with capture times, and MediaPipe tracking off the main thread.           |
-| `web/instrument/overlay.js`, `main.js`                    | The drawn instrument, heads-up display, and page wiring.                                 |
-| `web/instrument/tutorial.js`, `coach.js`                  | Lesson charts, judging, and timing calibration; the setup and lesson flow.               |
-| `web/instrument/midi.js`, `wav.js`, `recorder-worklet.js` | MIDI and WAV encoding, and recording the mix while a piece plays.                        |
-| `tests/instrument-*.test.js`, `tests/test_harmony.py`     | Timing, harmony, hand, control, band, looper, camera, engine, export, and lesson checks. |
+| Path                                                                | Responsibility                                                                           |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `web/index.html`, `web/instrument/style.css`                        | The instrument page and its styles.                                                      |
+| `web/instrument/theory.js`                                          | Pitches, chords, and the V1 musical world.                                               |
+| `web/instrument/clock.js`                                           | Beat and time conversion, swing, and latency-compensated grid alignment.                 |
+| `web/instrument/hands.js`                                           | Landmark smoothing, pinch and fist detection, and stable hand roles.                     |
+| `web/instrument/hand-visual.js`                                     | Fine hand skeletons and wrist/fingertip markers over the live camera image.              |
+| `web/instrument/controls.js`                                        | Hand features to instrument events, shared by camera, pointer, and scripted input.       |
+| `web/instrument/band.js`, `looper.js`                               | The band's parts per energy level, and retrospective loop capture.                       |
+| `web/instrument/synth.js`, `engine.js`                              | Web Audio instruments and mix, and the lookahead scheduler.                              |
+| `web/instrument/harmony.js`                                         | Generated harmony: requests MRT2 bars ahead and starts each on its bar line.             |
+| `src/sway/harmony.py`, `/api/harmony/*` in `app.py`                 | Renders a bar's chord with MRT2 from one continuous model stream.                        |
+| `web/instrument/arrange.js`, `composer.js`                          | A cycle's plan as notes per bar, and the page's side of the composer.                    |
+| `src/sway/composer.py`, `/api/compose` in `app.py`                  | Asks Qwen for the band's next cycle and validates its plan.                              |
+| `web/instrument/camera.js`, `web/vision-worker.js`                  | Camera capture with capture times, and MediaPipe tracking off the main thread.           |
+| `web/instrument/overlay.js`, `main.js`                              | The drawn instrument, heads-up display, and page wiring.                                 |
+| `web/instrument/tutorial.js`, `coach.js`                            | Lesson charts, judging, and timing calibration; the setup and lesson flow.               |
+| `web/instrument/midi.js`, `wav.js`, `recorder-worklet.js`           | MIDI and WAV encoding, and recording the mix while a piece plays.                        |
+| `tests/instrument-*.test.js`, `test_harmony.py`, `test_composer.py` | Timing, harmony, hand, control, band, looper, camera, engine, export, and lesson checks. |
 
 In the browser console, `window.sway` exposes the engine, controls, and a scripted `input()` that feeds the same features as a hand.
 Hand features carry 21 mirrored, smoothed image landmarks, centred on the same palm position that drives the controls.
@@ -70,6 +72,7 @@ The mirrored live video remains visible with reduced saturation and brightness s
 Hand accents use only the tracked bones and six small markers per hand; no inferred surfaces, particles, or trails are drawn.
 `POST /api/harmony/start` begins a piece's model stream, and `POST /api/harmony/bar` returns one bar of 16-bit stereo PCM at 48 kHz; bars for a piece that has since been replaced get HTTP 409.
 With real MRT2 assets present, `tests/test_harmony.py` also renders two bars and checks that they stay in key.
+`POST /api/compose` returns Qwen's plan for the next cycle, and `GET /api/compose/status` says whether Qwen is configured without revealing the key; the tests replace Qwen with a mock transport, so they make no billable requests.
 
 The legacy Python pipeline:
 

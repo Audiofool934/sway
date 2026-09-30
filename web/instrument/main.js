@@ -3,6 +3,7 @@
 
 import { Camera } from "./camera.js";
 import { Coach } from "./coach.js";
+import { Composer } from "./composer.js";
 import { Controls } from "./controls.js";
 import { Engine } from "./engine.js";
 import { GeneratedHarmony, PALETTES } from "./harmony.js";
@@ -41,6 +42,7 @@ const settings = {
   range: store.get("range", { top: 0.14, bottom: 0.86 }),
   offset: store.get("offset", 0), // Calibrated timing offset, in seconds.
   harmony: store.get("harmony", "strings"), // A generated palette, or "off".
+  composer: store.get("composer", "qwen"), // Qwen writes the band's cycles, or "off".
 };
 // A camera frame is exposed before its capture time; this is the allowance for that.
 const SENSOR = 0.02;
@@ -50,6 +52,9 @@ let engine = null;
 // Generated harmony for the current piece, when MRT2 is installed and chosen.
 let harmony = null;
 const harmonyCheck = { done: false, available: false, warned: false };
+// The band's composer for the current piece, when Qwen is configured and chosen.
+let composer = null;
+const composeCheck = { done: false, configured: false, warned: false };
 let tracker = new HandTracker({ leadSide: settings.leadSide });
 let controls = newControls();
 let cameraRoles = {};
@@ -242,6 +247,7 @@ const MIDI_TRACKS = [
   ["Pad", ["pad"], 3],
   ["Bass", ["bass"], 4],
   ["Arp", ["arp"], 5],
+  ["Answer", ["answer"], 6],
   ["Drums", Object.keys(DRUM_NOTES), 9],
 ];
 
@@ -303,6 +309,11 @@ async function exportTake() {
       grid: settings.grid,
       range: settings.range,
       harmony: harmony ? harmony.palette : "off",
+      composer: composer ? "qwen" : "off",
+    },
+    composer: composer && {
+      model: engine.composed.at(-1)?.model ?? null,
+      cycles: engine.composed,
     },
     harmony: harmony && {
       model: "MRT2 small",
@@ -353,6 +364,11 @@ async function start({ level, lesson = false } = {}) {
   noteCount = 0;
   harmony = null;
   harmonyCheck.warned = false;
+  composer = null;
+  composeCheck.warned = false;
+  // Lessons keep the built-in band, so every attempt sounds the same.
+  if (!lesson && composeCheck.configured && settings.composer === "qwen")
+    composer = new Composer({ world: WORLD });
   if (harmonyCheck.available && PALETTES[settings.harmony]) {
     harmony = new GeneratedHarmony(ctx, synth.buses.harmony, {
       palette: settings.harmony,
@@ -365,6 +381,7 @@ async function start({ level, lesson = false } = {}) {
     level,
     compensation: SENSOR + settings.offset,
     harmony,
+    composer,
   });
   engine.on(onEngine);
   take = { chunks: [] };
@@ -477,6 +494,10 @@ function onEngine(event) {
     renderLoops();
   } else if (event.type === "loopNote") {
     lastLoopPulse.set(event.layer, event.time);
+  } else if (event.type === "composed" && event.plan.caption) {
+    // Shown as the cycle Qwen wrote begins to play.
+    const wait = Math.max(0, (event.time - engine.ctx.currentTime) * 1000);
+    setTimeout(() => flashHint(event.plan.caption), wait);
   } else if (event.type === "ending" && !coach.active) {
     flashHint("Ending on the next bar.");
   } else if (event.type === "finished" && !coach.active) {
@@ -561,6 +582,16 @@ async function checkHarmony() {
     harmonyCheck.available = false;
   }
   harmonyCheck.done = true;
+  // Load MRT2 now, so the first piece does not wait for it; each piece starts its own stream.
+  if (harmonyCheck.available && PALETTES[settings.harmony])
+    fetch("/api/harmony/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        palette: settings.harmony,
+        seed: Math.floor(Math.random() * 2 ** 31),
+      }),
+    }).catch(() => {});
   $("harmony-note").textContent =
     "Generated harmony needs MRT2 on this Mac: run uv run --locked sway setup --music-only, then restart the server.";
   applySettings();
@@ -580,6 +611,33 @@ function renderHarmony() {
     harmonyCheck.warned = true;
     flashHint(
       `Generated harmony stopped (${harmony.error}); the synthesized pad plays instead.`,
+    );
+  }
+}
+
+// The band's composer.
+
+// Qwen composes through the local server, which holds the key; the page never sees it.
+async function checkComposer() {
+  try {
+    const response = await fetch("/api/compose/status");
+    composeCheck.configured =
+      response.ok && (await response.json()).configured === true;
+  } catch {
+    composeCheck.configured = false;
+  }
+  composeCheck.done = true;
+  $("composer-note").textContent =
+    "Qwen composes once its API key is in ~/.config/sway/qwen.json; until then the band plays its built-in patterns.";
+  applySettings();
+}
+
+function renderComposer(composed) {
+  $("composed-by").hidden = !composed;
+  if (composer?.state === "failed" && !composeCheck.warned) {
+    composeCheck.warned = true;
+    flashHint(
+      `Qwen stopped composing (${composer.error}); the band plays its own progressions.`,
     );
   }
 }
@@ -670,6 +728,19 @@ function renderDetails() {
         : "Off",
     ],
     ["MRT2 render per bar", ms(median(harmony?.stats.renderMs ?? []))],
+    [
+      "Qwen cycles",
+      composer
+        ? `${engine.composed.length} composed, ${composer.stats.failed} missed`
+        : "Off",
+    ],
+    ["Qwen reply", ms(median(composer?.stats.ms ?? []))],
+    [
+      "Qwen tokens",
+      composer
+        ? `${composer.stats.promptTokens + composer.stats.completionTokens}`
+        : "-",
+    ],
     ["Late scheduler steps", engine ? `${engine.stats.lateSteps}` : "-"],
     ["Worst lateness", engine ? ms(engine.stats.worstLateMs) : "-"],
   ];
@@ -788,6 +859,8 @@ function frame() {
     Boolean(leadHand),
     Boolean(bandHand),
     harmony ? `${harmony.state}:${harmony.last}` : "",
+    Boolean(info?.composed),
+    composer?.state ?? "",
     currentHint(),
   ].join("|");
   if (hud !== lastHud) {
@@ -802,6 +875,7 @@ function frame() {
     $("lead-status").classList.toggle("seen", Boolean(leadHand));
     $("band-status").classList.toggle("seen", Boolean(bandHand));
     renderHarmony();
+    renderComposer(Boolean(info?.composed));
     const hint = currentHint();
     if (hint !== null) $("hint").textContent = hint;
   }
@@ -831,6 +905,10 @@ function applySettings() {
   choice.disabled = !harmonyCheck.available;
   choice.value = harmonyCheck.available ? settings.harmony : "off";
   $("harmony-note").hidden = !harmonyCheck.done || harmonyCheck.available;
+  const band = $("composer");
+  band.disabled = !composeCheck.configured;
+  band.value = composeCheck.configured ? settings.composer : "off";
+  $("composer-note").hidden = !composeCheck.done || composeCheck.configured;
 }
 
 $("lead-side").onchange = (event) => {
@@ -839,6 +917,10 @@ $("lead-side").onchange = (event) => {
   tracker = new HandTracker({ leadSide: settings.leadSide });
   pointer.band = null;
   applySettings();
+};
+$("composer").onchange = (event) => {
+  settings.composer = event.target.value;
+  store.set("composer", settings.composer);
 };
 $("harmony").onchange = (event) => {
   settings.harmony = event.target.value;
@@ -869,6 +951,7 @@ window.addEventListener("pagehide", () => {
 
 applySettings();
 checkHarmony();
+checkComposer();
 cameraStatus("off");
 requestAnimationFrame(frame);
 

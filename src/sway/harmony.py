@@ -42,24 +42,28 @@ def frames_per_bar(tempo: float, beats_per_bar: int) -> int:
     return whole
 
 
-def bar_tokens(voicing, tones, frames, previous=None) -> np.ndarray:
+def bar_tokens(notes, tones, frames, beat_frames) -> np.ndarray:
     """Note conditioning for one bar, one row per model frame.
 
-    Pitch classes outside the chord are silent in every octave, so nothing can sound out of
-    key. The voicing is held for the whole bar; notes that were not in the previous bar's
-    voicing are struck on its first frame, and common tones carry over. Other octaves of the
-    chord's pitch classes are left free for the model's own doublings.
+    Pitch classes outside the chord and the bar's notes are silent in every octave, so
+    nothing can sound out of key. Each note is struck on its first frame, unless it is tied
+    over from the last bar, and held to its end; a written pitch is silent where no note
+    is written, so lines are articulated as written. Other octaves of the chord's pitch
+    classes stay free for the model's own doublings.
     """
     tokens = np.full((frames, 128), FREE, dtype=np.int32)
-    allowed = {tone % 12 for tone in tones} | {pitch % 12 for pitch in voicing}
+    allowed = {tone % 12 for tone in tones} | {note.pitch % 12 for note in notes}
     for pitch in range(128):
         if pitch % 12 not in allowed:
             tokens[:, pitch] = SILENT
-    carried = set(previous or ())
-    for pitch in voicing:
-        tokens[:, pitch] = HELD
-        if pitch not in carried:
-            tokens[0, pitch] = STRUCK
+    for pitch in {note.pitch for note in notes}:
+        tokens[:, pitch] = SILENT
+    for note in notes:
+        first = min(frames - 1, round(note.start * beat_frames))
+        last = min(frames, max(first + 1, round((note.start + note.length) * beat_frames)))
+        tokens[first:last, note.pitch] = HELD
+        if not note.tie:
+            tokens[first, note.pitch] = STRUCK
     return tokens
 
 
@@ -79,7 +83,6 @@ class HarmonyRenderer:
         self._factory = engine_factory
         self.engine = None
         self.palette = None
-        self.previous = None
         self.frame_ms = []
         # The piece whose bars are wanted. Set when a start request arrives, before it
         # queues, so bars still queued for a replaced piece are skipped, not rendered.
@@ -118,23 +121,21 @@ class HarmonyRenderer:
         # The first call compiles the graph; do it before the piece needs a bar in time.
         engine.generate(np.full(128, SILENT, dtype=np.int32), drumless=True)
         engine.reset(seed)
-        self.previous = None
         return {"palette": palette, "ms": round((time.perf_counter() - started) * 1000)}
 
-    def render(self, voicing, tones, palette: str, frames: int) -> np.ndarray:
-        """One bar of stereo audio for the chord, continuing the stream."""
+    def render(self, notes, tones, palette: str, frames: int, beats_per_bar: int) -> np.ndarray:
+        """One bar of stereo audio playing `notes` over the chord, continuing the stream."""
         engine = self._load()
         if palette != self.palette:
             # A palette change blends over a few frames instead of switching abruptly.
             self._style(palette, immediate=self.palette is None)
-        tokens = bar_tokens(voicing, tones, frames, self.previous)
+        tokens = bar_tokens(notes, tones, frames, frames / beats_per_bar)
         chunks = []
         for row in tokens:
             started = time.perf_counter()
             chunks.append(engine.generate(row, drumless=True))
             self.frame_ms.append((time.perf_counter() - started) * 1000)
         self.frame_ms = self.frame_ms[-600:]
-        self.previous = list(voicing)
         return np.concatenate(chunks)
 
     def status(self) -> dict:

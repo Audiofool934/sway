@@ -8,12 +8,16 @@ export const clamp = (value, low = 0, high = 1) =>
   Math.min(high, Math.max(low, value));
 
 // Voicings are written out so every chord change keeps common tones in place.
-const CHORDS = {
+export const CHORDS = {
   Am: { name: "Am", tones: [9, 0, 4], bass: 33, pad: [57, 60, 64, 67] },
   F: { name: "F", tones: [5, 9, 0], bass: 41, pad: [53, 57, 60, 64] },
   C: { name: "C", tones: [0, 4, 7], bass: 36, pad: [55, 60, 64, 67] },
   // No third: B would rub against the ladder's C, so G is voiced open.
   G: { name: "G", tones: [7, 2], bass: 43, pad: [55, 62, 64, 69] },
+  // For the composer. Each leaves out the note a semitone from a rung: Dm its F (against
+  // the ladder's E), and Em its B (against C).
+  Dm: { name: "Dm", tones: [2, 9], bass: 38, pad: [50, 57, 60, 64] },
+  Em: { name: "Em", tones: [4, 7], bass: 40, pad: [52, 55, 62, 67] },
 };
 
 export const WORLD = {
@@ -30,14 +34,19 @@ export const WORLD = {
     low: ["Am", "F", "C", "G"].map((name) => CHORDS[name]),
     high: ["F", "G", "Am", "C"].map((name) => CHORDS[name]),
   },
+  // The chords the composer may choose from.
+  vocabulary: ["Am", "C", "Dm", "Em", "F", "G"],
   tonic: CHORDS.Am,
   levels: ["Air", "Pulse", "Groove", "Drive", "Peak"],
 };
 
 export const cycleBeats = (world) => world.beatsPerBar * world.cycleBars;
 
+/** The chord of `bar` in a named progression, or in a composed cycle's list of chords. */
 export function chordAt(world, progression, bar) {
-  const chords = world.progressions[progression];
+  const chords = Array.isArray(progression)
+    ? progression
+    : world.progressions[progression];
   return chords[((bar % chords.length) + chords.length) % chords.length];
 }
 

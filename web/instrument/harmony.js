@@ -108,8 +108,12 @@ export class GeneratedHarmony {
     }
   }
 
-  /** Asks for one bar's chord; its audio waits here until that bar is scheduled. */
-  request(bar, chord) {
+  /**
+   * Asks for one bar: its written notes in beats from the bar's start, { pitch, start,
+   * length, tie }, and the chord's pitch classes. The audio waits here until that bar
+   * is scheduled.
+   */
+  request(bar, { notes, tones }) {
     // Each bar renders once, even after its audio has been placed.
     if (!this.active || this.asked.has(bar)) return;
     this.asked.add(bar);
@@ -122,8 +126,8 @@ export class GeneratedHarmony {
       headers: JSON_HEADERS,
       body: JSON.stringify({
         bar,
-        voicing: chord.pad,
-        tones: chord.tones,
+        notes,
+        tones,
         palette: this.palette,
         stream: this.seed,
         tempo: this.world.tempo,

@@ -8,6 +8,12 @@ import { WORLD, chordAt } from "../web/instrument/theory.js";
 const BAR = (WORLD.beatsPerBar * 60) / WORLD.tempo; // 2.4 s
 const RATE = 48000;
 const AM = chordAt(WORLD, "low", 0);
+// Am held for the bar, as the engine describes a bar to the harmony.
+const AM_BAR = {
+  chord: "Am",
+  notes: AM.pad.map((pitch) => ({ pitch, start: 0, length: 4, tie: false })),
+  tones: AM.tones,
+};
 
 function fakeContext() {
   const param = () => ({
@@ -106,12 +112,12 @@ test("a bar's chord is rendered and kept until its bar line", async () => {
     {},
     { palette: "choir", world: WORLD, fetch: server.fetch },
   );
-  harmony.request(5, AM);
-  harmony.request(5, AM); // Asked once, however often the engine asks.
+  harmony.request(5, AM_BAR);
+  harmony.request(5, AM_BAR); // Asked once, however often the engine asks.
   assert.equal(server.calls.length, 1);
   assert.deepEqual(server.calls[0].body, {
     bar: 5,
-    voicing: AM.pad,
+    notes: AM_BAR.notes,
     tones: AM.tones,
     palette: "choir",
     stream: 0, // Set to the piece's seed by start().
@@ -128,7 +134,7 @@ test("a bar's chord is rendered and kept until its bar line", async () => {
   assert.deepEqual(ctx.sources[0].starts, [30 - LEAD.choir]);
   assert.equal(harmony.ready(5), false);
   // The engine asks for each bar at two bar lines; once placed, it is not rendered again.
-  harmony.request(5, AM);
+  harmony.request(5, AM_BAR);
   assert.equal(server.calls.length, 1);
   harmony.passed(5, true);
   assert.equal(harmony.last, "generated");
@@ -148,7 +154,7 @@ test("a bar of the wrong length is refused", async () => {
     {},
     { world: WORLD, fetch: server.fetch },
   );
-  harmony.request(2, AM);
+  harmony.request(2, AM_BAR);
   server.calls[0].resolve(barAudio(BAR - 0.04));
   await settle();
   assert.equal(harmony.ready(2), false);
@@ -164,7 +170,7 @@ test("without MRT2 the page stops asking and the pad plays", async () => {
     {},
     { world: WORLD, fetch: server.fetch },
   );
-  harmony.request(1, AM);
+  harmony.request(1, AM_BAR);
   server.calls[0].resolve(
     new Response(JSON.stringify({ detail: "MRT2 is not installed." }), {
       status: 503,
@@ -173,7 +179,7 @@ test("without MRT2 the page stops asking and the pad plays", async () => {
   await settle();
   assert.equal(harmony.state, "failed");
   assert.equal(harmony.error, "MRT2 is not installed.");
-  harmony.request(2, AM);
+  harmony.request(2, AM_BAR);
   assert.equal(server.calls.length, 1);
   harmony.passed(1, false);
   assert.equal(harmony.last, "fallback");
@@ -192,7 +198,7 @@ test("each piece's bars carry its seed, and bars for a replaced piece are droppe
   server.calls[0].resolve(new Response("{}"));
   await settle();
   assert.equal(harmony.state, "ready");
-  harmony.request(1, AM);
+  harmony.request(1, AM_BAR);
   assert.equal(server.calls[1].body.stream, 1234);
   server.calls[1].resolve(
     new Response(JSON.stringify({ detail: "That piece has ended" }), {
@@ -213,14 +219,14 @@ test("stopping aborts renders in flight and ignores late answers", async () => {
     {},
     { world: WORLD, fetch: server.fetch },
   );
-  harmony.request(3, AM);
-  harmony.request(4, AM);
+  harmony.request(3, AM_BAR);
+  harmony.request(4, AM_BAR);
   harmony.stop();
   await settle();
   assert.equal(harmony.requests.size, 0);
   assert.equal(harmony.ready(3), false);
   assert.equal(harmony.error, null); // An abort is not an error.
-  harmony.request(5, AM);
+  harmony.request(5, AM_BAR);
   assert.equal(server.calls.length, 2);
 });
 
@@ -249,7 +255,7 @@ test("generated bars are matched to the synthesized pad's loudness", async () =>
     { world: WORLD, fetch: server.fetch },
   );
   const gainAfter = async (bar, amplitude) => {
-    harmony.request(bar, AM);
+    harmony.request(bar, AM_BAR);
     server.calls.at(-1).resolve(barAudio(BAR, amplitude));
     await settle();
     harmony.setLevel(1, bar);
@@ -268,7 +274,7 @@ test("generated bars are matched to the synthesized pad's loudness", async () =>
     {},
     { world: WORLD, fetch: server.fetch },
   );
-  silent.request(1, AM);
+  silent.request(1, AM_BAR);
   server.calls.at(-1).resolve(barAudio(BAR, 0));
   await settle();
   silent.setLevel(0, 0);
@@ -298,8 +304,8 @@ class FakeHarmony {
     this.played = [];
     this.stopped = false;
   }
-  request(bar, chord) {
-    this.requests.push([bar, chord.name]);
+  request(bar, description) {
+    this.requests.push([bar, description.chord]);
   }
   ready(bar) {
     return this.arrived.has(bar);

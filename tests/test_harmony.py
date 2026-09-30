@@ -4,16 +4,25 @@ from fastapi.testclient import TestClient
 
 from sway import harmony
 from sway.app import app
+from sway.schema import HarmonyNote
 
-AM = {"voicing": [57, 60, 64, 67], "tones": [9, 0, 4]}
-F = {"voicing": [53, 57, 60, 64], "tones": [5, 9, 0]}
 A_MINOR = {9, 11, 0, 2, 4, 5, 7}
+
+
+def held(voicing, carried=()):
+    """A chord held for a 4/4 bar; notes in `carried` continue from the last bar."""
+    return [HarmonyNote(pitch=pitch, start=0, length=4, tie=pitch in carried) for pitch in voicing]
+
+
+AM = {"notes": held([57, 60, 64, 67]), "tones": [9, 0, 4]}
+F = {"notes": held([53, 57, 60, 64], carried=(57, 60, 64)), "tones": [5, 9, 0]}
 
 
 def bar_request(**changes):
     return {
         "bar": 3,
-        **AM,
+        "notes": [note.model_dump() for note in AM["notes"]],
+        "tones": AM["tones"],
         "palette": "strings",
         "stream": 7,
         "tempo": 100,
@@ -41,27 +50,39 @@ def test_bars_are_whole_model_frames():
 
 
 def test_conditioning_silences_everything_outside_the_chord():
-    tokens = harmony.bar_tokens(AM["voicing"], AM["tones"], 60)
+    tokens = harmony.bar_tokens(AM["notes"], AM["tones"], 60, 15)
     assert tokens.shape == (60, 128)
     allowed = {9, 0, 4, 7}  # The triad plus the voicing's G.
     for pitch in range(128):
         if pitch % 12 not in allowed:
             assert (tokens[:, pitch] == harmony.SILENT).all(), pitch
     # The voicing is struck, then held for the bar; other octaves stay free.
-    for pitch in AM["voicing"]:
+    for pitch in (57, 60, 64, 67):
         assert tokens[0, pitch] == harmony.STRUCK
         assert (tokens[1:, pitch] == harmony.HELD).all()
     assert (tokens[:, 69] == harmony.FREE).all()
 
 
-def test_common_tones_carry_over_a_chord_change():
-    tokens = harmony.bar_tokens(F["voicing"], F["tones"], 60, previous=AM["voicing"])
+def test_tied_notes_carry_over_a_chord_change():
+    tokens = harmony.bar_tokens(F["notes"], F["tones"], 60, 15)
     assert tokens[0, 53] == harmony.STRUCK  # New in F.
-    for pitch in (57, 60, 64):  # Shared with the Am voicing.
+    for pitch in (57, 60, 64):  # Tied over from the Am bar.
         assert tokens[0, pitch] == harmony.HELD
     assert (tokens[:, 67] == harmony.SILENT).all()  # Am's G has no place in F.
-    same = harmony.bar_tokens(AM["voicing"], AM["tones"], 60, previous=AM["voicing"])
-    assert not (same == harmony.STRUCK).any()
+
+
+def test_a_line_is_articulated_as_written():
+    # A two-note line over Am: C4 on beat 2 for half a beat, then E4 held from beat 3.
+    line = [
+        HarmonyNote(pitch=48, start=1, length=0.5),
+        HarmonyNote(pitch=52, start=2, length=2),
+    ]
+    tokens = harmony.bar_tokens(line, [9, 0, 4], 60, 15)
+    assert tokens[15, 48] == harmony.STRUCK
+    assert (tokens[16:22, 48] == harmony.HELD).all()  # 7.5 frames, rounded to 8.
+    assert (tokens[:15, 48] == harmony.SILENT).all() and (tokens[23:, 48] == harmony.SILENT).all()
+    assert tokens[30, 52] == harmony.STRUCK and (tokens[31:, 52] == harmony.HELD).all()
+    assert (tokens[:, 36] == harmony.FREE).all()  # C in another octave stays free.
 
 
 def test_pcm_is_clipped_interleaved_little_endian():
@@ -109,14 +130,14 @@ def test_renderer_continues_one_stream_bar_after_bar():
     assert engine.seeds == [42]
     assert engine.style.prompts == [harmony.PALETTES["choir"]]
     assert (engine.current == engine.target).all()  # A new piece starts in its palette.
-    first = renderer.render(AM["voicing"], AM["tones"], "choir", 60)
+    first = renderer.render(AM["notes"], AM["tones"], "choir", 60, 4)
     assert first.shape == (60 * harmony.FRAME_SAMPLES, 2)
-    renderer.render(F["voicing"], F["tones"], "choir", 60)
+    renderer.render(F["notes"], F["tones"], "choir", 60, 4)
     assert len(engine.rows) == 120
     assert engine.rows[60][53] == harmony.STRUCK
     assert engine.rows[60][57] == harmony.HELD  # Carried over from the Am bar.
     # A palette change mid-piece blends toward the new style instead of jumping.
-    renderer.render(AM["voicing"], AM["tones"], "piano", 60)
+    renderer.render(AM["notes"], AM["tones"], "piano", 60, 4)
     assert engine.style.prompts[-1] == harmony.PALETTES["piano"]
     assert not (engine.current == engine.target).all()
     assert renderer.status()["loaded"] and renderer.status()["frame_ms"] is not None
@@ -132,10 +153,11 @@ class FakeRenderer:
         self.calls.append(("start", palette, seed))
         return {"palette": palette, "ms": 5}
 
-    def render(self, voicing, tones, palette, frames):
+    def render(self, notes, tones, palette, frames, beats_per_bar):
         if self.fail:
             raise RuntimeError("model failure with private detail")
-        self.calls.append(("render", voicing, tones, palette, frames))
+        pitches = [note.pitch for note in notes]
+        self.calls.append(("render", pitches, tones, palette, frames, beats_per_bar))
         return np.zeros((frames * harmony.FRAME_SAMPLES, 2), dtype=np.float32)
 
     def status(self):
@@ -172,15 +194,16 @@ def test_the_page_can_start_a_stream_and_render_bars(client, renderer):
     assert int(response.headers["x-render-ms"]) >= 0
     assert renderer.calls == [
         ("start", "piano", 7),
-        ("render", AM["voicing"], AM["tones"], "strings", 60),
+        ("render", [57, 60, 64, 67], AM["tones"], "strings", 60, 4),
     ]
 
 
 @pytest.mark.parametrize(
     "changes",
     [
-        {"voicing": [200]},
-        {"voicing": []},
+        {"notes": [{"pitch": 200, "start": 0, "length": 4}]},
+        {"notes": [{"pitch": 60, "start": 3, "length": 2}]},  # Ends past the bar.
+        {"notes": []},
         {"tones": [12]},
         {"stream": -1},
         {"palette": "banjo"},
@@ -234,8 +257,11 @@ def test_mrt2_plays_the_chords_it_is_given_in_key():
     renderer = harmony.HarmonyRenderer()
     renderer.start("strings", seed=11)
     frames = harmony.frames_per_bar(100, 4)
+    # The second bar adds a two-note answering line under the F chord.
+    line = [HarmonyNote(pitch=48, start=1, length=1), HarmonyNote(pitch=45, start=2.5, length=1.5)]
     bars = [
-        renderer.render(chord["voicing"], chord["tones"], "strings", frames) for chord in (AM, F)
+        renderer.render(AM["notes"], AM["tones"], "strings", frames, 4),
+        renderer.render(F["notes"] + line, F["tones"], "strings", frames, 4),
     ]
     for audio in bars:
         assert audio.shape == (frames * harmony.FRAME_SAMPLES, 2)

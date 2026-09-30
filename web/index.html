@@ -30,6 +30,7 @@
             <div id="beats" class="beats"><i></i><i></i><i></i><i></i></div>
             <span id="level-name" class="level-name"></span>
           </div>
+          <span id="composed-by" class="composed-by" hidden>by Qwen</span>
         </div>
         <div class="status">
           <span id="lead-status" class="chip lead">Lead hand</span>
@@ -101,8 +102,16 @@
               <option value="off">Synthesized</option>
             </select>
           </label>
+          <label>
+            Band
+            <select id="composer">
+              <option value="qwen">Composed by Qwen</option>
+              <option value="off">Built-in patterns</option>
+            </select>
+          </label>
         </div>
         <p id="harmony-note" class="note" hidden></p>
+        <p id="composer-note" class="note" hidden></p>
         <div class="actions">
           <button id="start" class="primary" type="button">
             Start playing

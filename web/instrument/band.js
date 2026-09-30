@@ -115,6 +115,7 @@ function bassPitch(symbol, chord, next) {
 /**
  * Band events for one sixteenth step. `bar` counts from the start of the piece.
  * `rising` is the level about to land on the next downbeat, when it is higher.
+ * `following` is the next bar's chord when it belongs to a different progression.
  * Each event: { part, step, beats, velocity, pitch | pitches }.
  */
 export function bandStep({
@@ -124,10 +125,11 @@ export function bandStep({
   level,
   progression,
   rising = null,
+  following = null,
 }) {
   const events = [];
   const chord = chordAt(world, progression, bar);
-  const next = chordAt(world, progression, bar + 1);
+  const next = following ?? chordAt(world, progression, bar + 1);
   const seed = bar * STEPS_PER_BAR + step;
   const humanize = (velocity, salt) =>
     velocity * (0.9 + 0.2 * hash(seed, salt));

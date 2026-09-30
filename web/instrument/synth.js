@@ -232,6 +232,9 @@ export class Synth {
         );
       case "keys":
         return this.keys(t, event.velocity, event.pitches, seconds);
+      // The composer's answering line, when generated harmony is not playing it.
+      case "answer":
+        return this.keys(t, event.velocity, [event.pitch], seconds);
       case "arp":
         return this.arp(t, event.velocity, event.pitch, seconds);
     }

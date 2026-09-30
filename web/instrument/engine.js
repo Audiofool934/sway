@@ -2,6 +2,7 @@
 // control events into band, loop, and lead sounds. Control times arrive in
 // performance.now() seconds and are mapped to the audio timeline as heard.
 
+import { answerEvents, answerNotes, harmonyNotes } from "./arrange.js";
 import { STEPS_PER_BAR, bandEnding, bandStep, progressionFor } from "./band.js";
 import { Transport, alignOnset, applySwing, removeSwing } from "./clock.js";
 import { Looper } from "./looper.js";
@@ -25,6 +26,7 @@ export class Engine {
       compensation = 0.02,
       level = 1,
       harmony = null,
+      composer = null,
     } = {},
   ) {
     this.ctx = ctx;
@@ -35,9 +37,13 @@ export class Engine {
     this.state = "idle"; // idle, playing, ending, finished
     this.level = level;
     this.pendingLevel = null;
-    this.progression = progressionFor(level);
-    // Each cycle's progression, settled two bars before the cycle begins.
+    this.progression = world.progressions[progressionFor(level)];
+    // Each cycle's plan, settled two bars before the cycle begins (see #planned).
     this.plans = new Map();
+    this.cycleLevels = new Map(); // The energy each cycle began at, for the composer.
+    // The band's composer (see composer.js), and the composed plans the band played.
+    this.composer = composer;
+    this.composed = [];
     // Generated harmony (see harmony.js), and the bars it will play instead of the pad.
     this.harmony = harmony;
     this.generated = new Map();
@@ -102,6 +108,7 @@ export class Engine {
     this.#releaseLead(now);
     this.#choke(now);
     this.harmony?.stop();
+    this.composer?.stop();
     this.state = "finished";
   }
 
@@ -289,7 +296,7 @@ export class Engine {
     const bar = Math.floor(step / STEPS_PER_BAR);
     const within = step % STEPS_PER_BAR;
     if (step === this.endStep) return this.#finish(bar, time);
-    if (within === 0) this.#downbeat(bar);
+    if (within === 0) this.#downbeat(bar, time);
     // A cut starts on the next eighth note.
     if (this.cut.requested && !this.cut.active && within % 2 === 0) {
       this.cut.active = true;
@@ -303,23 +310,35 @@ export class Engine {
       this.pendingLevel !== null && this.pendingLevel > this.level
         ? this.pendingLevel
         : null;
+    const { world } = this;
     const events = bandStep({
-      world: this.world,
+      world,
       bar,
       step: within,
       level: this.level,
       progression: this.progression,
       rising,
+      following: chordAt(world, this.#planned(bar + 1).chords, bar + 1),
     });
+    events.push(
+      ...answerEvents({
+        answer: this.#planned(bar).answer,
+        stepInCycle: step % (world.cycleBars * STEPS_PER_BAR),
+        world,
+      }),
+    );
     if (within === 0 && this.crashNext) {
       events.push({ part: "crash", step: 0, beats: 4, velocity: 0.55 });
       this.crashNext = false;
     }
     for (const event of events) {
-      // A generated bar already plays this chord; the pad still goes into the log.
-      const generated = event.part === "pad" && this.generated.get(bar);
+      // A generated bar already plays the chord and the answering line; they still go
+      // into the log.
+      const generated =
+        (event.part === "pad" || event.part === "answer") &&
+        this.generated.get(bar);
       if (generated) {
-        generated.notes = this.#logEvent(event, time);
+        generated.notes.push(...this.#logEvent(event, time));
         continue;
       }
       const handle = this.synth.play(event, time, beatSeconds);
@@ -335,7 +354,8 @@ export class Engine {
       this.#playLoop(note);
   }
 
-  #downbeat(bar) {
+  #downbeat(bar, time) {
+    const { world } = this;
     let crash = false;
     if (this.cut.active && this.cut.release) {
       Object.assign(this.cut, { active: false, release: false });
@@ -346,30 +366,141 @@ export class Engine {
       this.level = this.pendingLevel;
       this.pendingLevel = null;
     }
-    const cycle = Math.floor(bar / this.world.cycleBars);
-    if (bar % this.world.cycleBars === 0) this.progression = this.#planned(bar);
-    // The next progression is settled two bars ahead, which gives generated harmony
+    const cycle = Math.floor(bar / world.cycleBars);
+    const plan = this.#planned(bar);
+    if (bar % world.cycleBars === 0) {
+      this.progression = plan.chords;
+      this.cycleLevels.set(cycle, this.level);
+      this.cycleLevels.delete(cycle - 4);
+      // While this cycle plays, the composer writes the next one.
+      this.composer?.request(cycle + 1, this.#context(cycle));
+      if (plan.composed) {
+        const { names, texture, answer, caption, ms, model } = plan;
+        this.composed.push({
+          cycle,
+          chords: names,
+          texture,
+          answer,
+          caption,
+          ms,
+          model,
+        });
+        this.#emit({ type: "composed", cycle, plan, time });
+      }
+    }
+    // The next cycle's plan is settled two bars ahead, which gives generated harmony
     // time to render it; it is settled whether or not anything renders it.
     this.#planned(bar + 2);
-    this.plans.delete(cycle - 1);
+    this.plans.delete(cycle - 2);
     this.crashNext = crash;
     this.bars.set(bar, {
       level: this.level,
       progression: this.progression,
-      chord: chordAt(this.world, this.progression, bar),
-      next: chordAt(this.world, this.#planned(bar + 1), bar + 1),
+      chord: chordAt(world, this.progression, bar),
+      next: chordAt(world, this.#planned(bar + 1).chords, bar + 1),
+      composed: plan.composed,
       cut: this.cut.active,
       cutAt: this.cut.active ? 0 : null,
     });
     this.bars.delete(bar - 16);
   }
 
-  /** The progression of the cycle containing `bar`, settled at the energy level then. */
+  /**
+   * The plan of the cycle containing `bar`, settled the first time it is needed, two bars
+   * before the cycle begins: the composer's plan if it has arrived by then, or else the
+   * built-in progression for the energy at that moment.
+   */
   #planned(bar) {
-    const cycle = Math.floor(bar / this.world.cycleBars);
-    if (!this.plans.has(cycle))
-      this.plans.set(cycle, progressionFor(this.level));
+    const { world } = this;
+    const cycle = Math.floor(bar / world.cycleBars);
+    if (!this.plans.has(cycle)) {
+      const written = this.composer?.take(cycle);
+      const chords = world.progressions[progressionFor(this.level)];
+      this.plans.set(
+        cycle,
+        written
+          ? { ...written, composed: true }
+          : {
+              chords,
+              names: chords.map((chord) => chord.name),
+              texture: "hold",
+              answer: [],
+              caption: "",
+              composed: false,
+            },
+      );
+    }
     return this.plans.get(cycle);
+  }
+
+  /**
+   * What the composer hears at the start of `cycle`: the energy, the chords, and the
+   * player's notes in the cycle before, in sixteenths from its start.
+   */
+  #context(cycle) {
+    const { world } = this;
+    const beats = world.cycleBars * world.beatsPerBar;
+    const from = (cycle - 1) * beats;
+    const phrase = this.log
+      .filter(
+        (note) =>
+          note.part === "lead" &&
+          note.start >= from &&
+          note.start < from + beats,
+      )
+      .map((note) => ({
+        rung: world.ladder.indexOf(note.pitch),
+        at: Math.round((note.start - from) * 4),
+        len: Math.min(
+          beats * 4,
+          Math.max(
+            1,
+            Math.round((note.beats ?? from + beats - note.start) * 4),
+          ),
+        ),
+      }))
+      .filter((note) => note.rung >= 0 && note.at < beats * 4)
+      .slice(-64);
+    const earlier = [cycle - 2, cycle - 1]
+      .filter((c) => this.cycleLevels.has(c))
+      .map((c) => this.cycleLevels.get(c));
+    const current = this.#planned(cycle * world.cycleBars);
+    const before = cycle > 0 ? this.plans.get(cycle - 1) : null;
+    return {
+      level: this.pendingLevel ?? this.level,
+      earlier_levels: earlier,
+      current: current.names,
+      history: before ? before.names : [],
+      phrase,
+      previous_answer: current.answer,
+    };
+  }
+
+  /**
+   * What generated harmony renders for `bar`: the plan's chord in its texture, and the
+   * part of the answering line that falls in this bar.
+   */
+  #harmonyBar(bar) {
+    const { world } = this;
+    const plan = this.#planned(bar);
+    const chord = chordAt(world, plan.chords, bar);
+    const before = bar > 0 ? this.#planned(bar - 1) : null;
+    const previous = before && {
+      chord: chordAt(world, before.chords, bar - 1),
+      texture: before.texture,
+    };
+    return {
+      chord: chord.name,
+      tones: chord.tones,
+      notes: [
+        ...harmonyNotes({ chord, texture: plan.texture, previous, world }),
+        ...answerNotes({
+          answer: plan.answer,
+          barInCycle: bar % world.cycleBars,
+          world,
+        }),
+      ],
+    };
   }
 
   // Generated harmony. At each bar line: follow the energy, count what the bar played,
@@ -381,7 +512,7 @@ export class Engine {
     harmony.setLevel(this.level, time);
     if (!this.cut.active) harmony.passed(bar, this.generated.has(bar));
     for (const ahead of [bar + 1, bar + 2])
-      harmony.request(ahead, chordAt(world, this.#planned(ahead), ahead));
+      harmony.request(ahead, this.#harmonyBar(ahead));
   }
 
   // A generated bar starts as soon as its audio arrives, while there is still time for
@@ -459,6 +590,7 @@ export class Engine {
     this.#choke(time);
     this.#releaseLead(time);
     this.harmony?.stop();
+    this.composer?.stop();
     const beatSeconds = this.beatSeconds;
     const tail = time + 2 * this.world.beatsPerBar * beatSeconds + 1.5;
     for (const event of bandEnding(this.world)) {
