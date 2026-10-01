@@ -1,7 +1,7 @@
 # Sway V2: design proposal
 
 Started: October 1, 2026, Asia/Singapore.
-Status: proposal for discussion; nothing here is built yet.
+Status: direction agreed on October 1, 2026, with the [decisions](#decisions) below; nothing here is built yet.
 V1 is merged and described in the [V1 plan](v1-plan.md), which stays the reference for its rules and measurements.
 
 ## Where V1 leaves us
@@ -77,7 +77,8 @@ Physical-modelling voices for bowed strings, flutes, and plucked strings are a l
 
 ### Who chooses the lead's instrument
 
-The player does, from the instruments the world offers, with a default for each world.
+The player does, from the instruments the world offers.
+The bandleader can recommend one, for the world or for the next section, and the player takes the suggestion or ignores it.
 A player learns an instrument's response, how it attacks, sustains, and glides, and changing it under their hands would undo that.
 The bandleader enriches the lead in two other ways:
 
@@ -125,13 +126,22 @@ When either tier is late or fails, the band keeps the current section's orchestr
 ### A replaceable backbone
 
 Qwen is the backbone today, another model may be better tomorrow, and the two tiers may want different models.
+The backbone should be multimodal, as Qwen and Gemini are, so that it can also look and listen.
 
 - **One contract:** versioned JSON schemas for what the bandleader hears and what it returns, validated on the server and in the page.
 - **Providers by configuration:** an OpenAI-compatible client covers Qwen on DashScope, OpenAI, DeepSeek, Gemini's compatible endpoint, and local servers such as Ollama or MLX; an Anthropic adapter covers Claude.
 - **Chosen by evidence:** an offline harness replays recorded performances, from the performance files V1 already saves, through candidate models.
   It checks validity and latency, scores simple musical properties, and renders the results for listening.
+- **A spending cap:** the server estimates each call's cost from its token counts and keeps a running total across sessions.
+  At a loose cap, $20 to start, it warns, and the band plays its built-in parts instead of calling models until the total is reset.
+  A session should cost cents.
 
 A model change becomes a configuration change, and the product's quality rests on measured choices rather than on one vendor.
+
+### Looking and listening
+
+A multimodal director can choose a world from what the camera sees, and can hear the last section before planning the next.
+V1 sends models only musical data, so both are opt-in, off by default, and shown on the stage while they are on.
 
 ## 3. Generated sound where it fits
 
@@ -142,14 +152,15 @@ In V2 the director describes that part's sound for each section, instead of the 
 MRT2 blends toward a new description over about two seconds, so changes at section boundaries are smooth.
 Two changes make this safe and audible:
 
-- **A key guard:** before sending a rendered bar, the server measures how much of its energy lies in the world's scale.
+- **A key guard:** before sending a rendered bar, the server finds the notes it plays, by their fundamentals rather than their overtones, and measures how much of their energy lies in the world's scale.
+  This takes under 10 ms a bar.
   A bar that drifts is dropped, and the synthesized stand-in plays it; a description that drifts repeatedly is retired for the piece.
   This extends "nothing sounds wrong" from notes to generated audio.
 - **A featured mix:** the generated part is no longer matched to the pad's level.
   It is balanced as a featured part, and the synthesized band thins out around it when the arrangement says so.
 
 The [probe](#probe-which-sounds-mrt2-keeps-in-key) at the end of this document measured which descriptions MRT2 keeps in key, and showed two practical details.
-Every bar that drifted came in the first two bars after a new description started, so a new description should start rendering a bar before it is heard.
+Both bars that drifted below 90% came right after a new description started, so a new description should start rendering a bar before it is heard.
 Loudness differed by about 25 dB between descriptions, so loudness matching should restart with each new description.
 
 ### After the performance: the record
@@ -167,49 +178,57 @@ It needs its own experiment first: how faithfully MRT2 performs a solo melody, a
 ## 4. Worlds
 
 A world is a key and ladder, a tempo and groove, an instrument catalog, patterns for each role, descriptions for the generated part, a default lead instrument, and a visual theme.
-Start with three handcrafted worlds that differ clearly:
+Sway should have several handcrafted worlds that differ in every dimension: key and mode, tempo and groove, and instrument families.
+Candidates, limited to what the free sample libraries, the synthesizer, and MRT2 can play:
 
 - **Night Drive,** from V1: downtempo electronic, A minor, 100 BPM.
-- **A café world:** nylon guitar, upright bass, brushes, Rhodes, and strings, in a major key.
-- **A cinematic world:** strings, horns, harp, and timpani, slower, with a wide dynamic range.
+- **Café:** a bossa-tinged groove in a major key, around 120 BPM, with nylon guitar, double bass, brushes, and Rhodes.
+- **Cinematic:** strings, horns, harp, and timpani in D minor, slower, with a wide dynamic range.
+- **Garden:** kalimba, marimba, flute, and hand percussion on a major pentatonic scale, light and unhurried.
+- **Club:** four on the floor at 124 BPM, with synthesized bass, plucks, and pads.
 
 Later, the director can create a world from a sentence, such as "a warm summer night in Lisbon", or from what the camera sees, limited to parameters the renderers support.
 
 ## Rules V2 adds
 
-V1's eight rules stay, and V2 adds four:
+V1's eight rules stay, and V2 adds five:
 
 9. The bandleader changes the band only at section and cycle boundaries, and never changes the player's instrument or the world during a piece.
 10. Every AI decision comes from a vocabulary the renderers can play, is validated on the server and in the page, and has a fallback.
 11. Generated audio is checked before it is played.
 12. Models are chosen by measured quality and latency on recorded sessions, and can be replaced by configuration.
+13. Camera images and audio reach a cloud model only while the player has turned that on.
 
 ## Roadmap
 
 Each step is its own pull request, playable and tested on its own.
 
-| Step | Change                                                                                                            | Depends on            |
-| ---- | ----------------------------------------------------------------------------------------------------------------- | --------------------- |
-| 1    | Expressive lead: strike and lean-in on the current synthesizer, and a fix for stray notes from drumming fingers   | Nothing               |
-| 2    | Instrument catalog and sampler: four to six sampled lead instruments, chosen by the player                        | Decision 4            |
-| 3    | Backbone v2: the provider-agnostic client, the arrangement contract, validation, and the offline harness          | Nothing               |
-| 4    | Orchestrated band: band roles played by catalog instruments that the plan chooses, with lead doubling and harmony | 2 and 3               |
-| 5    | The described generated part, the key guard, and a featured mix                                                   | 3                     |
-| 6    | The director: sections, form, and transitions                                                                     | 3 and 4               |
-| 7    | Two more handcrafted worlds                                                                                       | 2 and 4               |
-| 8    | The record                                                                                                        | 5, and its experiment |
+| Step | Change                                                                                                                                         | Depends on            |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| 1    | Expressive lead: strike and lean-in on the current synthesizer, and a fix for stray notes from drumming fingers                                | Nothing               |
+| 2    | Instrument catalog and sampler: four to six free sampled lead instruments, chosen by the player                                                | Nothing               |
+| 3    | Backbone v2: one client for Qwen, Gemini, and other providers, the arrangement contract, validation, the spending cap, and the offline harness | Nothing               |
+| 4    | Orchestrated band: band roles played by catalog instruments that the plan chooses, lead doubling and harmony, and instrument recommendations   | 2 and 3               |
+| 5    | The described generated part, the key guard, and a featured mix                                                                                | 3                     |
+| 6    | The director: sections, form, and transitions, and opt-in looking and listening                                                                | 3 and 4               |
+| 7    | Diverse worlds: the candidates above                                                                                                           | 2 and 4               |
+| 8    | The record                                                                                                                                     | 5, and its experiment |
+| 9    | Shipping both ways: the bandleader and renderers as a cloud service for the web app, and a Mac app that runs MRT2 locally                      | 3 and 5               |
 
-Steps 1 and 2 answer "not lively" directly, steps 3 to 5 make the AI's part substantial and audible, and steps 6 to 8 turn the instrument into a product.
+Steps 1 and 2 answer "not lively" directly, steps 3 to 5 make the AI's part substantial and audible, and steps 6 to 9 turn the instrument into a product.
 The listening test's switches, which mute each part, are on a [draft pull request](https://github.com/Audiofool934/sway/pull/2); kept behind a key, they would help evaluate every step.
 
-## Decisions for Everett
+## Decisions
 
-1. **Where Sway ships first:** a web app with the models in the cloud, a Mac app with MRT2 running locally, or both.
-   This decides where the renderers run and what each session costs.
-2. **Who owns the lead's instrument:** the proposal is the player, with the bandleader adding doubling and harmony.
-3. **Which backbones to support first** beyond Qwen, and a budget for model calls per session.
-4. **Which samples:** freely licensed libraries only, or a licensed commercial library.
-5. **Which worlds** come after Night Drive.
+Everett settled the proposal's open questions on October 1:
+
+1. **Ship both:** a web app with the models in the cloud, and a Mac app with MRT2 running locally.
+   The page's real-time path is the same in both; only where the bandleader and renderers run differs, behind the same HTTP interfaces.
+2. **The player owns the lead's instrument,** and the AI can recommend one.
+3. **Backbones:** Qwen and other good multimodal models, such as Gemini, under a loose spending cap of about $20.
+   The cap is taken here as a running total across sessions, since a session should cost cents.
+4. **Samples:** free libraries first.
+5. **Worlds:** several, and diverse.
 
 ## Experiments before building
 
@@ -222,31 +241,36 @@ The listening test's switches, which mute each part, are on a [draft pull reques
 ## Probe: which sounds MRT2 keeps in key
 
 MRT2 Small rendered the same twelve bars for each description on the development Mac, in one continuing stream, as V1's band writes its harmony: Am, F, C, and G held for eight bars, then struck on every beat for four.
-Each bar was measured as in V1's test for generated harmony: the share of its energy between 60 Hz and 2 kHz on the pitch classes of A minor, or of the written chord, after its first 200 ms.
-[`scripts/probe_palettes.py`](../scripts/probe_palettes.py) reproduces the table and saves each take for listening.
+For each bar after its first 200 ms, [`sway.pitch`](../src/sway/pitch.py) finds the notes it plays by harmonic summation, removing each note's overtones before looking for the next.
+The table gives the share of those notes' energy in A minor, and on the notes written for that bar.
+[`scripts/probe_palettes.py`](../scripts/probe_palettes.py) reproduces it and saves each take for listening.
 
-| Sound                 | In key, held | On the chord, held | In key, struck | Bars under 90% in key | Loudness |
-| --------------------- | ------------ | ------------------ | -------------- | --------------------- | -------- |
-| Strings (V1)          | 99.4%        | 96.8%              | 97.2%          | 0 of 12               | -31 dB   |
-| Piano (V1)            | 99.2%        | 95.7%              | 96.0%          | 0 of 12               | -37 dB   |
-| Choir (V1)            | 99.3%        | 98.2%              | 99.1%          | 0 of 12               | -29 dB   |
-| Rhodes                | 99.2%        | 98.8%              | 98.5%          | 1 of 12               | -24 dB   |
-| Nylon guitar          | 98.4%        | 96.0%              | 93.0%          | 0 of 12               | -29 dB   |
-| Clean electric guitar | 97.0%        | 95.4%              | 98.4%          | 1 of 12               | -22 dB   |
-| Brass                 | 99.7%        | 92.3%              | 99.0%          | 0 of 12               | -30 dB   |
-| Woodwinds             | 99.6%        | 91.3%              | 99.0%          | 0 of 12               | -29 dB   |
-| Cellos                | 98.0%        | 95.2%              | 97.6%          | 0 of 12               | -18 dB   |
-| Harp                  | 99.6%        | 99.4%              | 97.8%          | 0 of 12               | -43 dB   |
-| Vibraphone            | 98.5%        | 97.4%              | 97.5%          | 0 of 12               | -24 dB   |
-| Organ                 | 93.5%        | 85.5%              | 98.3%          | 2 of 12               | -22 dB   |
-| Synthesizer pad       | 96.5%        | 87.1%              | 96.8%          | 2 of 12               | -26 dB   |
+| Sound                 | In key, held | On the written notes, held | In key, struck | Bars under 90% in key | Loudness |
+| --------------------- | ------------ | -------------------------- | -------------- | --------------------- | -------- |
+| Strings (V1)          | 100.0%       | 100.0%                     | 97.7%          | 0 of 12               | -31 dB   |
+| Piano (V1)            | 99.5%        | 99.1%                      | 96.6%          | 0 of 12               | -37 dB   |
+| Choir (V1)            | 99.6%        | 99.2%                      | 99.3%          | 0 of 12               | -29 dB   |
+| Rhodes                | 99.5%        | 99.5%                      | 98.8%          | 0 of 12               | -24 dB   |
+| Nylon guitar          | 98.8%        | 98.6%                      | 94.6%          | 0 of 12               | -29 dB   |
+| Clean electric guitar | 97.8%        | 97.4%                      | 98.8%          | 1 of 12               | -22 dB   |
+| Brass                 | 100.0%       | 100.0%                     | 99.8%          | 0 of 12               | -30 dB   |
+| Woodwinds             | 100.0%       | 100.0%                     | 99.6%          | 0 of 12               | -29 dB   |
+| Cellos                | 99.4%        | 99.2%                      | 98.4%          | 0 of 12               | -18 dB   |
+| Harp                  | 100.0%       | 99.8%                      | 98.6%          | 0 of 12               | -43 dB   |
+| Vibraphone            | 99.0%        | 98.4%                      | 97.8%          | 0 of 12               | -24 dB   |
+| Organ                 | 98.6%        | 98.5%                      | 99.2%          | 0 of 12               | -22 dB   |
+| Synthesizer pad       | 96.8%        | 89.5%                      | 97.4%          | 1 of 12               | -26 dB   |
 
-- All ten new descriptions kept most of their energy in key: medians of 93.5% to 99.7% on held chords, and 93.0% to 99.0% on struck ones.
-- Six of the 156 bars fell below 90% in key, all in the first two bars after a new description started: organ and the synthesizer pad twice each, Rhodes and clean electric guitar once.
-  A key guard at 90% would have replaced those six bars, 4% of the total, with their synthesized stand-in.
-- Brass and woodwinds stayed in key while putting less energy on the chord itself, because they add passing notes; the key guard should judge the scale, not the chord.
+- All ten new descriptions kept nearly all their notes in key: medians of 96.8% to 100% on held chords, and 94.6% to 99.8% on struck ones.
+- Only 2 of the 156 bars fell below 90% in key: the second bar of the clean electric guitar and the first of the synthesizer pad, both right after a new description started.
+  A key guard at 90% would have replaced just those two with their synthesized stand-ins.
+- Most descriptions followed the written notes closely.
+  The synthesizer pad strayed most, adding notes of its own that mostly stayed in key.
 - Loudness ranged from -43 dB for the harp to -18 dB for the cellos.
-- Each 28.8-second take rendered in 15 to 23 seconds, including starting its stream.
+- Each 28.8-second take rendered in 15 to 19 seconds, including starting its stream, and measuring a bar took under 10 ms.
+- The measure was checked two ways: synthetic chords in bright timbres read as fully in key, and the real takes, moved up a semitone, fell to between 0.5% and 20% in key.
+- An earlier version of this probe used V1's measure, which counts every partial as a note.
+  That under-rates bright sounds, by up to 6.5 points on a synthetic brass tone, and it made brass and woodwinds look as though they added notes; with overtones removed, both play only the written notes.
 - The measure hears pitch, not timbre: whether the harp sounds like a harp still needs listening.
 
 ## Ideas for later

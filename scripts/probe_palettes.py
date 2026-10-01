@@ -1,8 +1,10 @@
 """Which sound descriptions does MRT2 Small keep in key, as V1's band writes its harmony?
 
 Renders the same twelve bars for each description, in one continuing stream: Am, F, C,
-and G held for eight bars, then struck on every beat for four. Each bar is measured as in
-tests/test_harmony.py, and each take is saved for listening.
+and G held for eight bars, then struck on every beat for four. Each bar's notes are found
+by `sway.pitch`, which does not mistake overtones for notes, and scored by how much of
+their energy is in A minor and on the notes written for that bar. Each take is saved for
+listening; --measure-only scores saved takes again without rendering.
 
     uv run --locked python scripts/probe_palettes.py outputs/palette-probe
 """
@@ -15,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-from sway import harmony
+from sway import harmony, pitch
 from sway.schema import HarmonyNote
 
 DESCRIPTIONS = {
@@ -46,17 +48,8 @@ PROGRESSION = ["Am", "F", "C", "G"]
 A_MINOR = {9, 11, 0, 2, 4, 5, 7}
 TEMPO, BEATS = 100, 4
 SKIP = 9600  # A bar's first 200 ms, where the previous chord may still ring.
-
-
-def share(audio, classes):
-    """Share of 60 Hz to 2 kHz spectral energy on the pitch classes `classes`."""
-    mono = audio.astype(np.float64).mean(axis=1)
-    spectrum = np.abs(np.fft.rfft(mono * np.hanning(len(mono)))) ** 2
-    freqs = np.fft.rfftfreq(len(mono), 1 / harmony.SAMPLE_RATE)
-    band = (freqs > 60) & (freqs < 2000)
-    pcs = np.round(69 + 12 * np.log2(freqs[band] / 440)).astype(int) % 12
-    chroma = np.bincount(pcs, weights=spectrum[band], minlength=12)
-    return float(sum(chroma[pc] for pc in classes) / chroma.sum())
+PLAN = [(PROGRESSION[i % 4], "hold") for i in range(8)]
+PLAN += [(PROGRESSION[i % 4], "pulse") for i in range(4)]
 
 
 def bar_notes(voicing, texture, carried):
@@ -66,27 +59,37 @@ def bar_notes(voicing, texture, carried):
     return [HarmonyNote(pitch=p, start=0, length=BEATS, tie=p in carried) for p in voicing]
 
 
-def probe(renderer, key, frames, seed):
+def render(renderer, key, frames, seed):
+    """One take: every bar of PLAN, in one stream."""
     renderer.start(key, seed=seed)
-    plan = [(PROGRESSION[i % 4], "hold") for i in range(8)]
-    plan += [(PROGRESSION[i % 4], "pulse") for i in range(4)]
-    takes, bars, carried = [], [], set()
-    for name, texture in plan:
+    takes, carried = [], set()
+    for name, texture in PLAN:
         tones, voicing = CHORDS[name]
-        audio = renderer.render(bar_notes(voicing, texture, carried), tones, key, frames, BEATS)
+        takes.append(
+            renderer.render(bar_notes(voicing, texture, carried), tones, key, frames, BEATS)
+        )
         carried = set(voicing) if texture == "hold" else set()
-        takes.append(audio)
-        body = audio[SKIP:]
+    return np.concatenate(takes)
+
+
+def measure(take, frames):
+    """Each bar's notes: their share in A minor and on the written notes, and its level."""
+    length = frames * harmony.FRAME_SAMPLES
+    bars = []
+    for i, (name, texture) in enumerate(PLAN):
+        body = take[i * length + SKIP : (i + 1) * length]
+        energy = pitch.note_energy(body, harmony.SAMPLE_RATE)
+        written = {p % 12 for p in CHORDS[name][1]}
         bars.append(
             {
                 "chord": name,
                 "texture": texture,
-                "in_key": round(share(body, A_MINOR), 3),
-                "in_chord": round(share(body, {p % 12 for p in voicing}), 3),
+                "in_key": round(pitch.share(energy, A_MINOR), 3),
+                "on_written": round(pitch.share(energy, written), 3),
                 "rms_db": round(20 * float(np.log10(np.sqrt(np.mean(body**2)) + 1e-9)), 1),
             }
         )
-    return np.concatenate(takes), bars
+    return bars
 
 
 def summary(bars):
@@ -95,11 +98,17 @@ def summary(bars):
 
     return {
         "held_in_key": median("hold", "in_key"),
-        "held_in_chord": median("hold", "in_chord"),
+        "held_on_written": median("hold", "on_written"),
         "struck_in_key": median("pulse", "in_key"),
         "bars_under_90": sum(b["in_key"] < 0.9 for b in bars),
         "rms_db": round(float(np.median([b["rms_db"] for b in bars])), 1),
     }
+
+
+def load(path):
+    with wave.open(str(path), "rb") as take:
+        pcm = np.frombuffer(take.readframes(take.getnframes()), dtype="<i2")
+    return pcm.reshape(-1, 2).astype(np.float32) / 32768
 
 
 def save(path, audio):
@@ -115,17 +124,26 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("output", type=Path, help="Directory for the takes and results.json")
     parser.add_argument("--seed", type=int, default=11)
+    parser.add_argument(
+        "--measure-only", action="store_true", help="Score the takes already in output"
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     harmony.PALETTES.update(DESCRIPTIONS)
-    renderer = harmony.HarmonyRenderer()
+    renderer = None if args.measure_only else harmony.HarmonyRenderer()
     frames = harmony.frames_per_bar(TEMPO, BEATS)
     results = {}
     for key, description in DESCRIPTIONS.items():
+        path = args.output / f"{key}.wav"
         started = time.perf_counter()
-        audio, bars = probe(renderer, key, frames, args.seed)
-        save(args.output / f"{key}.wav", audio)
-        seconds = round(time.perf_counter() - started, 1)
+        if args.measure_only:
+            take = load(path)
+        else:
+            take = render(renderer, key, frames, args.seed)
+            save(path, take)
+        # Render time, including starting the stream; not recorded when only measuring.
+        seconds = None if args.measure_only else round(time.perf_counter() - started, 1)
+        bars = measure(take, frames)
         results[key] = {"description": description, "seconds": seconds, **summary(bars)}
         print(key, results[key], flush=True)
         results[key]["bars"] = bars
