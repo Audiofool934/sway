@@ -4,7 +4,7 @@
 // leaves toward the edge. The lead side is the pitch ladder; the band side shows
 // energy zones. Everything is positioned in the mirrored view's coordinates.
 
-import { isChordTone, noteName } from "./theory.js";
+import { TYPICAL_VELOCITY, isChordTone, noteName } from "./theory.js";
 import { HandVisuals } from "./hand-visual.js";
 
 const COLORS = {
@@ -241,7 +241,9 @@ export class Overlay {
         ctx.lineTo(side.x(note.start), rowY(note.rung));
         ctx.stroke();
       }
-      stroke(note.start, end, note.rung, COLORS.lead, alpha, thick);
+      // A note is drawn as thick as it was struck.
+      const weight = (note.velocity ?? TYPICAL_VELOCITY) / TYPICAL_VELOCITY;
+      stroke(note.start, end, note.rung, COLORS.lead, alpha, thick * weight);
       previous = { rung: note.rung, end };
     }
     ctx.restore();
@@ -250,7 +252,7 @@ export class Overlay {
   #leadCursor(scene, side, top, bottom, view) {
     // The hand, joined to "now" on its row.
     const { ctx } = this;
-    const { hand, rung: current, gate } = scene.lead;
+    const { hand, rung: current, gate, swell = 0 } = scene.lead;
     if (!hand) return;
     const hx = view.x(hand.x);
     const hy = view.y(hand.y);
@@ -265,9 +267,10 @@ export class Overlay {
     ctx.setLineDash([]);
     this.#cursor(hx, hy, COLORS.lead, gate, false, Boolean(hand.landmarks));
     if (scene.leadHold > 0) this.#ring(hx, hy, 27, scene.leadHold, COLORS.lead);
+    // The note's swell: a larger dot as the hand leans in, a smaller one as it leans back.
     ctx.fillStyle = rgba(COLORS.lead, 1);
     ctx.beginPath();
-    ctx.arc(side.now, y, gate ? 7 : 4, 0, Math.PI * 2);
+    ctx.arc(side.now, y, gate ? 7 * (1 + 0.45 * swell) : 4, 0, Math.PI * 2);
     ctx.fill();
   }
 

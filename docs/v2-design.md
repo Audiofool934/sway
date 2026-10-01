@@ -273,6 +273,31 @@ The table gives the share of those notes' energy in A minor, and on the notes wr
   That under-rates bright sounds, by up to 6.5 points on a synthetic brass tone, and it made brass and woodwinds look as though they added notes; with overtones removed, both play only the written notes.
 - The measure hears pitch, not timbre: whether the harp sounds like a harp still needs listening.
 
+## Progress
+
+### Step 1: expressive lead, October 1
+
+Built:
+
+- A note's velocity follows how quickly its pinch closed, timed from the most open the pinch was in the 150 ms before it caught, against the player's usual strike.
+  The usual strike is the median of the player's recent strikes, and carries over from one piece to the next.
+- Leaning in swells a held note by up to about 5 dB and opens its filter, and leaning back softens it.
+  Nearness is the palm's size on screen over its size in metres, so tilting the hand does not change it.
+- Each strike, velocity, and swell is in the performance file.
+  The trail is drawn as thick as each note was struck, the dot at "now" grows with the swell, and the timing panel shows the last note's velocity and the swell.
+
+Measured in Chrome through the page's scripted input, the same path a camera hand takes:
+
+- Strikes at a quarter of, the same as, and four times the usual speed played at velocities 0.3, 0.72, and 1.0, peaking at -22.7, -14.7, and -12.3 dB on the lead's bus.
+- A full lean raised a held note by 5.2 dB.
+
+Not yet done:
+
+- The starting guess for a usual strike, 4 hand sizes per second, and the swell's range and deadzone come from reasoning, not from real hands; the next play session's performance file records what tuning them needs.
+- The tutorial's dynamics lesson.
+- Stray notes from drumming fingers: telling them from pinches needs footage of both at the camera's own frame rate, and the only recording is 2.75 seconds of drumming at 12 frames per second.
+- Vibrato from a wobbling hand stays an experiment.
+
 ## Ideas for later
 
 - **Call and response as play:** the band answers a phrase with a variation, and the player answers back.

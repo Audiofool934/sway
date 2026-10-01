@@ -6,6 +6,7 @@ import {
   TIMING,
   stepWithHysteresis,
 } from "../web/instrument/controls.js";
+import { TYPICAL_VELOCITY } from "../web/instrument/theory.js";
 
 // A simple metric hand: wrist at the origin, fingers pointing up (+y).
 const MCP = {
@@ -248,7 +249,16 @@ test("a pinch plays, moving draws legato, and releasing ends the note", () => {
   const controls = new Controls();
   assert.deepEqual(controls.update({ lead: lead(0.25) }, 0), []);
   const on = controls.update({ lead: lead(0.25, true) }, 0.1);
-  assert.deepEqual(on, [{ type: "noteOn", rung: 2, time: 0.1 }]);
+  // Without a measured strike, as from a mouse, a note plays at the typical velocity.
+  assert.deepEqual(on, [
+    {
+      type: "noteOn",
+      rung: 2,
+      time: 0.1,
+      velocity: TYPICAL_VELOCITY,
+      strike: null,
+    },
+  ]);
   assert.deepEqual(controls.update({ lead: lead(0.26, true) }, 0.13), []);
   const moved = controls.update({ lead: lead(0.45, true) }, 0.2);
   assert.deepEqual(moved, [{ type: "noteMove", rung: 4, time: 0.2 }]);

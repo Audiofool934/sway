@@ -7,11 +7,12 @@ The [V1 plan](docs/v1-plan.md) defines the instrument, the rules it is built by,
 The [documentation index](docs/README.md) separates current guides from the paused experiments that came before.
 
 Someone with no musical training should be able to make a piece they want to keep.
-One hand plays a melody on a pitch ladder; the other sets the band's energy, cuts it, and loops what was played.
+One hand plays a melody on a pitch ladder, louder the quicker it pinches and swelling as it leans toward the camera; the other sets the band's energy, cuts it, and loops what was played.
 Sway keeps every note in time and in key, and the notes you play are synthesized in the browser, so no network request or large model sits between a gesture and its sound.
 The band is generative: Qwen writes its next four bars while the current four play, from what you just played and the energy you set, and MRT2, a music model running on the same Mac, performs the harmony and Qwen's answering lines.
 The engine checks every plan and keeps it in key and on the beat, and the built-in band steps in whenever a model is late.
-V1 is in progress: the instrument, a tutorial with setup and four lessons, recording, and MIDI export work with scripted input, and the first play test with real hands is next.
+V1 is merged and has had its first play test with real hands.
+The [V2 proposal](docs/v2-design.md) is under way, starting with a more expressive lead.
 
 ## Play
 

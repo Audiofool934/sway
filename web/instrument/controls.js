@@ -1,8 +1,9 @@
 // Hand features to instrument events. Camera, pointer, and scripted input all pass
-// the same per-role features ({ x, y, pinch, fist }), so every source plays alike.
+// the same per-role features ({ x, y, pinch, fist }), so every source plays alike; a
+// camera hand also gives its strike and closeness, which make the lead dynamic.
 // Event times are the best estimate of when the gesture happened, in seconds.
 
-import { clamp } from "./theory.js";
+import { TYPICAL_VELOCITY, clamp } from "./theory.js";
 
 export const TIMING = {
   hysteresis: 0.22, // Fraction of a rung or level to cross before changing.
@@ -16,6 +17,25 @@ export const TIMING = {
   bandGrace: 1, // A lost band hand releases a cut after this long.
   endHold: 0.8, // Two fists held this long end the piece.
   settleAfterShape: 0.2, // Height is ignored briefly after a fist or pinch.
+};
+
+// The lead's dynamics. A note's velocity follows how quickly its pinch closed, relative to
+// the player's usual strike, so it suits any hand and camera. Leaning toward the camera
+// while holding a note swells it, and leaning back softens it.
+export const DYNAMICS = {
+  spread: 0.22, // Velocity gained by a strike twice as quick as usual.
+  floor: 0.3,
+  usual: 4, // A usual strike in hand sizes per second, until the player has made a few.
+  settle: 6, // Strikes before the player's own become the usual one.
+  memory: 48, // The usual strike is the median of this many.
+  swellRange: 1.35, // Coming this much nearer, in apparent size, is a full swell.
+  swellDeadzone: 0.1, // The part of that range that a steady hand drifts through.
+  swellStep: 0.02, // The least change in swell worth sending.
+};
+
+const median = (values) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
 };
 
 // Continuous position to a step, changing only when clearly past the boundary.
@@ -33,6 +53,7 @@ export class Controls {
     rungs = 10,
     levels = 5,
     range = { top: 0.14, bottom: 0.86 },
+    strikes = [],
   } = {}) {
     this.rungs = rungs;
     this.levels = levels;
@@ -43,7 +64,10 @@ export class Controls {
       rung: null,
       gate: false,
       seenAt: -Infinity,
+      onsetCloseness: null,
+      swell: 0,
     };
+    this.strikes = [...strikes]; // The player's recent strikes, for their usual one.
     this.band = {
       visible: false,
       height: null,
@@ -99,12 +123,57 @@ export class Controls {
       TIMING.hysteresis,
     );
     const gate = Boolean(hand.pinch) && !hand.fist;
-    if (gate && !lead.gate) events.push({ type: "noteOn", rung, time });
-    else if (gate && rung !== lead.rung)
+    if (gate && !lead.gate) {
+      const strike = hand.strike > 0 ? hand.strike : null;
+      lead.onsetCloseness = hand.closeness > 0 ? hand.closeness : null;
+      lead.swell = 0;
+      events.push({
+        type: "noteOn",
+        rung,
+        time,
+        velocity: this.#velocity(strike),
+        strike,
+      });
+    } else if (gate && rung !== lead.rung)
       events.push({ type: "noteMove", rung, time });
     else if (!gate && lead.gate) events.push({ type: "noteOff", time });
+    if (gate) {
+      const swell = this.#swell(hand.closeness);
+      if (
+        Math.abs(swell - lead.swell) >= DYNAMICS.swellStep ||
+        (swell === 0 && lead.swell !== 0)
+      ) {
+        lead.swell = swell;
+        events.push({ type: "swell", value: +swell.toFixed(3), time });
+      }
+    }
     lead.rung = rung;
     lead.gate = gate;
+  }
+
+  /** A note's velocity from its strike; without one, the typical velocity. */
+  #velocity(strike) {
+    if (strike === null) return TYPICAL_VELOCITY;
+    const usual =
+      this.strikes.length >= DYNAMICS.settle
+        ? median(this.strikes)
+        : DYNAMICS.usual;
+    this.strikes.push(strike);
+    if (this.strikes.length > DYNAMICS.memory) this.strikes.shift();
+    const velocity =
+      TYPICAL_VELOCITY + DYNAMICS.spread * Math.log2(strike / usual);
+    return +clamp(velocity, DYNAMICS.floor, 1).toFixed(3);
+  }
+
+  /** How far the hand has leaned in (up to 1) or back (down to -1) since the note began. */
+  #swell(closeness) {
+    const onset = this.lead.onsetCloseness;
+    if (!(closeness > 0) || onset === null) return 0;
+    const lean = Math.log(closeness / onset) / Math.log(DYNAMICS.swellRange);
+    const beyond =
+      Math.max(0, Math.abs(lean) - DYNAMICS.swellDeadzone) /
+      (1 - DYNAMICS.swellDeadzone);
+    return clamp(Math.sign(lean) * beyond, -1, 1);
   }
 
   #band(hand, time, events) {
