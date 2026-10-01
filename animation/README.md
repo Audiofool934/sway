@@ -110,7 +110,7 @@ Dates and attributions were checked against sources, and the captions say "tradi
 ## Limits
 
 - The soundtrack was checked by measurement: spectrograms, loudness (integrated -17.0 LUFS, true peak -1.7 dBFS in the finished file, measured with ffmpeg), click and DC detection, and pitch and chroma analysis.
-  Sync was checked on the finished file by comparing audio onsets with lit drum steps and lit piano keys, which agree to within one frame.
+  Sync was checked on the finished file by comparing audio onsets with lit drum steps and lit piano keys: the median offset is under 20 ms, with the sound slightly after the picture, and most hits fall within one 33 ms frame.
   The film has not been listened to on speakers or headphones, so mix balance and taste still need a listen.
 - The history is a path through the story, not a complete account: it follows Western and technological lines and leaves out most of the world's music.
 - The fonts (Fraunces, DM Sans, IBM Plex Mono) are bundled under the SIL Open Font License; see `assets/fonts` and [third-party notices](../THIRD_PARTY_NOTICES.md).
