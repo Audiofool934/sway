@@ -9,7 +9,7 @@
 
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch } from "./browser.mjs";
 import { startServer } from "./serve.mjs";
@@ -35,7 +35,9 @@ const server = await startServer();
 const browser = await launch();
 const pages = [];
 for (let i = 0; i < workers; i++) {
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const page = await browser.newPage({
+    viewport: { width: 1920, height: 1080 },
+  });
   page.on("pageerror", (error) => {
     console.error("page error:", error.message);
     process.exitCode = 1;
@@ -56,34 +58,72 @@ const fps = Number(option("fps", info.fps));
 const hasAudio = existsSync(audioPath) && !flag("silent");
 const ffmpegArgs = [
   "-y",
-  "-loglevel", "warning",
-  "-f", "image2pipe",
-  "-framerate", String(fps),
-  "-c:v", jpeg ? "mjpeg" : "png",
-  "-i", "pipe:0",
+  "-loglevel",
+  "warning",
+  "-f",
+  "image2pipe",
+  "-framerate",
+  String(fps),
+  "-c:v",
+  jpeg ? "mjpeg" : "png",
+  "-i",
+  "pipe:0",
 ];
 if (hasAudio) ffmpegArgs.push("-ss", String(from / fps), "-i", audioPath);
 const filters = [];
-if (scale !== 1) filters.push(`scale=${Math.round(1920 * scale)}:${Math.round(1080 * scale)}:flags=lanczos`);
-filters.push("scale=in_range=full:out_range=tv:out_color_matrix=bt709", "format=yuv420p");
+if (scale !== 1)
+  filters.push(
+    `scale=${Math.round(1920 * scale)}:${Math.round(1080 * scale)}:flags=lanczos`,
+  );
+filters.push(
+  "scale=in_range=full:out_range=tv:out_color_matrix=bt709",
+  "format=yuv420p",
+);
 ffmpegArgs.push(
-  "-vf", filters.join(","),
-  "-c:v", "libx264",
-  "-preset", preset,
-  "-crf", crf,
-  "-tune", "animation",
-  "-profile:v", "high",
-  "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv",
-  "-movflags", "+faststart",
+  "-vf",
+  filters.join(","),
+  "-c:v",
+  "libx264",
+  "-preset",
+  preset,
+  "-crf",
+  crf,
+  "-tune",
+  "animation",
+  "-profile:v",
+  "high",
+  "-colorspace",
+  "bt709",
+  "-color_primaries",
+  "bt709",
+  "-color_trc",
+  "bt709",
+  "-color_range",
+  "tv",
+  "-movflags",
+  "+faststart",
 );
 if (hasAudio)
-  ffmpegArgs.push("-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-t", String(total / fps));
+  ffmpegArgs.push(
+    "-c:a",
+    "aac",
+    "-b:a",
+    "192k",
+    "-ar",
+    "48000",
+    "-t",
+    String(total / fps),
+  );
 else ffmpegArgs.push("-an");
 ffmpegArgs.push(out);
 
-const ffmpeg = spawn("ffmpeg", ffmpegArgs, { stdio: ["pipe", "inherit", "inherit"] });
+const ffmpeg = spawn("ffmpeg", ffmpegArgs, {
+  stdio: ["pipe", "inherit", "inherit"],
+});
 const finished = new Promise((done, fail) => {
-  ffmpeg.on("exit", (code) => (code === 0 ? done() : fail(new Error(`ffmpeg exited ${code}`))));
+  ffmpeg.on("exit", (code) =>
+    code === 0 ? done() : fail(new Error(`ffmpeg exited ${code}`)),
+  );
   ffmpeg.stdin.on("error", fail);
 });
 
@@ -99,12 +139,15 @@ function flush() {
       const buffer = ready.get(nextWrite);
       ready.delete(nextWrite);
       nextWrite++;
-      if (!ffmpeg.stdin.write(buffer)) await new Promise((r) => ffmpeg.stdin.once("drain", r));
+      if (!ffmpeg.stdin.write(buffer))
+        await new Promise((r) => ffmpeg.stdin.once("drain", r));
       const done = nextWrite - from;
       if (done % 150 === 0 || done === total) {
         const elapsed = (Date.now() - started) / 1000;
         const eta = (elapsed / done) * (total - done);
-        console.log(`frame ${done}/${total}  ${elapsed.toFixed(0)}s elapsed, ~${eta.toFixed(0)}s left`);
+        console.log(
+          `frame ${done}/${total}  ${elapsed.toFixed(0)}s elapsed, ~${eta.toFixed(0)}s left`,
+        );
       }
     }
   });
@@ -115,7 +158,8 @@ async function work(page) {
   while (nextTake < to) {
     const index = nextTake++;
     // Keep workers from racing far ahead of the writer.
-    while (index - nextWrite > workers * 6) await new Promise((r) => setTimeout(r, 5));
+    while (index - nextWrite > workers * 6)
+      await new Promise((r) => setTimeout(r, 5));
     const data = await page.evaluate(
       ([i, type]) => window.film.frame(i, type, 0.96),
       [index, jpeg ? "image/jpeg" : "image/png"],
@@ -131,4 +175,6 @@ ffmpeg.stdin.end();
 await finished;
 await browser.close();
 await server.close();
-console.log(`wrote ${out} (${total} frames, ${((Date.now() - started) / 1000).toFixed(0)}s)`);
+console.log(
+  `wrote ${out} (${total} frames, ${((Date.now() - started) / 1000).toFixed(0)}s)`,
+);

@@ -61,6 +61,7 @@ export class Bus {
   region(from, to, fn) {
     const a = Math.max(0, Math.round(from * SR));
     const b = Math.min(this.length, Math.round(to * SR));
+    if (b <= a) return;
     const L = this.L.slice(a, b);
     const R = this.R.slice(a, b);
     const out = fn(L, R) ?? { L, R };
@@ -70,7 +71,11 @@ export class Bus {
 }
 
 /** Duck a bus on each trigger time: gain dips to (1 - depth) and recovers over `release`. */
-export function duck(bus, times, { depth = 0.5, attack = 0.004, release = 0.18 } = {}) {
+export function duck(
+  bus,
+  times,
+  { depth = 0.5, attack = 0.004, release = 0.18 } = {},
+) {
   const n = bus.length;
   const curve = new Float32Array(n).fill(1);
   const att = Math.max(1, samples(attack));
@@ -92,7 +97,11 @@ export function duck(bus, times, { depth = 0.5, attack = 0.004, release = 0.18 }
 }
 
 /** Feedback echo (tape-style: each repeat is darker). Returns wet-only stereo. */
-export function echo(inL, inR, { time = 0.45, feedback = 0.4, tone = 2600, pingPong = true } = {}) {
+export function echo(
+  inL,
+  inR,
+  { time = 0.45, feedback = 0.4, tone = 2600, pingPong = true } = {},
+) {
   const n = inL.length;
   const d = samples(time);
   const dl = new Delay(d + 4);
@@ -151,15 +160,31 @@ export class Mixer {
    * Place a mono buffer (or `{L, R}` pair) at film time `t`.
    * `room`, `hall`, and `echo` are send levels; `stem` routes the dry signal to a stem.
    */
-  put(voice, t, { gain = 1, pan = 0, room = 0, hall = 0, echo: echoSend = 0, stem = null } = {}) {
+  put(
+    voice,
+    t,
+    {
+      gain = 1,
+      pan = 0,
+      room = 0,
+      hall = 0,
+      echo: echoSend = 0,
+      stem = null,
+    } = {},
+  ) {
     const dry = stem ? this.stem(stem).bus : this.master;
     const stereo = !(voice instanceof Float32Array);
     // A single NaN would circulate in the reverbs forever, so refuse it where it starts.
     for (const channel of stereo ? [voice.L, voice.R] : [voice])
       for (let i = 0; i < channel.length; i++)
-        if (!Number.isFinite(channel[i])) throw new Error(`non-finite sample ${i} in a voice placed at ${t.toFixed(2)} s`);
+        if (!Number.isFinite(channel[i]))
+          throw new Error(
+            `non-finite sample ${i} in a voice placed at ${t.toFixed(2)} s`,
+          );
     const add = (bus, g) =>
-      stereo ? bus.addStereo(voice.L, voice.R, t, { gain: g }) : bus.add(voice, t, { gain: g, pan });
+      stereo
+        ? bus.addStereo(voice.L, voice.R, t, { gain: g })
+        : bus.add(voice, t, { gain: g, pan });
     add(dry, gain);
     if (room) add(this.sends.room, gain * room);
     if (hall) add(this.sends.hall, gain * hall);
@@ -169,12 +194,24 @@ export class Mixer {
   finish({ room = {}, hall = {}, echo: echoOpts = {}, returns = {} } = {}) {
     const out = new Bus(this.length);
     out.addBus(this.master);
-    for (const { bus, gain } of Object.values(this.stems)) out.addBus(bus, gain);
+    for (const { bus, gain } of Object.values(this.stems))
+      out.addBus(bus, gain);
     const r = { room: 0.7, hall: 0.7, echo: 0.6, ...returns };
-    const wetRoom = reverb(this.sends.room.L, this.sends.room.R, { rt60: 0.9, damping: 0.3, size: 0.6, ...room });
+    const wetRoom = reverb(this.sends.room.L, this.sends.room.R, {
+      rt60: 0.9,
+      damping: 0.3,
+      size: 0.6,
+      ...room,
+    });
     out.L.set(out.L.map((v, i) => v + wetRoom.L[i] * r.room));
     out.R.set(out.R.map((v, i) => v + wetRoom.R[i] * r.room));
-    const wetHall = reverb(this.sends.hall.L, this.sends.hall.R, { rt60: 3.6, damping: 0.45, size: 1.4, predelay: 0.03, ...hall });
+    const wetHall = reverb(this.sends.hall.L, this.sends.hall.R, {
+      rt60: 3.6,
+      damping: 0.45,
+      size: 1.4,
+      predelay: 0.03,
+      ...hall,
+    });
     out.L.set(out.L.map((v, i) => v + wetHall.L[i] * r.hall));
     out.R.set(out.R.map((v, i) => v + wetHall.R[i] * r.hall));
     const wetEcho = echo(this.sends.echo.L, this.sends.echo.R, echoOpts);

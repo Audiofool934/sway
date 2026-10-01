@@ -7,7 +7,8 @@ export function writeWav(path, channels, sampleRate) {
   const frames = channels[0].length;
   const data = Buffer.alloc(frames * count * 4);
   for (let i = 0; i < frames; i++)
-    for (let c = 0; c < count; c++) data.writeFloatLE(channels[c][i], (i * count + c) * 4);
+    for (let c = 0; c < count; c++)
+      data.writeFloatLE(channels[c][i], (i * count + c) * 4);
   const header = Buffer.alloc(44);
   header.write("RIFF", 0);
   header.writeUInt32LE(36 + data.length, 4);
@@ -43,11 +44,17 @@ export function readWav(path) {
     } else if (id === "data") {
       const bytes = format.bits / 8;
       const frames = Math.floor(size / (bytes * format.channels));
-      const channels = Array.from({ length: format.channels }, () => new Float32Array(frames));
+      const channels = Array.from(
+        { length: format.channels },
+        () => new Float32Array(frames),
+      );
       for (let i = 0; i < frames; i++)
         for (let c = 0; c < format.channels; c++) {
           const at = offset + 8 + (i * format.channels + c) * bytes;
-          channels[c][i] = format.tag === 3 ? buffer.readFloatLE(at) : buffer.readInt16LE(at) / 32768;
+          channels[c][i] =
+            format.tag === 3
+              ? buffer.readFloatLE(at)
+              : buffer.readInt16LE(at) / 32768;
         }
       return { channels, rate: format.rate };
     }

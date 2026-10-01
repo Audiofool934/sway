@@ -42,5 +42,16 @@ Browser tracking uses Google's [MediaPipe Tasks Vision](https://github.com/googl
 The package retains its upstream Apache 2.0 license in `node_modules`.
 Model download URLs are listed in `src/sway/config.py`.
 
+## Fonts in the history film
+
+The film in `animation/` bundles Latin subsets of three typefaces, in the [Fontsource](https://fontsource.org/) packaging.
+Each is licensed under the SIL Open Font License, Version 1.1, and its license text is kept beside the font files in `animation/assets/fonts`.
+
+- [Fraunces](https://github.com/undercasetype/Fraunces), Copyright 2020 The Fraunces Project Authors.
+- [DM Sans](https://github.com/googlefonts/dm-fonts), Copyright 2014 The DM Sans Project Authors.
+- [IBM Plex Mono](https://github.com/IBM/plex), Copyright 2017 IBM Corp.
+
+The film's music is synthesized in code and contains no recorded samples.
+
 Other installed dependencies retain their respective upstream licenses.
 This notice does not assign a license to original Sway code.

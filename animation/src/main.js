@@ -50,7 +50,17 @@ if (!render && !params.has("t")) {
   const scrub = document.getElementById("scrub");
   const clock = document.getElementById("clock");
   const audio = document.getElementById("soundtrack");
-  audio.src = new URL("../out/soundtrack.m4a", import.meta.url).href;
+  // AAC where the browser has it, Opus where it does not (some open-source Chromium builds).
+  for (const [file, type] of [
+    ["soundtrack.m4a", "audio/mp4"],
+    ["soundtrack.ogg", 'audio/ogg; codecs="opus"'],
+  ]) {
+    const source = document.createElement("source");
+    source.src = new URL(`../out/${file}`, import.meta.url).href;
+    source.type = type;
+    audio.append(source);
+  }
+  audio.load();
   controls.hidden = false;
   let playing = false;
   let origin = 0;
@@ -84,8 +94,10 @@ if (!render && !params.has("t")) {
     } else if (event.code === "ArrowRight") seek(now() + 5);
     else if (event.code === "ArrowLeft") seek(now() - 5);
   });
-  const format = (seconds) =>
-    `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+  const format = (seconds) => {
+    const whole = Math.round(seconds);
+    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+  };
   const tick = async () => {
     await ready;
     const time = now();

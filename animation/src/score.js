@@ -36,7 +36,10 @@ export const MOTIF = [
  * The motif starting at film bar `bar`. `scale` stretches time (free-time chapters play
  * it slower), `transpose` shifts it in semitones. Times are film seconds.
  */
-export function motif(bar, { scale = 1, transpose = 0, from = 0, to = 16 } = {}) {
+export function motif(
+  bar,
+  { scale = 1, transpose = 0, from = 0, to = 16 } = {},
+) {
   return MOTIF.map(([beat, pitch, beats], index) => ({
     index,
     beat,
@@ -47,9 +50,111 @@ export function motif(bar, { scale = 1, transpose = 0, from = 0, to = 16 } = {})
 }
 
 /** The pitch class a note is sung on in Guido's hexachord on C: ut re mi fa sol la. */
-export const SOLFEGE = { 0: "Ut", 2: "Re", 4: "Mi", 5: "Fa", 7: "Sol", 9: "La" };
+export const SOLFEGE = {
+  0: "Ut",
+  2: "Re",
+  4: "Mi",
+  5: "Fa",
+  7: "Sol",
+  9: "La",
+};
 
 const at = (id, seconds) => byId[id].start + seconds;
+
+/**
+ * Repeat: the notes struck by the pinned cylinder (bars 14 to 17: the tune's first half,
+ * twice, over root and fifth pins) and those read from the paper roll (bars 17 to 19: a
+ * left hand from bar 17, the tune's second half from bar 18). Times are film seconds.
+ */
+export function repeatCue() {
+  const cylinder = [];
+  for (const bar of [14, 16])
+    for (const n of motif(bar, { from: 0, to: 8 }))
+      cylinder.push({ t: n.t, midi: n.midi + 12, dur: 1.2, kind: "melody" });
+  for (const bar of [14, 15, 16, 17]) {
+    const root = chordOfBar(bar).bass + 24;
+    cylinder.push(
+      { t: atBar(bar, 0), midi: root, dur: 1.2, kind: "bass" },
+      { t: atBar(bar, 2), midi: root + 7, dur: 1.2, kind: "bass" },
+    );
+  }
+  const roll = [];
+  for (const n of motif(16, { from: 8, to: 16 }))
+    roll.push({
+      t: n.t,
+      midi: n.midi,
+      dur: n.dur * 0.95,
+      vel: 0.8,
+      kind: "melody",
+    });
+  for (const bar of [17, 18, 19]) {
+    const chord = chordOfBar(bar);
+    roll.push({
+      t: atBar(bar, 0),
+      midi: chord.bass + 12,
+      dur: 0.45,
+      vel: 0.7,
+      kind: "bass",
+    });
+    roll.push({
+      t: atBar(bar, 2),
+      midi: chord.bass + 19,
+      dur: 0.45,
+      vel: 0.6,
+      kind: "bass",
+    });
+    for (const beat of [1, 3])
+      for (const midi of chord.pad.slice(1))
+        roll.push({
+          t: atBar(bar, beat),
+          midi,
+          dur: 0.4,
+          vel: 0.35,
+          kind: "chord",
+        });
+  }
+  return { cylinder, roll: roll.sort((a, b) => a.t - b.t) };
+}
+
+/**
+ * The finale's performance, as gestures on the film's beat grid (beats counted from the
+ * film's start, so bar b is beat 4b). The lead hand pinches once per bar and moves between
+ * rungs while it holds; the third statement adds two passing notes. The same list drives the
+ * hands on screen and Sway's own synth in the finale render.
+ */
+export function playScript() {
+  const lead = []; // { beat, type: "on" | "move" | "off", midi }
+  const notes = []; // { start, end, midi, legato } in beats
+  const statements = cues.play.statements;
+  statements.forEach((bar, index) => {
+    const rich = index === statements.length - 1;
+    const base = bar * 4;
+    const tune = [];
+    for (const [beat, midi, length] of MOTIF) {
+      if (rich && beat === 1) tune.push([1, 72, 0.75], [1.75, 74, 0.25]);
+      else if (rich && beat === 10)
+        tune.push([10, 72, 0.75], [10.75, 74, 0.25]);
+      else tune.push([beat, midi, length]);
+    }
+    tune.forEach(([beat, midi, length], i) => {
+      const barStart = beat % 4 === 0;
+      const start = base + beat;
+      lead.push({ beat: start, type: barStart ? "on" : "move", midi });
+      notes.push({ start, end: start + length, midi, legato: !barStart });
+      if (i === tune.length - 1 && index === statements.length - 1)
+        lead.push({ beat: start + length - 0.1, type: "off", midi });
+    });
+  });
+  return {
+    lead,
+    notes,
+    levels: cues.play.levels,
+    capture: cues.play.capture,
+    fists: cues.play.fists,
+    endBar: cues.play.endBar,
+  };
+}
+
 const freq = (midi) => 440 * 2 ** ((midi - 69) / 12);
 export { freq };
 
@@ -63,12 +168,33 @@ export const cues = {
     title: [at("vibrate", 1.8), at("vibrate", 6.6)],
     monochord: at("vibrate", 6.0),
     intervals: [
-      { name: "octave", ratio: [2, 1], length: 1 / 2, slide: at("vibrate", 7.2), pluck: at("vibrate", 7.8) },
-      { name: "fifth", ratio: [3, 2], length: 2 / 3, slide: at("vibrate", 9.6), pluck: at("vibrate", 10.2) },
-      { name: "fourth", ratio: [4, 3], length: 3 / 4, slide: at("vibrate", 12.0), pluck: at("vibrate", 12.6) },
+      {
+        name: "octave",
+        ratio: [2, 1],
+        length: 1 / 2,
+        slide: at("vibrate", 7.2),
+        pluck: at("vibrate", 7.8),
+      },
+      {
+        name: "fifth",
+        ratio: [3, 2],
+        length: 2 / 3,
+        slide: at("vibrate", 9.6),
+        pluck: at("vibrate", 10.2),
+      },
+      {
+        name: "fourth",
+        ratio: [4, 3],
+        length: 3 / 4,
+        slide: at("vibrate", 12.0),
+        pluck: at("vibrate", 12.6),
+      },
     ],
     // The open string's own overtones: harmonics 1, 2, 3, 4, 6 of A2.
-    harmonics: [1, 2, 3, 4, 6].map((n, i) => ({ n, t: at("vibrate", 14.4 + i * 0.6) })),
+    harmonics: [1, 2, 3, 4, 6].map((n, i) => ({
+      n,
+      t: at("vibrate", 14.4 + i * 0.6),
+    })),
   },
 
   // Theremin for four bars, then the organ: its nine drawbars are pulled out one at a time
@@ -145,10 +271,42 @@ export const cues = {
   delegate: {
     start: at("delegate", 2.4),
     loops: [
-      { id: "box", beats: 7, notes: [[0, 81], [2, 76], [4.5, 72]] },
-      { id: "bell", beats: 11, notes: [[1, 74], [5, 67], [8, 69]] },
-      { id: "low", beats: 17, notes: [[0, 57], [9, 52]] },
-      { id: "spark", beats: 13, notes: [[0, 79], [6, 74], [10, 76]], enters: at("delegate", 9.6) },
+      {
+        id: "box",
+        beats: 7,
+        notes: [
+          [0, 81],
+          [2, 76],
+          [4.5, 72],
+        ],
+      },
+      {
+        id: "bell",
+        beats: 11,
+        notes: [
+          [1, 74],
+          [5, 67],
+          [8, 69],
+        ],
+      },
+      {
+        id: "low",
+        beats: 17,
+        notes: [
+          [0, 57],
+          [9, 52],
+        ],
+      },
+      {
+        id: "spark",
+        beats: 13,
+        notes: [
+          [0, 79],
+          [6, 74],
+          [10, 76],
+        ],
+        enters: at("delegate", 9.6),
+      },
     ],
   },
 

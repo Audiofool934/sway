@@ -9,7 +9,12 @@ import { fileURLToPath } from "node:url";
 import { launch } from "./browser.mjs";
 import { startServer } from "./serve.mjs";
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "out", "stills");
+const OUT = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "out",
+  "stills",
+);
 mkdirSync(OUT, { recursive: true });
 
 const args = process.argv.slice(2);
@@ -22,9 +27,11 @@ const times = [];
 if (sheet) {
   const [from, to] = sheet.split(":").map(Number);
   const count = Number(option("count", 6));
-  for (let i = 0; i < count; i++) times.push(from + ((to - from) * i) / Math.max(1, count - 1));
+  for (let i = 0; i < count; i++)
+    times.push(from + ((to - from) * i) / Math.max(1, count - 1));
 } else {
-  for (const arg of args) if (!Number.isNaN(Number(arg))) times.push(Number(arg));
+  for (const arg of args)
+    if (!Number.isNaN(Number(arg))) times.push(Number(arg));
 }
 
 const server = await startServer();
@@ -41,7 +48,10 @@ const files = [];
 for (const time of times) {
   const data = await page.evaluate(async (t) => {
     await window.film.at(t);
-    return document.getElementById("stage").toDataURL("image/png").split(",")[1];
+    return document
+      .getElementById("stage")
+      .toDataURL("image/png")
+      .split(",")[1];
   }, time);
   const file = join(OUT, `still-${time.toFixed(2).padStart(6, "0")}.png`);
   writeFileSync(file, Buffer.from(data, "base64"));
@@ -57,9 +67,24 @@ if (sheet) {
   const name = option("name", "sheet");
   const target = join(OUT, `${name}.png`);
   const tile = option("tile", "640x360");
-  const result = spawnSync("montage", [...files, "-tile", `${cols}x`, "-geometry", `${tile}+4+4`, "-background", "#111", target]);
+  const result = spawnSync("montage", [
+    ...files,
+    "-tile",
+    `${cols}x`,
+    "-geometry",
+    `${tile}+4+4`,
+    "-background",
+    "#111",
+    target,
+  ]);
   if (result.status !== 0) {
-    const fallback = spawnSync("convert", [...files, "-resize", tile, "+append", target]);
+    const fallback = spawnSync("convert", [
+      ...files,
+      "-resize",
+      tile,
+      "+append",
+      target,
+    ]);
     if (fallback.status !== 0) console.error("montage and convert both failed");
   }
   console.log(`sheet: ${target}`);

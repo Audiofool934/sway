@@ -3,7 +3,22 @@
 // peaks are about 0.5 at full velocity; the mixer sets the balance.
 
 import {
-  Biquad, Osc, SR, TAU, clamp, fade, filter, ladder, mtof, noise, normalize, peak, rng, samples, saturate, smoothstep,
+  Biquad,
+  Osc,
+  SR,
+  TAU,
+  clamp,
+  fade,
+  filter,
+  ladder,
+  mtof,
+  noise,
+  normalize,
+  peak,
+  rng,
+  samples,
+  saturate,
+  smoothstep,
 } from "./dsp.js";
 
 const env = (t, tau) => Math.exp(-t / tau);
@@ -11,15 +26,26 @@ const env = (t, tau) => Math.exp(-t / tau);
 // ---------------------------------------------------------------- chapter 1: string
 
 /** An idealized plucked string: harmonic partials with pluck-position comb and faster-fading highs. */
-export function string({ freq, dur = 3, vel = 0.8, decay = 2.6, bright = 1, pos = 0.17, release = 0.05, seed = 1 }) {
+export function string({
+  freq,
+  dur = 3,
+  vel = 0.8,
+  decay = 2.6,
+  bright = 1,
+  pos = 0.17,
+  release = 0.05,
+  seed = 1,
+}) {
   const n = samples(dur);
   const out = new Float32Array(n);
   const partials = Math.min(16, Math.floor(10000 / freq));
   for (let h = 1; h <= partials; h++) {
-    const amp = (Math.abs(Math.sin(Math.PI * h * pos)) + 0.08) / h ** (1.25 / bright);
+    const amp =
+      (Math.abs(Math.sin(Math.PI * h * pos)) + 0.08) / h ** (1.25 / bright);
     const tau = decay / h ** 0.75;
     const w = (TAU * freq * h) / SR;
-    for (let i = 0; i < n; i++) out[i] += amp * Math.sin(w * i) * Math.exp(-i / SR / tau);
+    for (let i = 0; i < n; i++)
+      out[i] += amp * Math.sin(w * i) * Math.exp(-i / SR / tau);
   }
   // The pluck itself: a few milliseconds of darkened noise.
   const r = rng(seed);
@@ -63,13 +89,17 @@ export function pipe({ midi, dur = 1, vel = 0.7, vibrato = 0.0025, seed = 5 }) {
   const breath = new Biquad("bandpass", 2800, 2.2);
   for (let i = 0; i < n; i++) {
     const t = i / SR;
-    const vib = 1 + vibrato * Math.sin(TAU * 4.6 * t) * smoothstep((t - 0.25) / 0.5);
+    const vib =
+      1 + vibrato * Math.sin(TAU * 4.6 * t) * smoothstep((t - 0.25) / 0.5);
     phase += (TAU * f * vib) / SR;
     let s = 0;
-    for (let h = 0; h < amps.length; h++) s += amps[h] * Math.sin(phase * (h + 1));
+    for (let h = 0; h < amps.length; h++)
+      s += amps[h] * Math.sin(phase * (h + 1));
     const a = clamp(t / attack);
     const rel = t > dur ? Math.exp(-(t - dur) / (release / 3)) : 1;
-    const chiff = breath.tick(r() * 2 - 1) * 0.05 * Math.exp(-t / 0.05) + breath.tick(r() * 2 - 1) * 0.004;
+    const chiff =
+      breath.tick(r() * 2 - 1) * 0.05 * Math.exp(-t / 0.05) +
+      breath.tick(r() * 2 - 1) * 0.004;
     out[i] = (s * 0.22 + chiff) * a * rel;
   }
   normalize(out, 0.45 * vel);
@@ -93,7 +123,8 @@ export function musicBox({ midi, vel = 0.7, dur = 1.6, seed = 2 }) {
     const fr = f * ratio;
     if (fr > 14000) continue;
     const w = (TAU * fr) / SR;
-    for (let i = 0; i < n; i++) out[i] += amp * Math.sin(w * i) * Math.exp(-i / SR / tau);
+    for (let i = 0; i < n; i++)
+      out[i] += amp * Math.sin(w * i) * Math.exp(-i / SR / tau);
   }
   const r = rng(seed);
   const tick = new Biquad("highpass", 2500);
@@ -124,8 +155,11 @@ export function piano({ midi, vel = 0.7, dur = 1, honky = 0, seed = 3 }) {
       const fh = f * h * Math.sqrt(1 + B * h * h);
       if (fh > 14000) break;
       const bright = h > 3 ? vel ** 1.4 : 1;
-      const amp = ((Math.abs(Math.sin(Math.PI * h * strike)) + 0.05) / h ** 0.95) * bright;
-      const tau = ringing / (1 + 0.55 * h) * (cents === detunes[1] ? 1 : 0.85);
+      const amp =
+        ((Math.abs(Math.sin(Math.PI * h * strike)) + 0.05) / h ** 0.95) *
+        bright;
+      const tau =
+        (ringing / (1 + 0.55 * h)) * (cents === detunes[1] ? 1 : 0.85);
       const w = (TAU * fh) / SR;
       for (let i = 0; i < n; i++) {
         const t = i / SR;
@@ -139,7 +173,10 @@ export function piano({ midi, vel = 0.7, dur = 1, honky = 0, seed = 3 }) {
   const click = new Biquad("bandpass", 3200, 1);
   for (let i = 0; i < Math.min(n, samples(0.03)); i++) {
     const w = r() * 2 - 1;
-    out[i] += (thump.tick(w) * 0.5 + click.tick(w) * (honky ? 0.7 : 0.15)) * vel * Math.exp(-i / SR / 0.008);
+    out[i] +=
+      (thump.tick(w) * 0.5 + click.tick(w) * (honky ? 0.7 : 0.15)) *
+      vel *
+      Math.exp(-i / SR / 0.008);
   }
   for (let i = 0; i < Math.min(n, 48); i++) out[i] *= i / 48;
   normalize(out, 0.55 * vel);
@@ -161,7 +198,11 @@ export function theremin({ notes, vel = 0.7, glide = 0.11, seed = 9 }) {
     for (const note of notes) if (note.t <= t) current = note;
     const index = notes.indexOf(current);
     const previous = notes[index - 1];
-    if (previous && t - current.t < glide && current.t - (previous.t + previous.dur) < 0.12) {
+    if (
+      previous &&
+      t - current.t < glide &&
+      current.t - (previous.t + previous.dur) < 0.12
+    ) {
       const u = smoothstep((t - current.t) / glide);
       return previous.midi + (current.midi - previous.midi) * u;
     }
@@ -186,11 +227,14 @@ export function theremin({ notes, vel = 0.7, glide = 0.11, seed = 9 }) {
     let current = notes[0];
     for (const note of notes) if (note.t <= t) current = note;
     const sinceOnset = t - current.t;
-    const vibrato = 1 + 0.0048 * Math.sin(TAU * 5.7 * t) * smoothstep((sinceOnset - 0.2) / 0.45);
+    const vibrato =
+      1 +
+      0.0048 * Math.sin(TAU * 5.7 * t) * smoothstep((sinceOnset - 0.2) / 0.45);
     const drift = 1 + 0.0007 * Math.sin(TAU * 0.37 * t + 1);
     const f = mtof(pitchAt(t)) * vibrato * drift;
     phase += (TAU * f) / SR;
-    const s = Math.sin(phase) + 0.13 * Math.sin(2 * phase) + 0.05 * Math.sin(3 * phase);
+    const s =
+      Math.sin(phase) + 0.13 * Math.sin(2 * phase) + 0.05 * Math.sin(3 * phase);
     out[i] = tone.tick(s + (r() * 2 - 1) * 0.004) * ampAt(t);
   }
   normalize(out, 0.5 * vel);
@@ -202,21 +246,36 @@ export function theremin({ notes, vel = 0.7, glide = 0.11, seed = 9 }) {
  * 1 3/5', 1 1/3', 1' (levels 0 to 8 each), a key click, and a rotating-speaker shimmer.
  */
 export const DRAWBAR_RATIOS = [0.5, 1.5, 1, 2, 3, 4, 5, 6, 8];
-export function organ({ midi, dur = 1, drawbars = [0, 0, 8, 0, 0, 0, 0, 0, 0], vel = 0.7, speaker = 0.18, seed = 4 }) {
+export function organ({
+  midi,
+  dur = 1,
+  drawbars = [0, 0, 8, 0, 0, 0, 0, 0, 0],
+  vel = 0.7,
+  speaker = 0.18,
+  seed = 4,
+}) {
   const f = mtof(midi);
   const total = dur + 0.15;
   const n = samples(total);
   const L = new Float32Array(n);
   const R = new Float32Array(n);
-  const levels = drawbars.map((d) => (d <= 0 ? 0 : 10 ** ((d - 8) * 3 / 20)));
-  const norm = 1 / Math.max(1, levels.reduce((a, b) => a + b, 0));
+  const levels = drawbars.map((d) => (d <= 0 ? 0 : 10 ** (((d - 8) * 3) / 20)));
+  const norm =
+    1 /
+    Math.max(
+      1,
+      levels.reduce((a, b) => a + b, 0),
+    );
   const r = rng(seed + midi);
   const click = new Biquad("bandpass", 2400, 0.8);
   for (let i = 0; i < n; i++) {
     const t = i / SR;
     let s = 0;
-    for (let k = 0; k < 9; k++) if (levels[k] && f * DRAWBAR_RATIOS[k] < 15000) s += levels[k] * Math.sin(TAU * f * DRAWBAR_RATIOS[k] * t);
-    const a = Math.min(1, t / 0.006) * (t > dur ? Math.exp(-(t - dur) / 0.03) : 1);
+    for (let k = 0; k < 9; k++)
+      if (levels[k] && f * DRAWBAR_RATIOS[k] < 15000)
+        s += levels[k] * Math.sin(TAU * f * DRAWBAR_RATIOS[k] * t);
+    const a =
+      Math.min(1, t / 0.006) * (t > dur ? Math.exp(-(t - dur) / 0.03) : 1);
     const keyclick = click.tick(r() * 2 - 1) * 0.1 * Math.exp(-t / 0.004);
     const v = (s * norm + keyclick) * a;
     // Rotating speaker: opposite-phase amplitude shimmer on each side.
@@ -235,7 +294,18 @@ export function organ({ midi, dur = 1, drawbars = [0, 0, 8, 0, 0, 0, 0, 0, 0], v
 // ---------------------------------------------------------------- chapter 6: voltage
 
 /** A subtractive voice: saw + pulse + sub into a resonant ladder filter with its own envelope. */
-export function moog({ midi, dur = 0.5, vel = 0.8, cutoff = 500, envAmount = 3000, envDecay = 0.25, resonance = 0.55, sub = 0.5, pulse = 0.4, glideFrom = null }) {
+export function moog({
+  midi,
+  dur = 0.5,
+  vel = 0.8,
+  cutoff = 500,
+  envAmount = 3000,
+  envDecay = 0.25,
+  resonance = 0.55,
+  sub = 0.5,
+  pulse = 0.4,
+  glideFrom = null,
+}) {
   const total = dur + 0.25;
   const n = samples(total);
   const out = new Float32Array(n);
@@ -245,12 +315,24 @@ export function moog({ midi, dur = 0.5, vel = 0.8, cutoff = 500, envAmount = 300
   const f = mtof(midi);
   for (let i = 0; i < n; i++) {
     const t = i / SR;
-    const fi = glideFrom === null ? f : mtof(glideFrom + (midi - glideFrom) * smoothstep(t / 0.06));
-    const s = saw.saw(fi) * 0.55 + pul.pulse(fi * 1.003, 0.35) * pulse * 0.5 + sin.sine(fi * 0.5) * sub * 0.6;
-    const a = Math.min(1, t / 0.004) * (t > dur ? Math.exp(-(t - dur) / 0.06) : 1);
+    const fi =
+      glideFrom === null
+        ? f
+        : mtof(glideFrom + (midi - glideFrom) * smoothstep(t / 0.06));
+    const s =
+      saw.saw(fi) * 0.55 +
+      pul.pulse(fi * 1.003, 0.35) * pulse * 0.5 +
+      sin.sine(fi * 0.5) * sub * 0.6;
+    const a =
+      Math.min(1, t / 0.004) * (t > dur ? Math.exp(-(t - dur) / 0.06) : 1);
     out[i] = s * a;
   }
-  ladder(out, (i) => cutoff + envAmount * vel * Math.exp(-i / SR / envDecay), resonance, 1.4);
+  ladder(
+    out,
+    (i) => cutoff + envAmount * vel * Math.exp(-i / SR / envDecay),
+    resonance,
+    1.4,
+  );
   normalize(out, 0.6 * vel);
   return fade(out, 0, 0.03);
 }
@@ -266,8 +348,15 @@ export function fmPiano({ midi, vel = 0.7, dur = 1 }) {
   const tau = clamp(2.2 - (midi - 48) * 0.02, 0.5, 2.4);
   for (let i = 0; i < n; i++) {
     const t = i / SR;
-    const body = Math.sin(TAU * f * t + (0.9 + 2.2 * vel) * env(t, 0.55) * Math.sin(TAU * f * t));
-    const tine = Math.sin(TAU * f * t + 2.6 * vel * env(t, 0.05) * Math.sin(TAU * f * 14 * t)) * 0.28 * env(t, 0.22);
+    const body = Math.sin(
+      TAU * f * t + (0.9 + 2.2 * vel) * env(t, 0.55) * Math.sin(TAU * f * t),
+    );
+    const tine =
+      Math.sin(
+        TAU * f * t + 2.6 * vel * env(t, 0.05) * Math.sin(TAU * f * 14 * t),
+      ) *
+      0.28 *
+      env(t, 0.22);
     const a = env(t, tau) * (t > dur ? Math.exp(-(t - dur) / 0.12) : 1);
     out[i] = (body + tine) * a * Math.min(1, t / 0.002);
   }
@@ -276,13 +365,24 @@ export function fmPiano({ midi, vel = 0.7, dur = 1 }) {
 }
 
 /** An inharmonic FM bell (carrier : modulator = 1 : 3.5). */
-export function fmBell({ midi, vel = 0.6, dur = 2.4, ratio = 3.5, index = 3.2 }) {
+export function fmBell({
+  midi,
+  vel = 0.6,
+  dur = 2.4,
+  ratio = 3.5,
+  index = 3.2,
+}) {
   const f = mtof(midi);
   const n = samples(dur);
   const out = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const t = i / SR;
-    out[i] = Math.sin(TAU * f * t + index * env(t, 0.7) * Math.sin(TAU * f * ratio * t)) * env(t, 1.15) * Math.min(1, t / 0.002);
+    out[i] =
+      Math.sin(
+        TAU * f * t + index * env(t, 0.7) * Math.sin(TAU * f * ratio * t),
+      ) *
+      env(t, 1.15) *
+      Math.min(1, t / 0.002);
   }
   normalize(out, 0.5 * vel);
   return fade(out, 0, 0.1);
@@ -305,7 +405,15 @@ export function blip({ midi, vel = 0.7, dur = 0.18, cutoff = 2800 }) {
 
 // ---------------------------------------------------------------- chapter 8: drum machine
 
-export function kick({ vel = 0.9, tune = 48, decay = 0.42, sweep = 3.2, click = 0.25, drive = 1.6, seed = 6 }) {
+export function kick({
+  vel = 0.9,
+  tune = 48,
+  decay = 0.42,
+  sweep = 3.2,
+  click = 0.25,
+  drive = 1.6,
+  seed = 6,
+}) {
   const n = samples(decay * 3 + 0.1);
   const out = new Float32Array(n);
   let phase = 0;
@@ -317,7 +425,8 @@ export function kick({ vel = 0.9, tune = 48, decay = 0.42, sweep = 3.2, click = 
   }
   const r = rng(seed);
   const hp = new Biquad("highpass", 1500);
-  for (let i = 0; i < Math.min(n, samples(0.012)); i++) out[i] += hp.tick(r() * 2 - 1) * click * env(i / SR, 0.002);
+  for (let i = 0; i < Math.min(n, samples(0.012)); i++)
+    out[i] += hp.tick(r() * 2 - 1) * click * env(i / SR, 0.002);
   saturate(out, drive, 1);
   normalize(out, 0.8 * vel);
   return fade(out, 0, 0.02);
@@ -331,7 +440,9 @@ export function snare({ vel = 0.8, tone = 185, seed = 8 }) {
   const high = new Biquad("highpass", 1200);
   for (let i = 0; i < n; i++) {
     const t = i / SR;
-    const body = Math.sin(TAU * tone * t * (1 + 0.25 * env(t, 0.015))) * env(t, 0.07) + 0.6 * Math.sin(TAU * tone * 1.78 * t) * env(t, 0.045);
+    const body =
+      Math.sin(TAU * tone * t * (1 + 0.25 * env(t, 0.015))) * env(t, 0.07) +
+      0.6 * Math.sin(TAU * tone * 1.78 * t) * env(t, 0.045);
     const hiss = high.tick(band.tick(r() * 2 - 1)) * env(t, 0.1) * 1.1;
     out[i] = body * 0.8 + hiss;
   }
@@ -347,7 +458,8 @@ export function clap({ vel = 0.7, seed = 12 }) {
   for (let i = 0; i < n; i++) {
     const t = i / SR;
     let a = 0;
-    for (const offset of [0, 0.011, 0.023]) if (t >= offset) a = Math.max(a, env(t - offset, 0.004));
+    for (const offset of [0, 0.011, 0.023])
+      if (t >= offset) a = Math.max(a, env(t - offset, 0.004));
     if (t >= 0.034) a = Math.max(a, 0.8 * env(t - 0.034, 0.08));
     out[i] = band.tick(r() * 2 - 1) * a;
   }
@@ -366,7 +478,10 @@ export function hat({ vel = 0.6, open = false, seed = 14 }) {
     const t = i / SR;
     let s = 0;
     for (let k = 0; k < 6; k++) s += oscs[k].pulse(HAT_FREQS[k] * 2.6, 0.5);
-    out[i] = (s / 6 + (r() * 2 - 1) * 0.35) * env(t, open ? 0.14 : 0.022) * Math.min(1, t / 0.0006);
+    out[i] =
+      (s / 6 + (r() * 2 - 1) * 0.35) *
+      env(t, open ? 0.14 : 0.022) *
+      Math.min(1, t / 0.0006);
   }
   filter(out, "highpass", 7000, 0.8);
   filter(out, "peaking", 10200, 1.2, 4);
@@ -381,7 +496,9 @@ export function cowbell({ vel = 0.6 }) {
   const b = new Osc(0.3);
   for (let i = 0; i < n; i++) {
     const t = i / SR;
-    out[i] = (a.pulse(540, 0.5) + b.pulse(800, 0.5)) * (0.4 * env(t, 0.03) + 0.6 * env(t, 0.16));
+    out[i] =
+      (a.pulse(540, 0.5) + b.pulse(800, 0.5)) *
+      (0.4 * env(t, 0.03) + 0.6 * env(t, 0.16));
   }
   filter(out, "bandpass", 830, 1.6);
   normalize(out, 0.45 * vel);
@@ -405,7 +522,8 @@ export function crash({ vel = 0.6, dur = 3, seed = 16 }) {
   const n = samples(dur);
   const out = new Float32Array(n);
   const r = rng(seed);
-  for (let i = 0; i < n; i++) out[i] = (r() * 2 - 1) * env(i / SR, dur / 4.5) * Math.min(1, i / 60);
+  for (let i = 0; i < n; i++)
+    out[i] = (r() * 2 - 1) * env(i / SR, dur / 4.5) * Math.min(1, i / 60);
   filter(out, "highpass", 4200, 0.8);
   filter(out, "peaking", 7500, 0.8, 5);
   normalize(out, 0.4 * vel);
@@ -413,7 +531,13 @@ export function crash({ vel = 0.6, dur = 3, seed = 16 }) {
 }
 
 /** Filtered noise that sweeps up and swells: a riser into a downbeat. */
-export function riser({ dur = 2, vel = 0.6, from = 300, to = 8000, seed = 17 }) {
+export function riser({
+  dur = 2,
+  vel = 0.6,
+  from = 300,
+  to = 8000,
+  seed = 17,
+}) {
   const n = samples(dur);
   const out = new Float32Array(n);
   const r = rng(seed);
@@ -429,7 +553,15 @@ export function riser({ dur = 2, vel = 0.6, from = 300, to = 8000, seed = 17 }) 
 // ---------------------------------------------------------------- pads and bass
 
 /** A warm detuned-saw pad chord, stereo-wide, with a slowly opening low-pass. */
-export function pad({ midis, dur = 2.4, vel = 0.7, bright = 0.4, attack = 0.5, release = 0.9, seed = 21 }) {
+export function pad({
+  midis,
+  dur = 2.4,
+  vel = 0.7,
+  bright = 0.4,
+  attack = 0.5,
+  release = 0.9,
+  seed = 21,
+}) {
   const total = dur + release * 1.5;
   const n = samples(total);
   const L = new Float32Array(n);
@@ -437,7 +569,11 @@ export function pad({ midis, dur = 2.4, vel = 0.7, bright = 0.4, attack = 0.5, r
   const r = rng(seed);
   for (const midi of midis) {
     const f = mtof(midi);
-    for (const [cents, side] of [[-9, -1], [0, 0], [8, 1]]) {
+    for (const [cents, side] of [
+      [-9, -1],
+      [0, 0],
+      [8, 1],
+    ]) {
       const oscL = new Osc(r());
       const oscR = new Osc(r());
       const fd = f * 2 ** (cents / 1200);
@@ -449,12 +585,14 @@ export function pad({ midis, dur = 2.4, vel = 0.7, bright = 0.4, attack = 0.5, r
       }
     }
   }
-  const cutoff = (i) => 350 + 2600 * bright * (0.55 + 0.45 * smoothstep(i / SR / (attack * 2)));
+  const cutoff = (i) =>
+    350 + 2600 * bright * (0.55 + 0.45 * smoothstep(i / SR / (attack * 2)));
   filter(L, "lowpass", cutoff, 0.6);
   filter(R, "lowpass", cutoff, 0.6);
   for (let i = 0; i < n; i++) {
     const t = i / SR;
-    const a = clamp(t / attack) * (t > dur ? Math.exp(-(t - dur) / (release / 3)) : 1);
+    const a =
+      clamp(t / attack) * (t > dur ? Math.exp(-(t - dur) / (release / 3)) : 1);
     L[i] *= a;
     R[i] *= a;
   }
@@ -474,7 +612,10 @@ export function subBass({ midi, dur = 0.6, vel = 0.8, bite = 0.35 }) {
   const out = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const t = i / SR;
-    const a = Math.min(1, t / 0.006) * (t > dur ? Math.exp(-(t - dur) / 0.04) : 1) * (0.75 + 0.25 * env(t, 0.25));
+    const a =
+      Math.min(1, t / 0.006) *
+      (t > dur ? Math.exp(-(t - dur) / 0.04) : 1) *
+      (0.75 + 0.25 * env(t, 0.25));
     out[i] = Math.sin(TAU * f * t) * a;
   }
   saturate(out, 1 + bite * 2.2, 1);
@@ -498,16 +639,23 @@ export function hum({ dur = 5, level = 0.4, freq = 55 }) {
 }
 
 /** Surface crackle: sparse clicks of varied size, plus a bed of fine noise. */
-export function crackle({ dur = 10, density = 18, level = 0.5, seed = 31, bed = 0.06 }) {
+export function crackle({
+  dur = 10,
+  density = 18,
+  level = 0.5,
+  seed = 31,
+  bed = 0.06,
+}) {
   const n = samples(dur);
   const out = new Float32Array(n);
   const r = rng(seed);
   for (let i = 0; i < n; i++) {
     out[i] = (r() * 2 - 1) * bed;
     if (r() < density / SR) {
-      const size = (r() ** 3) * level * (r() < 0.5 ? -1 : 1);
+      const size = r() ** 3 * level * (r() < 0.5 ? -1 : 1);
       const len = samples(0.0004 + r() * 0.0015);
-      for (let k = 0; k < len && i + k < n; k++) out[i + k] += size * Math.exp(-k / len * 3) * (k % 2 ? -0.6 : 1);
+      for (let k = 0; k < len && i + k < n; k++)
+        out[i + k] += size * Math.exp((-k / len) * 3) * (k % 2 ? -0.6 : 1);
     }
   }
   filter(out, "highpass", 1200, 0.7);

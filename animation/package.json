@@ -4,9 +4,9 @@
   "type": "module",
   "description": "Between Hand and Sound: a short animated history of music technology, rendered from code.",
   "scripts": {
-    "audio": "node audio/render.mjs",
+    "audio": "node audio/render.mjs && node audio/finale.mjs && node audio/master.mjs",
     "video": "node tools/render.mjs",
-    "build": "node audio/render.mjs && node tools/render.mjs",
+    "build": "npm run audio && npm run video",
     "still": "node tools/still.mjs",
     "serve": "node tools/serve.mjs"
   },

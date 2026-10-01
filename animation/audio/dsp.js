@@ -39,7 +39,13 @@ export function noise(length, rand = rng(7)) {
 /** Pink-ish noise (Paul Kellet's economy filter). */
 export function pinkNoise(length, rand = rng(11)) {
   const out = new Float32Array(length);
-  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+  let b0 = 0,
+    b1 = 0,
+    b2 = 0,
+    b3 = 0,
+    b4 = 0,
+    b5 = 0,
+    b6 = 0;
   for (let i = 0; i < length; i++) {
     const white = rand() * 2 - 1;
     b0 = 0.99886 * b0 + white * 0.0555179;
@@ -70,28 +76,52 @@ export class Biquad {
     let b0, b1, b2, a0, a1, a2;
     switch (type) {
       case "lowpass":
-        b0 = (1 - cos) / 2; b1 = 1 - cos; b2 = b0;
-        a0 = 1 + alpha; a1 = -2 * cos; a2 = 1 - alpha;
+        b0 = (1 - cos) / 2;
+        b1 = 1 - cos;
+        b2 = b0;
+        a0 = 1 + alpha;
+        a1 = -2 * cos;
+        a2 = 1 - alpha;
         break;
       case "highpass":
-        b0 = (1 + cos) / 2; b1 = -(1 + cos); b2 = b0;
-        a0 = 1 + alpha; a1 = -2 * cos; a2 = 1 - alpha;
+        b0 = (1 + cos) / 2;
+        b1 = -(1 + cos);
+        b2 = b0;
+        a0 = 1 + alpha;
+        a1 = -2 * cos;
+        a2 = 1 - alpha;
         break;
       case "bandpass": // constant 0 dB peak
-        b0 = alpha; b1 = 0; b2 = -alpha;
-        a0 = 1 + alpha; a1 = -2 * cos; a2 = 1 - alpha;
+        b0 = alpha;
+        b1 = 0;
+        b2 = -alpha;
+        a0 = 1 + alpha;
+        a1 = -2 * cos;
+        a2 = 1 - alpha;
         break;
       case "notch":
-        b0 = 1; b1 = -2 * cos; b2 = 1;
-        a0 = 1 + alpha; a1 = -2 * cos; a2 = 1 - alpha;
+        b0 = 1;
+        b1 = -2 * cos;
+        b2 = 1;
+        a0 = 1 + alpha;
+        a1 = -2 * cos;
+        a2 = 1 - alpha;
         break;
       case "allpass":
-        b0 = 1 - alpha; b1 = -2 * cos; b2 = 1 + alpha;
-        a0 = 1 + alpha; a1 = -2 * cos; a2 = 1 - alpha;
+        b0 = 1 - alpha;
+        b1 = -2 * cos;
+        b2 = 1 + alpha;
+        a0 = 1 + alpha;
+        a1 = -2 * cos;
+        a2 = 1 - alpha;
         break;
       case "peaking":
-        b0 = 1 + alpha * A; b1 = -2 * cos; b2 = 1 - alpha * A;
-        a0 = 1 + alpha / A; a1 = -2 * cos; a2 = 1 - alpha / A;
+        b0 = 1 + alpha * A;
+        b1 = -2 * cos;
+        b2 = 1 - alpha * A;
+        a0 = 1 + alpha / A;
+        a1 = -2 * cos;
+        a2 = 1 - alpha / A;
         break;
       case "lowshelf": {
         const s = 2 * Math.sqrt(A) * alpha;
@@ -116,8 +146,11 @@ export class Biquad {
       default:
         throw new Error(`unknown filter ${type}`);
     }
-    this.b0 = b0 / a0; this.b1 = b1 / a0; this.b2 = b2 / a0;
-    this.a1 = a1 / a0; this.a2 = a2 / a0;
+    this.b0 = b0 / a0;
+    this.b1 = b1 / a0;
+    this.b2 = b2 / a0;
+    this.a1 = a1 / a0;
+    this.a2 = a2 / a0;
     return this;
   }
   tick(x) {
@@ -134,7 +167,8 @@ export class Biquad {
 
 /** Filter `buffer` in place; `f` may be a number or a function of the sample index. */
 export function filter(buffer, type, f, q = Math.SQRT1_2, gainDb = 0) {
-  if (typeof f === "number") return new Biquad(type, f, q, gainDb).process(buffer);
+  if (typeof f === "number")
+    return new Biquad(type, f, q, gainDb).process(buffer);
   const bq = new Biquad(type, f(0), q, gainDb);
   const STEP = 32;
   for (let i = 0; i < buffer.length; i++) {
@@ -153,12 +187,19 @@ export function filterN(buffer, type, f, q, order = 2) {
 /** A moog-style 4-pole ladder low-pass (zero-delay feedback), with time-varying cutoff. */
 export function ladder(buffer, cutoff, resonance = 0.3, drive = 1) {
   const k = clamp(resonance, 0, 1) * 3.9;
-  let s1 = 0, s2 = 0, s3 = 0, s4 = 0;
+  let s1 = 0,
+    s2 = 0,
+    s3 = 0,
+    s4 = 0;
   const STEP = 8;
   let G = 0;
   for (let i = 0; i < buffer.length; i++) {
     if (i % STEP === 0) {
-      const fc = clamp(typeof cutoff === "number" ? cutoff : cutoff(i), 20, SR * 0.45);
+      const fc = clamp(
+        typeof cutoff === "number" ? cutoff : cutoff(i),
+        20,
+        SR * 0.45,
+      );
       const g = Math.tan((Math.PI * fc) / SR);
       G = g / (1 + g);
     }
@@ -167,13 +208,17 @@ export function ladder(buffer, cutoff, resonance = 0.3, drive = 1) {
     const S = (1 - G) * (G2 * G * s1 + G2 * s2 + G * s3 + s4);
     let u = (Math.tanh(buffer[i] * drive) - k * S) / (1 + k * G4);
     let v = (u - s1) * G;
-    const y1 = v + s1; s1 = y1 + v;
+    const y1 = v + s1;
+    s1 = y1 + v;
     v = (y1 - s2) * G;
-    const y2 = v + s2; s2 = y2 + v;
+    const y2 = v + s2;
+    s2 = y2 + v;
     v = (y2 - s3) * G;
-    const y3 = v + s3; s3 = y3 + v;
+    const y3 = v + s3;
+    s3 = y3 + v;
     v = (y3 - s4) * G;
-    const y4 = v + s4; s4 = y4 + v;
+    const y4 = v + s4;
+    s4 = y4 + v;
     buffer[i] = y4;
   }
   return buffer;
@@ -249,7 +294,15 @@ export class Delay {
  * slowly modulated lines). Returns the wet signal only.
  */
 export function reverb(inL, inR, opts = {}) {
-  const { rt60 = 2.5, predelay = 0.015, damping = 0.35, size = 1, modulation = 0.0008, lowCut = 150, highCut = 9000 } = opts;
+  const {
+    rt60 = 2.5,
+    predelay = 0.015,
+    damping = 0.35,
+    size = 1,
+    modulation = 0.0008,
+    lowCut = 150,
+    highCut = 9000,
+  } = opts;
   const n = inL.length;
   const lengthsMs = [29.7, 37.1, 41.1, 43.7, 53.0, 59.3, 67.7, 79.1];
   const lines = lengthsMs.map((ms) => Math.round((ms * size * SR) / 1000));
@@ -261,9 +314,14 @@ export function reverb(inL, inR, opts = {}) {
   const outR = new Float32Array(n);
   const pre = new Delay(samples(predelay) + 8);
   // Input diffusion: four short allpasses in series.
-  const apLengths = [142, 107, 379, 277].map((x) => Math.round((x * SR) / 48000));
+  const apLengths = [142, 107, 379, 277].map((x) =>
+    Math.round((x * SR) / 48000),
+  );
   const ap = apLengths.map((length) => ({ d: new Delay(length + 2), length }));
-  const preFilters = [new Biquad("highpass", lowCut), new Biquad("lowpass", highCut)];
+  const preFilters = [
+    new Biquad("highpass", lowCut),
+    new Biquad("lowpass", highCut),
+  ];
   const signs = [1, -1, 1, -1, 1, -1, 1, -1];
   const tapL = [1, 0, 1, 0, 1, 0, 1, 0];
   const tapR = [0, 1, 0, 1, 0, 1, 0, 1];
@@ -285,7 +343,8 @@ export function reverb(inL, inR, opts = {}) {
       sum += x[k];
     }
     const mean = sum * 0.25; // Householder: x - (2/N) * sum, N = 8
-    let l = 0, r = 0;
+    let l = 0,
+      r = 0;
     for (let k = 0; k < 8; k++) {
       let y = (x[k] - mean) * gains[k];
       lp[k] = y * (1 - damping) + lp[k] * damping;
@@ -301,19 +360,37 @@ export function reverb(inL, inR, opts = {}) {
 }
 
 /** Feed-forward stereo-linked compressor. Operates in place. `key` is an optional sidechain. */
-export function compress(L, R, { threshold = -18, ratio = 3, attack = 0.01, release = 0.15, knee = 6, makeup = 0, key = null } = {}) {
+export function compress(
+  L,
+  R,
+  {
+    threshold = -18,
+    ratio = 3,
+    attack = 0.01,
+    release = 0.15,
+    knee = 6,
+    makeup = 0,
+    key = null,
+  } = {},
+) {
   const n = L.length;
   const attackCoef = Math.exp(-1 / (attack * SR));
   const releaseCoef = Math.exp(-1 / (release * SR));
   let reduction = 0;
   const gainMakeup = dB(makeup);
   for (let i = 0; i < n; i++) {
-    const level = key ? Math.abs(key[i]) : Math.max(Math.abs(L[i]), Math.abs(R[i]));
+    const level = key
+      ? Math.abs(key[i])
+      : Math.max(Math.abs(L[i]), Math.abs(R[i]));
     const over = toDb(level) - threshold;
     let target = 0;
-    if (2 * over > knee) target = (over * (1 - 1 / ratio));
-    else if (2 * Math.abs(over) <= knee) target = ((1 - 1 / ratio) * (over + knee / 2) ** 2) / (2 * knee);
-    reduction = target > reduction ? attackCoef * reduction + (1 - attackCoef) * target : releaseCoef * reduction + (1 - releaseCoef) * target;
+    if (2 * over > knee) target = over * (1 - 1 / ratio);
+    else if (2 * Math.abs(over) <= knee)
+      target = ((1 - 1 / ratio) * (over + knee / 2) ** 2) / (2 * knee);
+    reduction =
+      target > reduction
+        ? attackCoef * reduction + (1 - attackCoef) * target
+        : releaseCoef * reduction + (1 - releaseCoef) * target;
     const g = dB(-reduction) * gainMakeup;
     L[i] *= g;
     R[i] *= g;
@@ -325,7 +402,11 @@ export function compress(L, R, { threshold = -18, ratio = 3, attack = 0.01, rele
  * by any sample in the next `lookahead` seconds, smoothed so it ramps in before a peak
  * and recovers with `release`. Operates in place.
  */
-export function limit(L, R, { ceiling = -1, lookahead = 0.003, release = 0.08 } = {}) {
+export function limit(
+  L,
+  R,
+  { ceiling = -1, lookahead = 0.003, release = 0.08 } = {},
+) {
   const n = L.length;
   const cap = dB(ceiling);
   const la = Math.max(2, Math.round(lookahead * SR));
@@ -372,7 +453,16 @@ export function saturate(buffer, drive = 1.5, mix = 1) {
 }
 
 /** Wow and flutter: read the buffer through a slowly wobbling delay. Returns a new buffer. */
-export function wobble(buffer, { wow = 0.004, wowRate = 0.8, flutter = 0.0012, flutterRate = 7.3, seed = 3 } = {}) {
+export function wobble(
+  buffer,
+  {
+    wow = 0.004,
+    wowRate = 0.8,
+    flutter = 0.0012,
+    flutterRate = 7.3,
+    seed = 3,
+  } = {},
+) {
   const n = buffer.length;
   const out = new Float32Array(n);
   const phase = rng(seed)() * TAU;
@@ -433,8 +523,10 @@ export const reversed = (buffer) => Float32Array.from(buffer).reverse();
 export function fade(buffer, inSeconds = 0.005, outSeconds = 0.02) {
   const a = Math.min(buffer.length, samples(inSeconds));
   const b = Math.min(buffer.length, samples(outSeconds));
-  for (let i = 0; i < a; i++) buffer[i] *= 0.5 - 0.5 * Math.cos((Math.PI * i) / a);
-  for (let i = 0; i < b; i++) buffer[buffer.length - 1 - i] *= 0.5 - 0.5 * Math.cos((Math.PI * i) / b);
+  for (let i = 0; i < a; i++)
+    buffer[i] *= 0.5 - 0.5 * Math.cos((Math.PI * i) / a);
+  for (let i = 0; i < b; i++)
+    buffer[buffer.length - 1 - i] *= 0.5 - 0.5 * Math.cos((Math.PI * i) / b);
   return buffer;
 }
 
@@ -467,13 +559,26 @@ function kWeighted(buffer) {
   const [b0, b1, b2] = [1.53512485958697, -2.69169618940638, 1.19839281085285];
   const [a1, a2] = [-1.69065929318241, 0.73248077421585];
   const [c1, c2] = [-1.99004745483398, 0.99007225036621];
-  let x1 = 0, x2 = 0, y1 = 0, y2 = 0, u1 = 0, u2 = 0, v1 = 0, v2 = 0;
+  let x1 = 0,
+    x2 = 0,
+    y1 = 0,
+    y2 = 0,
+    u1 = 0,
+    u2 = 0,
+    v1 = 0,
+    v2 = 0;
   for (let i = 0; i < buffer.length; i++) {
     const x = buffer[i];
     const y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
-    x2 = x1; x1 = x; y2 = y1; y1 = y;
+    x2 = x1;
+    x1 = x;
+    y2 = y1;
+    y1 = y;
     const v = y - 2 * u1 + u2 - c1 * v1 - c2 * v2;
-    u2 = u1; u1 = y; v2 = v1; v1 = v;
+    u2 = u1;
+    u1 = y;
+    v2 = v1;
+    v1 = v;
     out[i] = v;
   }
   return out;
@@ -490,11 +595,15 @@ export function loudness(L, R, from = 0, to = L.length / SR) {
   const energy = new Float64Array(hops);
   for (let h = 0; h < hops; h++) {
     let e = 0;
-    for (let i = h * hop; i < (h + 1) * hop; i++) e += kl[i] * kl[i] + kr[i] * kr[i];
+    for (let i = h * hop; i < (h + 1) * hop; i++)
+      e += kl[i] * kl[i] + kr[i] * kr[i];
     energy[h] = e / hop;
   }
   const blocks = [];
-  for (let h = 0; h + 4 <= hops; h++) blocks.push((energy[h] + energy[h + 1] + energy[h + 2] + energy[h + 3]) / 4);
+  for (let h = 0; h + 4 <= hops; h++)
+    blocks.push(
+      (energy[h] + energy[h + 1] + energy[h + 2] + energy[h + 3]) / 4,
+    );
   const lufs = (e) => -0.691 + 10 * Math.log10(e + 1e-12);
   const absolute = blocks.filter((e) => lufs(e) > -70);
   if (!absolute.length) return -70;
