@@ -1,0 +1,16 @@
+{
+  "name": "sway-animation",
+  "private": true,
+  "type": "module",
+  "description": "Between Hand and Sound: a short animated history of music technology, rendered from code.",
+  "scripts": {
+    "audio": "node audio/render.mjs",
+    "video": "node tools/render.mjs",
+    "build": "node audio/render.mjs && node tools/render.mjs",
+    "still": "node tools/still.mjs",
+    "serve": "node tools/serve.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.1"
+  }
+}

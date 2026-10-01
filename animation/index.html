@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Between Hand and Sound</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0c10;
+        color: #f4f1ea;
+        font-family: "DM Sans", system-ui, sans-serif;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+      #stage {
+        width: min(100vw, 177.78vh);
+        height: min(56.25vw, 100vh);
+        background: #000;
+        display: block;
+      }
+      body.render #stage {
+        width: 1920px;
+        height: 1080px;
+      }
+      #controls {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 10px 16px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+        font:
+          500 13px "IBM Plex Mono",
+          ui-monospace,
+          monospace;
+        opacity: 0;
+        transition: opacity 200ms;
+      }
+      body:hover #controls,
+      #controls:focus-within {
+        opacity: 1;
+      }
+      body.render #controls {
+        display: none;
+      }
+      #controls button {
+        font: inherit;
+        color: inherit;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+        padding: 4px 12px;
+        cursor: pointer;
+      }
+      #controls input[type="range"] {
+        flex: 1;
+        accent-color: #ff5b3a;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage" width="1920" height="1080"></canvas>
+    <div id="controls" hidden>
+      <button id="play" type="button">Play</button>
+      <input id="scrub" type="range" min="0" max="1" step="0.001" value="0" />
+      <span id="clock">0:00</span>
+    </div>
+    <audio id="soundtrack" preload="auto"></audio>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
