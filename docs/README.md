@@ -2,6 +2,7 @@
 
 Sway development resumed on September 28, 2026 with a first-principles redesign.
 Start with the [V1 plan](v1-plan.md): what the instrument is, the rules it is built by, and the milestones.
+The [manual](manual.md) explains how Sway works, part by part, with the music and audio background it assumes.
 
 ## Current guides
 
