@@ -8,6 +8,7 @@ Start with the [V1 plan](v1-plan.md): what the instrument is, the rules it is bu
 | Document                      | Read it for                                                                |
 | ----------------------------- | -------------------------------------------------------------------------- |
 | [V1 plan](v1-plan.md)         | The instrument's design, defaults, architecture, milestones, and progress. |
+| [V2 proposal](v2-design.md)   | The proposed next direction, under discussion; not yet built.              |
 | [Development](development.md) | Source map, checks, runtime constraints, and local data locations.         |
 
 ## The paused prototype
