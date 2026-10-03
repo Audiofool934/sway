@@ -9,7 +9,6 @@ Part 3 follows one note from your hand to the speakers.
 Part 4 is a glossary, and Part 5 points to good places to learn more.
 
 This manual describes `main`, which is V1 as merged on October 1, 2026.
-Notes marked **Pull request #4** describe the expressive lead, which is on its own branch and not yet merged.
 Measurements come from the development Mac, an M2 Pro, in Chrome.
 The [V1 plan](v1-plan.md) records why each choice was made and how it was measured.
 
@@ -166,6 +165,7 @@ A **fill** is a short drum figure at the end of a phrase that leads into the nex
 On real instruments, playing harder usually makes a note both louder and brighter, because a harder strike excites more overtones.
 
 **Velocity** is how hard a note is struck, the number that keyboards, MIDI, and synthesizers use for dynamics: 1 to 127 in MIDI, and 0 to 1 in Sway.
+In V1, every note you strike has the same velocity, while the band's hits vary theirs (see 2.8).
 
 **Articulation** is how notes begin and connect.
 **Legato** notes flow into one another without a new attack, as when a singer slides between notes or a violinist changes notes within one bow stroke.
@@ -174,9 +174,6 @@ Pinching again starts a new, separately articulated note.
 
 **Vibrato** is a small, regular wobble in pitch that singers and string players use to warm a held note.
 Sway's lead adds one automatically once a note has held for a moment.
-
-> **Pull request #4:** the lead becomes dynamic.
-> A quicker pinch plays louder and brighter, and leaning toward the camera swells a held note (see 2.5).
 
 ### 1.7 The band: roles in an arrangement
 
@@ -462,9 +459,6 @@ It also labels each hand Left or Right, by your anatomy.
 Every frame carries the time it was captured, so a gesture is placed when it happened rather than when it was recognized.
 [hand-visual.js](../web/instrument/hand-visual.js) draws a thin skeleton over each hand in its role's color.
 
-> **Pull request #4:** the tracker also measures each pinch's **strike**, how quickly it closed, and how **near** the hand is to the camera.
-> Nearness is the palm's size on screen over its size in metres, which tilting the hand does not change.
-
 ### 2.5 Controls: from hands to music
 
 [controls.js](../web/instrument/controls.js) turns features into musical events.
@@ -493,10 +487,6 @@ The same code serves the camera, the mouse and keyboard, and scripted tests.
 Without a camera, the mouse plays the lead: its height picks the note, and clicking plays it.
 The keyboard steers the band: 1 to 5 set the energy, holding Space cuts, holding L loops, holding E ends, and Backspace undoes the last loop.
 D shows the timing panel.
-
-> **Pull request #4:** a `noteOn` carries a **velocity** from its strike, compared with your usual strike.
-> A strike twice as quick as usual is 0.22 louder on a scale from 0 to 1, within 0.3 to 1.
-> While a note is held, **swell** events follow how far you have leaned in, up to +1, or back, down to -1.
 
 ### 2.6 Time: the clock, the scheduler, and the grid
 
@@ -661,7 +651,8 @@ Lessons always use the built-in band, so every attempt sounds the same.
 [looper.js](../web/instrument/looper.js) is a **retrospective looper**: it always remembers the notes you play, so you can loop a phrase after playing it rather than pressing record first.
 
 Capturing turns the last cycle, 16 beats, into a **layer**.
-Each note keeps its place in the four-bar cycle, so the loop replays over the same chords it was played over.
+Each note keeps its place in the four-bar cycle and replays there.
+The chords under it may differ by then, since each cycle has its own plan, from Qwen or from the built-in progression for the energy, but every note is on the ladder, so a loop stays in key.
 Up to four layers play at once; a fifth replaces the oldest, and **Undo loop** removes the newest.
 Loops replay as plucks, panned apart, so they sound distinct from your live lead.
 On the ladder their notes are thin pale-yellow lines, drawn ahead of "now" as they come round again.
@@ -719,7 +710,7 @@ The start screen chooses the lead hand, the timing help, the harmony (generated 
 ### 2.15 Recording and exports
 
 Free play records every piece, and lessons do not.
-When a piece ends, it offers three files:
+When a piece ends, it offers three files to download:
 
 - **Audio:** a WAV of the whole mix as you heard it, 16-bit stereo, captured by a small audio worklet at the end of the master chain.
 - **MIDI:** a track per part (see 1.10).
@@ -733,17 +724,9 @@ It serves the page, the hand-tracking files, and the models' endpoints, and refu
 - `sway setup --music-only` downloads what V1 needs: the hand tracker, the browser libraries, and MRT2.
   `--instrument-only` skips MRT2, and the pad then plays the harmony.
 - `sway doctor` checks the installation, including whether Qwen is configured.
-- Models and recordings live in `.cache/`, outside Git.
+- Models live in `.cache/`, outside Git, as do the paused prototypes' recordings.
 
 The server also still runs the paused prototypes, `/ensemble.html` and `/flow.html`, and their endpoints.
-
-### 2.17 Work in progress
-
-| Pull request                                               | What it adds                                                     |
-| ---------------------------------------------------------- | ---------------------------------------------------------------- |
-| [#2](https://github.com/Audiofool934/sway/pull/2), a draft | Switches that mute each part, to hear MRT2 and Qwen on their own |
-| [#3](https://github.com/Audiofool934/sway/pull/3)          | The V2 proposal, with Everett's decisions                        |
-| [#4](https://github.com/Audiofool934/sway/pull/4)          | The expressive lead: strike and lean-in                          |
 
 ## Part 3: One note, from hand to speaker
 
@@ -845,8 +828,6 @@ The number after each term is the section that explains it.
 - **Semitone:** the smallest step in Western music, a twelfth of an octave (1.2).
 - **Sixteenth note:** a quarter of a beat, 150 ms at 100 BPM (1.5).
 - **Stem:** an audio file holding one group of parts (1.12).
-- **Strike:** in pull request #4, how quickly a pinch closes (2.4).
-- **Swell:** in pull request #4, leaning in to make a held note louder (2.5).
 - **Swing:** delaying every second subdivision so the rhythm lilts (1.5).
 - **Synthesizer:** an instrument that makes sound from electronic building blocks (1.8).
 - **Tempo:** the speed of the beat (1.5).
