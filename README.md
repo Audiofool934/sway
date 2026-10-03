@@ -84,6 +84,7 @@ node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,c
 git diff --check
 ```
 
+[CI](.github/workflows/ci.yml) runs the same checks on Linux for every pull request and every push to `main`; the test that needs MRT2's model skips there.
 The JavaScript tests cover the V1 instrument's timing, harmony, hand tracking, controls, band, looper, camera, engine, generated harmony scheduling, exports, and lessons.
 These checks do not establish musical quality, recognition accuracy, or how the instrument feels to play.
 The [development guide](docs/development.md) maps the source, runtime, and evidence locations.
