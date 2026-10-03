@@ -11,10 +11,11 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels its earlier run. Each push to main has a group of its
+# own, because a group keeps only its newest waiting run and drops any older one.
 concurrency:
-  group: ci-${{ github.ref }}
-  # A new push to a pull request replaces its earlier run; runs on main always finish.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   python:
@@ -54,7 +55,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 2
+          fetch-depth: 0
       # For a pull request, HEAD is GitHub's merge commit, whose first parent is the base
-      # branch, so this checks the lines the pull request adds; on main, the latest commit.
-      - run: git diff --check HEAD^ HEAD
+      # branch; for a push to main, the base is main before the push. Either way, this
+      # checks every line the change adds.
+      - run: git diff --check "$BASE" HEAD
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && 'HEAD^' || github.event.before }}
