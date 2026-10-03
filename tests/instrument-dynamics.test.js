@@ -49,19 +49,25 @@ function detection({ closed = 0, scale = 2, tilt = 0 } = {}) {
   return { side: "Right", score: 0.95, points, world };
 }
 
-/** The lead's features after a pinch closes over `frames` camera frames at 30 fps. */
+/**
+ * A pinch closing over `frames` camera frames at 30 fps: whether the hand ends pinched,
+ * and the strike measured on the frame the pinch caught.
+ */
 function strikeOver(frames) {
   const tracker = new HandTracker();
   let time = 0;
   let lead = null;
+  let strike = null;
   for (let i = 0; i < 10; i++)
     lead = tracker.update([detection()], (time += 1 / 30)).lead;
-  for (let i = 1; i <= frames; i++)
+  for (let i = 1; i <= frames; i++) {
     lead = tracker.update(
       [detection({ closed: i / frames })],
       (time += 1 / 30),
     ).lead;
-  return lead;
+    strike ??= lead.strike;
+  }
+  return { pinch: lead.pinch, strike };
 }
 
 test("a pinch that closes quickly strikes harder than one that closes slowly", () => {
@@ -69,6 +75,7 @@ test("a pinch that closes quickly strikes harder than one that closes slowly", (
   const slow = strikeOver(8);
   assert.equal(quick.pinch, true);
   assert.equal(slow.pinch, true);
+  assert.ok(slow.strike > 0);
   assert.ok(
     quick.strike > 2.5 * slow.strike,
     `${quick.strike} vs ${slow.strike}`,
@@ -137,6 +144,53 @@ test("without a measured strike a note plays at the typical velocity", () => {
   assert.deepEqual(velocities([null, 0]), [TYPICAL_VELOCITY, TYPICAL_VELOCITY]);
 });
 
+/** Camera frames at 30 fps, through the tracker and then the controls, as the page runs them. */
+function camera() {
+  const tracker = new HandTracker();
+  const play = { controls: new Controls(), notes: [] };
+  let time = 0;
+  play.frame = (...detections) => {
+    const hands = tracker.update(detections, (time += 1 / 30));
+    for (const event of play.controls.update(hands, time))
+      if (event.type === "noteOn") play.notes.push(event);
+    return hands.lead;
+  };
+  // A quick pinch from an open hand.
+  play.strike = () => {
+    for (let i = 0; i < 10; i++) play.frame(detection());
+    play.frame(detection({ closed: 0.5 }));
+    play.frame(detection({ closed: 1 }));
+  };
+  return play;
+}
+
+test("a strike belongs to the frame its pinch caught, not to the pinch held after it", () => {
+  const play = camera();
+  play.strike();
+  assert.ok(play.notes[0].strike > DYNAMICS.usual);
+  assert.equal(play.frame(detection({ closed: 1 })).strike, null);
+});
+
+test("a note restarted after a dropout, or pinched as a piece starts, is not struck", () => {
+  const play = camera();
+  play.strike();
+  const [struck] = play.notes;
+  assert.ok(struck.velocity > TYPICAL_VELOCITY);
+  // Lost for 0.3 s, longer than the lead's grace but within the tracker's memory of the
+  // hand, then back still pinched: the note starts again.
+  for (let i = 0; i < 9; i++) play.frame();
+  play.frame(detection({ closed: 1 }));
+  // A new piece, keeping the player's strikes, starts with the hand still pinched.
+  play.controls = new Controls({ strikes: play.controls.strikes });
+  play.frame(detection({ closed: 1 }));
+  const [, restarted, first] = play.notes;
+  for (const note of [restarted, first]) {
+    assert.equal(note.strike, null);
+    assert.equal(note.velocity, TYPICAL_VELOCITY);
+  }
+  assert.deepEqual(play.controls.strikes, [struck.strike]); // Counted once.
+});
+
 test("leaning in swells a held note, leaning back softens it, and drift is ignored", () => {
   const controls = new Controls();
   const at = (value, time) =>
@@ -175,7 +229,11 @@ test("a mouse, with no closeness, never swells", () => {
 });
 
 function engineWith(t) {
-  t.mock.method(globalThis, "setInterval", () => 1);
+  let tick;
+  t.mock.method(globalThis, "setInterval", (callback) => {
+    tick = callback;
+    return 1;
+  });
   t.mock.method(globalThis, "clearInterval", () => {});
   const calls = [];
   const synth = {
@@ -188,11 +246,23 @@ function engineWith(t) {
     leadMove: (voice, time, pitch) => calls.push(["move", pitch]),
     leadSwell: (voice, time, value) => calls.push(["swell", value]),
     leadOff: (voice) => calls.push(["off", voice.velocity]),
+    pluck: (time, velocity) => {
+      calls.push(["pluck", velocity]);
+      return { release() {} };
+    },
   };
-  const engine = new Engine({ currentTime: 0 }, synth);
+  const ctx = { currentTime: 0 };
+  const engine = new Engine(ctx, synth);
   engine.start(0);
   t.after(() => engine.stop());
-  return { engine, calls };
+  // Run the scheduler up to `seconds`, in its 20 ms ticks.
+  const until = (seconds) => {
+    while (ctx.currentTime < seconds - 1e-9) {
+      ctx.currentTime = Math.min(seconds, ctx.currentTime + 0.02);
+      tick();
+    }
+  };
+  return { engine, calls, until };
 }
 
 test("the engine plays, logs, and loops each note at its velocity", (t) => {
@@ -218,6 +288,25 @@ test("the engine plays, logs, and loops each note at its velocity", (t) => {
   assert.deepEqual(
     notes.map((note) => note.velocity),
     [0.9, 0.9],
+  );
+});
+
+test("a loop replays each note at the velocity it was played", (t) => {
+  const { engine, calls, until } = engineWith(t);
+  until(1);
+  engine.noteOn(0, performance.now() / 1000); // A typical strike.
+  until(1.3);
+  engine.noteOff();
+  engine.noteOn(2, performance.now() / 1000, 1);
+  until(1.6);
+  engine.noteOff();
+  engine.capture();
+  until(12); // One cycle later, both notes play again.
+  const plucks = calls.filter(([kind]) => kind === "pluck");
+  // A typical strike loops at 0.72, the level of every loop note before strikes.
+  assert.deepEqual(
+    plucks.map(([, velocity]) => velocity),
+    [0.72, 1],
   );
 });
 

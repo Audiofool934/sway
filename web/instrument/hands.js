@@ -278,10 +278,12 @@ export class HandTracker {
         : shape.pinch < SHAPE.pinchOn);
     // How quickly the pinch closed, in hand sizes per second: from the most open it was
     // lately to now, measured on the unfiltered shape so the strike adds no delay. Unknown
-    // without an earlier frame to compare.
+    // without an earlier frame to compare. A strike belongs to the frame its pinch caught,
+    // so a pinch that is held, or found again after a dropout, does not strike again.
     track.pinches = track.pinches.filter(
       ([t]) => t < time && time - t <= STRIKE_WINDOW,
     );
+    track.strike = null;
     if (track.pinch && !pinched) {
       let widest = null;
       for (const frame of track.pinches)
@@ -338,7 +340,8 @@ export class HandTracker {
       fist: track.fist,
       shape: track.shape,
       landmarks: track.landmarks,
-      // The latest pinch's strike, and the hand's smoothed nearness to the camera.
+      // The strike of a pinch that caught on this frame, and the hand's smoothed nearness
+      // to the camera.
       strike: track.strike,
       closeness: track.closeness,
     };

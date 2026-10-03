@@ -571,9 +571,10 @@ export class Engine {
       (layer) => layer.id === note.layer,
     );
     const pan = LOOP_PANS[Math.max(0, index) % LOOP_PANS.length];
+    // Each note replays at the velocity it was played.
     const handle = this.synth.pluck(
       time,
-      note.velocity * 0.9,
+      note.velocity,
       note.pitch,
       seconds,
       pan,
@@ -583,7 +584,7 @@ export class Engine {
         part: "loop",
         pitch: note.pitch,
         beats: note.beats,
-        velocity: note.velocity * 0.9,
+        velocity: note.velocity,
       },
       time,
     );
