@@ -217,6 +217,8 @@ Each step is its own pull request, playable and tested on its own.
 
 Steps 1 and 2 answer "not lively" directly, steps 3 to 5 make the AI's part substantial and audible, and steps 6 to 9 turn the instrument into a product.
 The listening test's switches, which mute each part, are on a [draft pull request](https://github.com/Audiofool934/sway/pull/2); kept behind a key, they would help evaluate every step.
+[Issue #6](https://github.com/Audiofool934/sway/issues/6) records an evaluation of DEMON, ACE-Step 1.5, and Stable Audio 3, made on October 1.
+Its ideas belong to three steps: controls that the bandleader returns as curves across a cycle rather than single values, for step 3; blending two sound descriptions with the energy, and timing how soon a change is heard, for step 5; and restyling the finished piece offline, for step 8.
 
 ## Decisions
 
