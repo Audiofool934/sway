@@ -13,22 +13,6 @@ from sway.schema import EnsembleIntent
 from sway.workers import semantic_worker
 
 
-@pytest.fixture
-def credentials(tmp_path, monkeypatch):
-    path = tmp_path / "qwen.json"
-    path.write_text(json.dumps({"api_key": "test-secret-do-not-echo", "workspace_id": "llm-test"}))
-    path.chmod(0o600)
-    monkeypatch.setenv("SWAY_QWEN_CONFIG", str(path))
-    for env in (
-        "DASHSCOPE_API_KEY",
-        "SWAY_QWEN_WORKSPACE_ID",
-        "SWAY_QWEN_REGION",
-        "SWAY_QWEN_MODEL",
-    ):
-        monkeypatch.delenv(env, raising=False)
-    return path
-
-
 def test_private_config_and_status_do_not_expose_key(credentials, monkeypatch):
     config = QwenConfig.load()
     assert config.endpoint == "https://llm-test.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
