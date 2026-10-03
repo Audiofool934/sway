@@ -62,7 +62,8 @@ The [first-play guide](docs/morning-test.md) explains how to run it, and it need
 ## Data and compute
 
 The server listens on loopback.
-The V1 instrument sends nothing off the machine: tracking and sound both run in the browser.
+In the V1 instrument, tracking and sound run in the browser, and camera images never leave the machine.
+When Qwen composes the band, the server sends it musical data only: the energy, the chords, and the notes just played.
 In the legacy ensemble page, Qwen mode sends selected camera images and motion observations to Alibaba; recordings contain generated audio only.
 The Qwen credential stays in backend configuration outside the repository and browser.
 Colab receives musical controls or Flow source audio, depending on the mode, without camera images or the Qwen key.
