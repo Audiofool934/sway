@@ -49,13 +49,15 @@ const settings = {
 const SENSOR = 0.02;
 
 let audio = null; // { ctx, synth }
+let audioPending = null;
+let startEpoch = 0;
 let engine = null;
 // Generated harmony for the current piece, when MRT2 is installed and chosen.
 let harmony = null;
 const harmonyCheck = { done: false, available: false, warned: false };
 // The band's composer for the current piece, when Qwen is configured and chosen.
 let composer = null;
-let listening = null; // TEMPORARY listening test (see listening.js).
+let listening = null;
 const composeCheck = { done: false, configured: false, warned: false };
 let tracker = new HandTracker({ leadSide: settings.leadSide });
 let controls = newControls();
@@ -65,6 +67,7 @@ let trail = [];
 let captures = [];
 let lastLoopPulse = new Map();
 let noteCount = 0;
+let lastVelocity = null; // For the timing panel.
 let startedAt = 0;
 const overlay = new Overlay($("overlay"));
 const camera = new Camera($("video"), {
@@ -81,11 +84,13 @@ const camera = new Camera($("video"), {
       : "CPU",
 });
 
-function newControls() {
+// A player's usual strike carries over from one piece to the next.
+function newControls(strikes = []) {
   return new Controls({
     rungs: WORLD.ladder.length,
     levels: WORLD.levels.length,
     range: settings.range,
+    strikes,
   });
 }
 
@@ -137,11 +142,29 @@ const keyBand = () =>
   (pointer.band ??= { x: bandX(), y: levelY(1), pinch: false, fist: false });
 
 window.addEventListener("keydown", (event) => {
-  if (event.target.closest("select") || event.metaKey || event.ctrlKey) return;
+  if (
+    event.target.closest("input, textarea, select, [contenteditable]") ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.altKey
+  )
+    return;
   const key = event.key.toLowerCase();
-  if (key === "d") return toggleDetails();
-  if (key === "m") return listening?.toggle();
+  if (key === "d") {
+    if (!event.repeat) toggleDetails();
+    return;
+  }
+  if (key === "m") {
+    if (!event.repeat && stage.dataset.state === "playing" && !coach.active)
+      listening?.toggle();
+    return;
+  }
   if (stage.dataset.state !== "playing" || event.repeat) return;
+  if (
+    event.target.closest(".listening") ||
+    (key === " " && event.target.closest("button, a"))
+  )
+    return;
   if (/^[1-5]$/.test(key)) keyBand().y = levelY(Number(key) - 1);
   else if (key === " ") keyBand().fist = true;
   else if (key === "l") keyBand().pinch = true;
@@ -167,6 +190,14 @@ window.addEventListener("keyup", (event) => {
     if (pointer.lead) pointer.lead.fist = false;
   } else return;
   update(event.timeStamp / 1000);
+});
+
+// A key-up or pointer-up can happen in another window; never leave a control held.
+window.addEventListener("blur", () => {
+  pointer.pressed = false;
+  pointer.lead = null;
+  if (pointer.band) Object.assign(pointer.band, { fist: false, pinch: false });
+  update(performance.now() / 1000);
 });
 
 // Per role, the camera wins over scripted input, which wins over mouse and keyboard.
@@ -199,9 +230,11 @@ function dispatch(events) {
       ...event,
       time: +(event.time - startedAt / 1000).toFixed(4),
     });
-    if (event.type === "noteOn") engine.noteOn(event.rung, event.time);
+    if (event.type === "noteOn")
+      engine.noteOn(event.rung, event.time, event.velocity);
     else if (event.type === "noteMove") engine.noteMove(event.rung, event.time);
     else if (event.type === "noteOff") engine.noteOff(event.time);
+    else if (event.type === "swell") engine.swell(event.value);
     else if (event.type === "energy") engine.setEnergy(event.level);
     else if (event.type === "cut") engine.setCut(event.on);
     else if (event.type === "capture" && !engine.capture())
@@ -214,7 +247,17 @@ function dispatch(events) {
 
 // Audio starts on the first click, as browsers require.
 async function ensureAudio() {
-  if (audio) return audio;
+  if (audio) {
+    if (audio.ctx.state === "suspended") await audio.ctx.resume();
+    return audio;
+  }
+  audioPending ??= createAudio().finally(() => {
+    audioPending = null;
+  });
+  return audioPending;
+}
+
+async function createAudio() {
   const ctx = new AudioContext({ latencyHint: "interactive" });
   await ctx.resume();
   const synth = new Synth(ctx, { beatSeconds: 60 / WORLD.tempo });
@@ -238,6 +281,15 @@ async function ensureAudio() {
   listening = new ListeningPanel($("listening"), {
     mixer: new Mixer(synth),
     onComposing: (on) => engine?.setComposing(on),
+    onActive: (on) => engine?.setListening(on),
+    onChange: (mix) => {
+      if (engine?.state === "playing" && !coach.active)
+        controlLog.push({
+          type: "mix",
+          ...mix,
+          time: +((performance.now() - startedAt) / 1000).toFixed(4),
+        });
+    },
   });
   return audio;
 }
@@ -259,6 +311,7 @@ const MIDI_TRACKS = [
 ];
 
 async function exportTake() {
+  let durationSeconds = (performance.now() - startedAt) / 1000;
   const stamp = new Date()
     .toISOString()
     .slice(0, 19)
@@ -275,6 +328,8 @@ async function exportTake() {
       (sum, chunk) => sum + chunk.left.length,
       0,
     );
+    // File encoding can take seconds for a long take; it is not performance time.
+    durationSeconds = frames / audio.ctx.sampleRate;
     const left = new Float32Array(frames);
     const right = new Float32Array(frames);
     let at = 0;
@@ -331,7 +386,7 @@ async function exportTake() {
     recordedAt: new Date(
       Date.now() - (performance.now() - startedAt),
     ).toISOString(),
-    durationSeconds: +((performance.now() - startedAt) / 1000).toFixed(2),
+    durationSeconds: +durationSeconds.toFixed(2),
     controls: controlLog,
     notes,
   };
@@ -362,10 +417,13 @@ function showDownloads(files) {
 
 // Free play records the piece; lessons do not.
 async function start({ level, lesson = false } = {}) {
+  const epoch = ++startEpoch;
   const { ctx, synth } = await ensureAudio();
+  if (epoch !== startEpoch) return engine;
   engine?.stop();
+  listening.reset();
   level ??= controls.band.level ?? 1;
-  controls = newControls();
+  controls = newControls(controls.strikes);
   trail = [];
   captures = [];
   noteCount = 0;
@@ -390,7 +448,8 @@ async function start({ level, lesson = false } = {}) {
     harmony,
     composer,
   });
-  engine.on(onEngine);
+  const playing = engine;
+  engine.on((event) => onEngine(event, playing));
   engine.setComposing(listening.composing);
   take = { chunks: [] };
   controlLog = [];
@@ -408,6 +467,7 @@ async function start({ level, lesson = false } = {}) {
 const coach = new Coach({
   startEngine: ({ level }) => start({ level, lesson: true }),
   stopEngine: () => {
+    startEpoch++;
     engine?.stop();
     stage.dataset.state = "lesson";
   },
@@ -431,6 +491,7 @@ const coach = new Coach({
   now: () => performance.now() / 1000,
   beatSeconds: () => 60 / WORLD.tempo,
   currentRung: () => controls.lead.rung,
+  leadExpression: () => controls.lead,
   freePlay: () => {
     $("lesson").hidden = true;
     start();
@@ -478,7 +539,8 @@ function showCard({
   $("lesson-actions").querySelector("button")?.focus({ preventScroll: true });
 }
 
-function onEngine(event) {
+function onEngine(event, playing) {
+  if (playing !== engine) return;
   const beat = event.time !== undefined ? engine.beatAt(event.time) : null;
   if (event.type === "note") {
     coach.onNote(event);
@@ -489,7 +551,9 @@ function onEngine(event) {
       start: beat,
       end: null,
       legato: Boolean(event.legato),
+      velocity: event.velocity,
     });
+    lastVelocity = event.velocity;
     if (trail.length > 64) trail.shift();
     noteCount++;
   } else if (event.type === "noteOff") {
@@ -505,12 +569,17 @@ function onEngine(event) {
   } else if (event.type === "composed" && event.plan.caption) {
     // Shown as the cycle Qwen wrote begins to play.
     const wait = Math.max(0, (event.time - engine.ctx.currentTime) * 1000);
-    setTimeout(() => flashHint(event.plan.caption), wait);
+    setTimeout(() => {
+      if (playing === engine && engine.state === "playing")
+        flashHint(event.plan.caption);
+    }, wait);
   } else if (event.type === "ending" && !coach.active) {
     flashHint("Ending on the next bar.");
   } else if (event.type === "finished" && !coach.active) {
     const wait = Math.max(0, (event.tail - engine.ctx.currentTime) * 1000);
-    setTimeout(() => finish(), wait);
+    setTimeout(() => {
+      if (playing === engine) finish();
+    }, wait);
   }
 }
 
@@ -522,6 +591,7 @@ async function finish() {
   )
     return;
   $("end-piece").hidden = true;
+  $("again").disabled = true;
   const preparing = document.createElement("span");
   preparing.className = "preparing";
   preparing.textContent = "Preparing your files…";
@@ -539,6 +609,8 @@ async function finish() {
     showDownloads(await exportTake());
   } catch (error) {
     preparing.textContent = `The files could not be prepared: ${error.message}`;
+  } finally {
+    $("again").disabled = false;
   }
 }
 
@@ -714,6 +786,12 @@ function renderDetails() {
     ["Tracking (capture to hands)", ms(median(camera.stats.tracking))],
     ["Note delay (capture to sound)", ms(median(engine?.stats.delays ?? []))],
     [
+      "Last note's velocity, swell",
+      lastVelocity === null
+        ? "-"
+        : `${lastVelocity.toFixed(2)}, ${controls.lead.gate ? controls.lead.swell.toFixed(2) : "-"}`,
+    ],
+    [
       "Audio output",
       ms(
         ctx ? ((ctx.outputLatency || 0) + (ctx.baseLatency || 0)) * 1000 : null,
@@ -807,6 +885,7 @@ function loopNotes(beat) {
 let lastHud = "";
 function frame() {
   requestAnimationFrame(frame);
+  $("exit-lesson").hidden = !coach.active;
   const now = performance.now() / 1000;
   if (!camera.active && stage.dataset.state === "playing") update(now);
   const playing = engine?.transport && stage.dataset.state !== "intro";
@@ -839,6 +918,7 @@ function frame() {
       hand: leadHand,
       rung: controls.lead.rung,
       gate: controls.lead.gate,
+      swell: controls.lead.gate ? controls.lead.swell : 0,
     },
     band: {
       hand: bandHand,
@@ -953,6 +1033,7 @@ $("learn").onclick = () => coach.begin();
 $("camera-toggle").onclick = toggleCamera;
 $("camera-intro").onclick = toggleCamera;
 $("end-piece").onclick = () => engine?.end();
+$("exit-lesson").onclick = () => coach.exit();
 $("undo-loop").onclick = () => {
   engine?.undoLoop();
   renderLoops();

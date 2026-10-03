@@ -9,6 +9,7 @@ The [manual](manual.md) explains how Sway works, part by part, with the music an
 | Document                      | Read it for                                                                |
 | ----------------------------- | -------------------------------------------------------------------------- |
 | [V1 plan](v1-plan.md)         | The instrument's design, defaults, architecture, milestones, and progress. |
+| [V1 readiness](v1-readiness.md) | Current candidate, issue and PR disposition, validation, and remaining play tests. |
 | [Development](development.md) | Source map, checks, runtime constraints, and local data locations.         |
 
 ## The paused prototype

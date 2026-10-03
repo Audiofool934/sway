@@ -34,13 +34,14 @@ node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,c
 git diff --check
 ```
 
-The pause checkpoint passed 89 Python tests and 18 JavaScript tests.
+The October 3-4 V1 candidate passed 133 Python tests and 136 JavaScript tests, including the real MRT2 render on the development Mac.
 The Starlette TestClient emitted one upstream deprecation warning about `httpx`.
 No dependency change was made to suppress it.
 
 These tests cover motion observations, ensemble state, cloud failure handling, private configuration, session cleanup, audio buffering, and Flow timeline behavior.
 They do not substitute for a camera performance, physical output recording, or musical listening assessment.
 See the [validation index](README.md#validation-records) for hardware and browser evidence.
+The [V1 readiness record](v1-readiness.md) describes the current candidate, the browser checks, and the remaining human play tests.
 
 ## Source map
 
@@ -56,6 +57,7 @@ The V1 instrument:
 | `web/instrument/controls.js`                                        | Hand features to instrument events, shared by camera, pointer, and scripted input.       |
 | `web/instrument/band.js`, `looper.js`                               | The band's parts per energy level, and retrospective loop capture.                       |
 | `web/instrument/synth.js`, `engine.js`                              | Web Audio instruments and mix, and the lookahead scheduler.                              |
+| `web/instrument/listening.js`                                      | Optional mixer for comparing parts; closing it restores the full band.                   |
 | `web/instrument/harmony.js`                                         | Generated harmony: requests MRT2 bars ahead and starts each on its bar line.             |
 | `src/sway/harmony.py`, `/api/harmony/*` in `app.py`                 | Renders a bar's chord with MRT2 from one continuous model stream.                        |
 | `web/instrument/arrange.js`, `composer.js`                          | A cycle's plan as notes per bar, and the page's side of the composer.                    |
@@ -111,6 +113,7 @@ All repository-local paths in this table are ignored by Git.
 | `outputs/colab/`               | Downloaded GPU trial outputs and measurements.                                             |
 | `outputs/ensemble-2026-09-27/` | Qwen ensemble recordings, status samples, diagnostics, and UI screenshots.                 |
 | `outputs/pause-2026-09-27/`    | Sanitized runtime snapshots from stopping the local session.                               |
+| `outputs/v1-ready-2026-10-03/` | V1 candidate test results, browser recordings, exports, and UI screenshots.                 |
 | `work/`                        | Earlier local experiment evidence and working files cited in dated reports.                |
 | `~/.config/sway/qwen.json`     | Private Qwen credential and region configuration outside the repository.                   |
 

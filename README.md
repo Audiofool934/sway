@@ -7,11 +7,14 @@ The [V1 plan](docs/v1-plan.md) defines the instrument, the rules it is built by,
 The [documentation index](docs/README.md) separates current guides from the paused experiments that came before.
 
 Someone with no musical training should be able to make a piece they want to keep.
-One hand plays a melody on a pitch ladder; the other sets the band's energy, cuts it, and loops what was played.
+One hand plays a melody on a pitch ladder, with quicker pinches making stronger notes and leaning toward the camera swelling a held note.
+The other hand sets the band's energy, cuts it, and loops what was played.
 Sway keeps every note in time and in key, and the notes you play are synthesized in the browser, so no network request or large model sits between a gesture and its sound.
 The band is generative: Qwen writes its next four bars while the current four play, from what you just played and the energy you set, and MRT2, a music model running on the same Mac, performs the harmony and Qwen's answering lines.
 The engine checks every plan and keeps it in key and on the beat, and the built-in band steps in whenever a model is late.
-V1 is in progress: the instrument, a tutorial with setup and four lessons, recording, and MIDI export work with scripted input, and the first play test with real hands is next.
+V1 is playable and has had its first test with real hands.
+The current candidate adds expressive lead controls, a listening mixer, and a matching tutorial and manual.
+The [readiness record](docs/v1-readiness.md) tracks the checks and remaining play tests.
 
 ## Play
 
@@ -22,7 +25,9 @@ cd ~/Projects/sway
 uv run --locked sway serve
 ```
 
-Open **http://127.0.0.1:8765** in Chrome, turn the camera on, and press **Learn to play** for setup and four short lessons, or **Start playing** to go straight to a piece.
+Open **http://127.0.0.1:8765** in Chrome, turn the camera on, and press **Learn to play** for setup and short lessons, or **Start playing** to go straight to a piece.
+The camera tutorial includes expression practice; without a camera, it teaches the four core lessons with the mouse and keyboard.
+**Leave lesson** returns to free play at any time.
 The mirrored camera keeps your body, hands, and room visible for a sense of space.
 Subtle hand skeletons and small fingertip markers show which hand controls each part of the instrument.
 Without a camera, the mouse plays the lead and the keyboard steers the band; the start screen lists the keys.
@@ -31,6 +36,8 @@ The **Harmony** setting on the start screen picks generated strings, piano, or c
 **Band** chooses whether Qwen composes the band's cycles or the built-in patterns play; while a composed cycle plays, "by Qwen" shows under the beat and its caption appears at the bottom.
 Qwen needs a DashScope API key in `~/.config/sway/qwen.json`, and `sway doctor` shows whether it is configured; only musical data is sent to it, never camera images.
 Press D while playing to see measured tracking, audio timing, and how many bars were generated.
+Press M during free play to compare the band's parts in the listening mixer.
+Closing it restores the full mix; its extra comparison voices run only while it is open.
 Stop the server with Ctrl-C when finished.
 
 For a fresh checkout, use an Apple Silicon Mac, Python 3.12 through [uv](https://docs.astral.sh/uv/), Node.js/npm, and a recent Chrome browser:
@@ -92,11 +99,11 @@ The [development guide](docs/development.md) maps the source, runtime, and evide
 
 ## Models and attribution
 
-V1 synthesizes its sound directly and uses only MediaPipe hand tracking.
-The legacy pages use the following models.
+V1 uses MediaPipe to track hands, synthesizes its lead and rhythm in the browser, and can use local MRT2 for harmony and cloud Qwen for composition.
+The legacy pages also use the models noted below.
 
-- [Magenta RealTime 2](https://github.com/magenta/magenta-realtime): continuous music generation and style resources.
-- [Qwen](https://www.alibabacloud.com/help/en/model-studio/vision): cloud visual interpretation and musical direction.
+- [Magenta RealTime 2](https://github.com/magenta/magenta-realtime): generated harmony in V1 and continuous generation in the legacy pages.
+- [Qwen](https://www.alibabacloud.com/help/en/model-studio/vision): V1's musical composer and the legacy ensemble's visual interpretation.
 - [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js): browser hand and pose tracking, used by V1 and the legacy pages.
 - [DEMON](https://github.com/daydreamlive/DEMON): experimental Flow generation and source transformation on Colab.
 - [Qwen3.5-0.8B via MLX Community](https://huggingface.co/mlx-community/Qwen3.5-0.8B-4bit): optional local interpretation for the older comparison mode.

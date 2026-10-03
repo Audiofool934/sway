@@ -690,7 +690,7 @@ select {
   color: rgba(244, 241, 234, 0.4);
 }
 
-/* TEMPORARY listening test (see listening.js), on the band hand's side between its
+/* Optional listening controls, on the band hand's side between its
    level names and its "now" line, over the energy already played. */
 
 .listening {

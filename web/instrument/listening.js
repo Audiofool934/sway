@@ -1,7 +1,5 @@
-// TEMPORARY listening test, not for merging: switches that mute each part of the mix, so
-// what the models make can be heard on its own. MRT2 performs the harmony; Qwen writes
-// each cycle's chords, the harmony's texture, and an answering line; everything else is
-// synthesized in the page. Press M to show or hide the panel.
+// Optional listening controls for comparing the band's parts. Press M during free play
+// to open them; closing the panel restores the full mix and releases the stand-in voices.
 
 import { PALETTES } from "./harmony.js";
 
@@ -20,7 +18,7 @@ export const GROUPS = [
   {
     kind: "generated",
     title: "Generated",
-    note: "MRT2 renders Qwen's chords, texture, and answer line",
+    note: "MRT2 performs the cycle's chords and answer line",
     parts: [{ id: "harmony", name: "MRT2 harmony", buses: ["harmony"] }],
   },
   {
@@ -110,6 +108,7 @@ export class Mixer {
     for (const node of Object.values(synth.shadows))
       fade(node.gain, this.on.has("harmony") ? 0 : 1);
     synth.ducking = this.on.has("drums");
+    if (!synth.ducking) fade(synth.duck.gain, 1);
   }
 }
 
@@ -128,12 +127,15 @@ function button(className, text, onclick) {
 }
 
 export class ListeningPanel {
-  constructor(root, { mixer, onComposing }) {
+  constructor(root, { mixer, onComposing, onActive, onChange = () => {} }) {
     this.root = root;
     this.mixer = mixer;
     this.onComposing = onComposing;
-    this.composing = true; // Whether Qwen's plans are used, kept across pieces.
-    this.shown = true;
+    this.onActive = onActive;
+    this.onChange = onChange;
+    this.composing = true;
+    this.shown = false;
+    this.active = false;
     this.key = "";
     this.#build();
     this.#sync();
@@ -143,9 +145,30 @@ export class ListeningPanel {
     this.shown = !this.shown;
   }
 
+  /** A new piece and every lesson start with the complete band. */
+  reset() {
+    this.shown = false;
+    this.#activate(false);
+    this.root.hidden = true;
+  }
+
+  #activate(on) {
+    if (this.active === on) return;
+    this.active = on;
+    this.onActive(on);
+    if (!on) {
+      this.mixer.preset("everything");
+      if (!this.composing) {
+        this.composing = true;
+        this.onComposing(true);
+      }
+      this.#sync();
+    }
+  }
+
   #build() {
     const head = make("header");
-    head.append(make("h2", "", "Listening test"), make("span", "", "M hides"));
+    head.append(make("h2", "", "Mixer"), make("span", "", "M hides"));
     const presets = make("div", "presets");
     this.presets = PRESETS.map((preset) => {
       const node = button("preset", preset.name, () => {
@@ -211,11 +234,13 @@ export class ListeningPanel {
       node.classList.toggle("current", node.dataset.preset === current);
     this.qwen.setAttribute("aria-pressed", this.composing);
     this.key = ""; // The readout depends on the switches too.
+    this.onChange({ parts: [...this.mixer.on], composing: this.composing });
   }
 
   /** Called every frame; touches the page only when what it shows changes. */
   render({ visible, engine, harmony, composer, bar, side }) {
     this.root.hidden = !(visible && this.shown && engine);
+    this.#activate(!this.root.hidden);
     if (this.root.hidden) return;
     const { cycleBars } = engine.world;
     const cycle = Math.floor(bar / cycleBars);

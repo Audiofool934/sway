@@ -1,7 +1,7 @@
 # Sway V1: design and execution plan
 
 Started: September 28, 2026, Asia/Singapore.
-Status: in progress.
+Status: V1 merged on October 1, 2026; the current readiness work and remaining play tests are tracked in [V1 readiness](v1-readiness.md).
 This plan supersedes the paused Gesture ensemble direction as the definition of the product.
 The earlier Qwen and MRT2 pipeline remains available as a legacy experiment at `/ensemble.html`.
 
@@ -48,6 +48,8 @@ These choices keep V1 focused and can be revisited after the first play test.
 | Pinch (thumb and index together)   | Starts a note on the current rung; holding sustains it.    |
 | Move to another rung while pinched | Plays the new rung legato, so a held pinch draws a melody. |
 | Release the pinch                  | Ends the note.                                             |
+| Pinch quickly or gently            | Starts a louder, brighter note or a softer one.             |
+| Lean toward or away from the camera while pinched | Swells or softens the held note.              |
 
 The ladder has ten rungs spanning two octaves of A minor pentatonic, from A3 to G5.
 A short calibration maps the ladder to the player's comfortable reach.
@@ -76,12 +78,13 @@ The music moves in four-bar cycles, and Qwen writes each cycle's chords while th
 Without the composer, or whenever its plan is late, the built-in progression plays: Am, F, C, G at low energy, and F, G, Am, C from Drive up.
 The band settles each cycle's plan two bars before it begins, so the generated harmony has time to render it.
 Every chord is voiced to avoid a semitone against the ladder, so the G chord is played without its third.
-Loops are stored by their position in the four-bar cycle, so they stay aligned with the harmony they were played over.
+Loops keep each note's position in the four-bar cycle and its velocity.
+The chords under them can change with each cycle's plan; the loop's notes stay on the same pentatonic ladder.
 
 ## Timing
 
 The AudioContext clock is the only musical clock.
-Band events are scheduled about 120 ms ahead by a lookahead scheduler.
+Band events are scheduled about 180 ms ahead by a lookahead scheduler.
 Lead onsets are aligned to a sixteenth-note grid by default, with eighth-note and off settings.
 
 Input latency is compensated before alignment.
@@ -97,7 +100,8 @@ The engine still chooses every chord: the model decides how the harmony sounds, 
 
 - Each bar's written notes go to the local server two bars ahead as note conditioning: the chord's voicing in the cycle's texture, and any of the composer's answering line that falls in the bar. Every pitch class outside the chord and those notes is silenced in every octave.
 - The server renders bars in order from one continuous model stream, so consecutive bars join without a seam; each piece starts a fresh stream with a new seed.
-- The page starts each bar as soon as its audio arrives, early by the model's own delay, so its chord change lands on the bar line. MRT2 answers a chord change about 100 ms late for strings and choir and 40 ms late for piano.
+- The page schedules each bar's audio in advance, early by the model's own delay, so its chord change lands on the bar line.
+  MRT2 answers a chord change about 100 ms late for strings and choir and 40 ms late for piano.
 - A bar that has not arrived with at least 50 ms to spare keeps the synthesized pad, so the music never waits for the model. Bars still queued for a piece that has been replaced are skipped.
 - The generated harmony follows the band's energy, cuts, and ending as the pad does. Its loudness is matched to the pad's from the bars that arrive, because MRT2's level varies from piece to piece.
 - Drums, bass, keys, the lead, and loops stay synthesized, so everything rhythmic stays exactly on the grid.
@@ -132,8 +136,13 @@ Hitting a target plays its note; the lesson measures timing and accuracy per ges
 | 0. Setup         | Hand roles, comfortable reach for the ladder, and a timing calibration.  |
 | 1. Play notes    | Pinch on a rung at the right moment, starting with three rungs.          |
 | 2. Draw a melody | Hold the pinch and move between rungs.                                   |
-| 3. Lead the band | Raise and lower energy, cut the band, and bring it back on the downbeat. |
-| 4. Make a piece  | Capture a loop, play over it, and end the piece.                         |
+| 3. Give notes expression | Pinch softly or strongly, and swell or soften held notes with the camera. |
+| 4. Lead the band | Raise and lower energy, cut the band, and bring it back on the downbeat. |
+| 5. Make a piece  | Capture a loop, play over it, and end the piece.                         |
+
+The expression lesson is skipped when setup starts without a camera.
+Every lesson requires at least one success for each skill it teaches, as well as a 70% overall hit rate.
+The player can leave a lesson at any time.
 
 The same judging code produces per-gesture hit rates and timing errors, which is how we decide which gestures are reliable enough to keep.
 
@@ -190,7 +199,7 @@ Done when a three-minute piece can be played from start to ending and its WAV an
 
 ### M3: tutorial
 
-Setup and calibration plus lessons 1 to 4, with judging and per-gesture statistics.
+Setup and calibration plus the core lessons and camera expression practice, with judging and per-gesture statistics.
 Done when every lesson can be completed by scripted input in a test and by Everett with his hands.
 
 ### M4: polish and validation

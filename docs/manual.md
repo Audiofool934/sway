@@ -8,8 +8,8 @@ Part 2 walks through Sway part by part, linking each idea from Part 1 to the cod
 Part 3 follows one note from your hand to the speakers.
 Part 4 is a glossary, and Part 5 points to good places to learn more.
 
-This manual describes `main`, which is V1 as merged on October 1, 2026.
-Measurements come from the development Mac, an M2 Pro, in Chrome.
+This manual describes the V1 implementation in this checkout, including the expressive lead and optional listening mixer.
+Dated measurements come from the development Mac, an M2 Pro, in Chrome; they are observations of that setup, not guarantees for other cameras or computers.
 The [V1 plan](v1-plan.md) records why each choice was made and how it was measured.
 
 - [Part 1: Foundations](#part-1-foundations)
@@ -165,7 +165,10 @@ A **fill** is a short drum figure at the end of a phrase that leads into the nex
 On real instruments, playing harder usually makes a note both louder and brighter, because a harder strike excites more overtones.
 
 **Velocity** is how hard a note is struck, the number that keyboards, MIDI, and synthesizers use for dynamics: 1 to 127 in MIDI, and 0 to 1 in Sway.
-In V1, every note you strike has the same velocity, while the band's hits vary theirs (see 2.8).
+A quicker pinch gives Sway's lead a higher velocity, making the note louder and brighter.
+The response adapts to your recent pinches, so a usual strike settles around 0.72, with a range from 0.3 to 1.
+Mouse clicks, which have no measured pinch speed, use the usual velocity.
+Leaning toward the camera while holding a note creates a **swell**, raising its level and opening its filter; leaning away softens it.
 
 **Articulation** is how notes begin and connect.
 **Legato** notes flow into one another without a new attack, as when a singer slides between notes or a violinist changes notes within one bow stroke.
@@ -198,7 +201,7 @@ Most bands divide the work into roles:
 
 **Energy** comes from density: more instruments, more notes, and brighter sounds.
 Music builds by adding parts, drops to a **break** (Sway's **cut**), and returns with a crash.
-Longer pieces have **sections** such as an intro, verses, choruses, a bridge, and an outro; V1 has only repeating cycles, and the V2 proposal adds sections.
+Longer pieces have **sections** such as an intro, verses, choruses, a bridge, and an outro; V1 has repeating cycles whose energy you shape yourself.
 Most pieces **end** by returning to the tonic chord, home, often held while it rings out.
 
 ### 1.8 Synthesizers
@@ -262,7 +265,7 @@ An instrument's sound can be made in three ways, and Sway's design depends on th
 - **Samples** are recordings of real instruments, played back by a **sampler**.
   Good libraries record every few notes at several **velocity layers**, soft to hard, with repeated takes so that repeated notes differ, and with loop points so held notes can sustain.
   Samples sound real and start almost as fast as synthesis, but they are large downloads, and an instrument can only do what was recorded.
-  V1 uses no samples; step 2 of the V2 proposal adds free sample libraries.
+  V1 uses no sampled instrument libraries.
 - **Generation** uses a trained model.
   An audio model such as MRT2 produces the waveform itself and can make sounds that no recipe or library has; a language model such as Qwen writes musical decisions, such as chords, as text.
   Generation takes time and computing power and can drift from what was asked, so it cannot sit between a gesture and its sound.
@@ -451,10 +454,14 @@ It also labels each hand Left or Right, by your anatomy.
 - **Roles:** your right hand is the **lead** and your left hand the **band**, and a setting swaps them for left-handed players.
   Roles follow the tracker's labels but change only on clear evidence, so a flickering label cannot swap them.
 - **Pinch:** the distance between the thumb tip and the index tip, divided by the hand's size from the wrist to the middle finger's knuckle, measured on the metric landmarks.
-  A pinch starts when this falls below 0.3, and ends when it rises above 0.42.
+  A pinch starts when this falls below 0.2, and ends when it rises above 0.32.
   The gap between the two thresholds is **hysteresis**, and it stops a borderline pinch from flickering on and off.
 - **Fist:** how curled the fingers are, from each fingertip's distance to the wrist, with the index finger folded in.
   A fist overrides a pinch, since making a fist also brings the thumb and index together.
+- **Strike:** how quickly the pinch closed, in hand sizes per second, using the most open point in the previous 150 ms.
+  Only a fresh pinch reports a strike; a note resumed after a dropout does not reuse the old strike.
+- **Closeness:** the palm's apparent size divided by its metric size, using the same palm bones projected across the screen.
+  Smoothing this ratio helps distinguish moving toward the camera from small changes of hand angle.
 
 Every frame carries the time it was captured, so a gesture is placed when it happened rather than when it was recognized.
 [hand-visual.js](../web/instrument/hand-visual.js) draws a thin skeleton over each hand in its role's color.
@@ -470,6 +477,11 @@ The same code serves the camera, the mouse and keyboard, and scripted tests.
   The ladder spans your comfortable reach, as measured in setup.
   The hand must cross 22% of a rung past its edge before the note changes, so a steady hand does not wobble between two rungs.
 - **A pinch** plays the note, a `noteOn` event.
+- **Pinch speed** sets its velocity against the median of recent strikes.
+  Until six strikes have been measured, the starting reference is four hand sizes per second.
+- **Leaning in or back while pinched** changes the note's swell, relative to where the hand was when the note began.
+  A small deadzone ignores drift.
+  Full swell is reached at 1.35 times the starting closeness; full softening is reached at its reciprocal.
 - **Moving while pinched** glides to each new rung's note, a `noteMove`: legato.
 - **Letting go** ends the note, a `noteOff`, and so does losing sight of the hand for more than 0.15 s.
 
@@ -493,7 +505,7 @@ D shows the timing panel.
 Everything in Sway runs on one clock, the AudioContext's, which counts exact samples.
 The **transport** in [clock.js](../web/instrument/clock.js) converts between seconds on that clock and beats.
 
-JavaScript timers are not precise, so the engine uses a **lookahead scheduler**: every 20 ms it wakes and schedules everything due in the next 120 ms at exact times on the audio clock.
+JavaScript timers are not precise, so the engine uses a **lookahead scheduler**: every 20 ms it wakes and schedules everything due in the next 180 ms at exact times on the audio clock.
 A bar is divided into 16 **steps**, one per sixteenth.
 
 **Swing** is applied to every position as it is scheduled: within each eighth note, the first sixteenth stays put and the second moves later, to 56% of the eighth.
@@ -573,6 +585,10 @@ Every sound in [synth.js](../web/instrument/synth.js) is built from Web Audio no
 | Loops          | A plucked sawtooth and triangle through a quickly closing filter, each layer panned to its own place                                                                                          |
 | Answering line | The keys' electric piano, when MRT2 is not playing the bar                                                                                                                                    |
 
+The lead's strike controls both level and filter brightness.
+A full lean-in swell adds about 5 dB to that held voice before the master compressor and limiter; the change in the finished mix depends on the other parts.
+Legato preserves the held voice and its swell while gliding to the next pitch.
+
 Each part plays into its own **bus**, with a level and a stereo position balanced by measurement.
 The buses send to a shared reverb, a 2.6-second tail made from shaped noise, and some to the dotted-eighth delay.
 The harmony, bass, keys, and arpeggio dip by up to 35% under each kick, for about 60 ms.
@@ -651,10 +667,11 @@ Lessons always use the built-in band, so every attempt sounds the same.
 [looper.js](../web/instrument/looper.js) is a **retrospective looper**: it always remembers the notes you play, so you can loop a phrase after playing it rather than pressing record first.
 
 Capturing turns the last cycle, 16 beats, into a **layer**.
-Each note keeps its place in the four-bar cycle and replays there.
+Each note keeps its place in the four-bar cycle and its velocity, and replays there.
 The chords under it may differ by then, since each cycle has its own plan, from Qwen or from the built-in progression for the energy, but every note is on the ladder, so a loop stays in key.
 Up to four layers play at once; a fifth replaces the oldest, and **Undo loop** removes the newest.
 Loops replay as plucks, panned apart, so they sound distinct from your live lead.
+Their plucked envelopes do not reproduce the live lead's continuous swell.
 On the ladder their notes are thin pale-yellow lines, drawn ahead of "now" as they come round again.
 
 A relaxed band hand can look like a pinch to the tracker, so it is easy to capture a loop by accident; the loop chips at the bottom right show how many are playing.
@@ -670,21 +687,28 @@ Setup comes first:
 2. **Find your timing:** after a bar of count-in, pinch on each of eight beats.
    The median gap between your pinches and the beats, up to 150 ms either way, becomes your timing correction.
 
-Then four lessons, each opening with a bar of count-in:
+Then five camera lessons, each opening with a bar of count-in:
 
 | Lesson           | Teaches                                          | Energy                  | Length  |
 | ---------------- | ------------------------------------------------ | ----------------------- | ------- |
 | 1. Play notes    | Pinching on time, at the right height            | Pulse                   | 8 bars  |
 | 2. Draw a melody | Legato: holding a pinch and moving between notes | Groove                  | 8 bars  |
-| 3. Lead the band | Energy changes and cuts                          | From Pulse, up and down | 10 bars |
-| 4. Make a piece  | A phrase, a loop, and an ending                  | Groove                  | 16 bars |
+| 3. Give notes expression | Soft and strong pinches, swelling and softening held notes | Pulse | 8 bars |
+| 4. Lead the band | Energy changes and cuts                          | From Pulse, up and down | 10 bars |
+| 5. Make a piece  | A phrase, a loop, and an ending                  | Groove                  | 16 bars |
+
+Without a camera, the tutorial skips the expression lesson and keeps the four lessons that work with the mouse and keyboard.
 
 Targets scroll from the centre toward your hand as outlined notes, which fill when hit and redden when missed.
 A note counts if it is on the right rung and played the right way, as a new pinch or a slide, within 60 ms for **perfect** or 150 ms for **good**.
-A lesson passes at 70% of its targets, and each lesson unlocks only the band-hand controls it teaches.
+A lesson passes at 70% of its targets and at least one successful target for each skill it teaches.
+Playing the melody alone cannot pass the piece lesson: a loop and a deliberate ending are required too.
+Soft targets require a velocity no greater than 0.6, and strong targets require at least 0.85.
+Swell targets require a held note on their rung, reaching at least half of the full swell or softening range within one beat of the cue.
+Each lesson unlocks only the band-hand controls it teaches.
 
-To leave the tutorial, choose **Back to free play** on a lesson's introduction card, or reload the page.
-There is not yet a way to leave in the middle of a lesson.
+**Leave lesson** returns to free play at any time.
+The introduction cards also offer **Back to free play**.
 
 ### 2.14 The screen
 
@@ -704,6 +728,12 @@ Across the top are the world, the chord playing now and the next one ("then F"),
 Chips light when each hand is seen and while generated harmony plays, beside the camera and End piece buttons.
 Across the bottom are the hints, the loop chips, and **Undo loop**.
 Press D for the timing panel: tracking delay, note delay, audio output latency, frames processed, and the models' statistics.
+It also shows the last lead velocity and the current swell.
+Press M during free play to open the listening mixer and hear the parts separately.
+Its presets compare MRT2 with the written pad and answering line while leaving your lead audible.
+The Qwen switch affects the next cycle whose plan has not already been settled.
+Closing the mixer restores every part and normal composition, and releases the extra synthesized comparison voices.
+Every new piece and lesson starts with the full mix.
 
 The start screen chooses the lead hand, the timing help, the harmony (generated strings, piano, or choir, or synthesized), and the band (composed by Qwen, or the built-in patterns).
 
@@ -715,6 +745,10 @@ When a piece ends, it offers three files to download:
 - **Audio:** a WAV of the whole mix as you heard it, 16-bit stereo, captured by a small audio worklet at the end of the master chain.
 - **MIDI:** a track per part (see 1.10).
 - **Performance:** a JSON file with the world, your settings, each cycle Qwen composed, how many bars were generated, every control event, and every note played.
+
+The performance file includes strike, velocity, and swell events, and records mixer changes with the active parts and composer switch.
+The MIDI file preserves note velocities; the WAV preserves the audible swell and any changes made in the listening mixer.
+Files go to the location chosen by your browser, not to the server's model cache.
 
 ### 2.16 The server and setup
 
@@ -735,7 +769,7 @@ This is what happens, in order, when you pinch while the band plays:
 1. **At 0 ms**, your thumb and index finger meet.
    The camera captures the frame and stamps its time.
 2. **About 50 ms later**, the tracker returns the frame's landmarks.
-   The pinch distance is below 0.3 of your hand's size, so the hand is pinching.
+   The pinch distance is below 0.2 of your hand's size, so the hand is pinching.
 3. The controls see the pinch begin and emit a `noteOn`, with the rung your hand's height picks, timed at the frame's capture.
 4. The engine works out when the gesture happened on the audio clock: the capture time, minus the 20 ms sensor allowance and your calibrated offset.
 5. It finds the nearest swung sixteenth.
@@ -743,9 +777,9 @@ This is what happens, in order, when you pinch while the band plays:
 6. The synthesizer builds the lead voice and schedules its attack at that exact time on the audio clock.
 7. **About 37 ms after that time**, once the audio output has buffered it, you hear the note, in time with the band.
 
-Meanwhile, each part of Sway keeps its own clock:
+Meanwhile, the scheduler and the models work at different intervals on the same musical timeline:
 
-- **Every 20 ms**, the scheduler books the band's next 120 ms.
+- **Every 20 ms**, the scheduler books the band's next 180 ms.
 - **Every bar**, the energy you set takes effect, and MRT2 renders the bar after next.
 - **Every cycle**, Qwen writes the next one.
 
@@ -770,6 +804,7 @@ The number after each term is the section that explains it.
 - **Chord:** several notes sounding together (1.4).
 - **Chord tone:** a note that belongs to the current chord (1.4).
 - **Clipping:** the harsh distortion of a signal cut off at full scale (1.11).
+- **Closeness:** the palm's apparent size relative to its metric size, used to control a held note's swell (2.4).
 - **Comping:** striking chords in a rhythm (1.7).
 - **Compressor:** an effect that evens out loudness by turning down the loudest moments (1.8).
 - **Cut:** Sway's break, when a fist silences the band (2.5).
@@ -828,6 +863,8 @@ The number after each term is the section that explains it.
 - **Semitone:** the smallest step in Western music, a twelfth of an octave (1.2).
 - **Sixteenth note:** a quarter of a beat, 150 ms at 100 BPM (1.5).
 - **Stem:** an audio file holding one group of parts (1.12).
+- **Strike:** how quickly a fresh pinch closes, measured in hand sizes per second (2.4).
+- **Swell:** a held note growing louder and brighter as the player leans in (1.6, 2.5).
 - **Swing:** delaying every second subdivision so the rhythm lilts (1.5).
 - **Synthesizer:** an instrument that makes sound from electronic building blocks (1.8).
 - **Tempo:** the speed of the beat (1.5).

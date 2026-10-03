@@ -1,4 +1,4 @@
-// TEMPORARY listening test: the switches that mute parts, and the live composer switch.
+// Part comparisons and the live composer switch.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -25,6 +25,7 @@ function fakeSynth() {
     buses: Object.fromEntries(names.map((name) => [name, { gain: param(1) }])),
     levels: Object.fromEntries(names.map((name, i) => [name, 0.1 * (i + 1)])),
     shadows: { pad: { gain: param(0) }, answer: { gain: param(0) } },
+    duck: { gain: param(0.65) },
     ducking: true,
   };
 }
@@ -46,7 +47,20 @@ test("MRT2 alone mutes every other part and stops the ducking", () => {
     );
   assert.equal(synth.shadows.pad.gain.value, 0);
   assert.equal(synth.ducking, false);
+  assert.equal(synth.duck.gain.value, 1);
   assert.equal(mixer.current, "mrt2");
+});
+
+test("returning to the full mix restores every bus and silences stand-ins", () => {
+  const synth = fakeSynth();
+  const mixer = new Mixer(synth);
+  mixer.preset("qwen");
+  mixer.preset("everything");
+  for (const [name, gain] of Object.entries(gains(synth)))
+    assert.equal(gain, synth.levels[name], name);
+  assert.equal(synth.shadows.pad.gain.value, 0);
+  assert.equal(synth.shadows.answer.gain.value, 0);
+  assert.equal(synth.ducking, true);
 });
 
 test("muting MRT2 brings in the synthesized pad and answer line on its bars", () => {

@@ -42,6 +42,9 @@
           <button id="end-piece" class="chip action" type="button" hidden>
             End piece
           </button>
+          <button id="exit-lesson" class="chip action" type="button" hidden>
+            Leave lesson
+          </button>
         </div>
       </header>
 
@@ -61,6 +64,10 @@
               <li><b>Height</b> picks the note on the ladder</li>
               <li>
                 <b>Pinch</b> plays it; move while pinched to draw a melody
+              </li>
+              <li>
+                <b>Pinch quickly</b> to play louder, and <b>lean in</b> to swell
+                a held note
               </li>
             </ul>
           </div>
@@ -174,13 +181,8 @@
         <p>Press D to hide.</p>
       </aside>
 
-      <!-- TEMPORARY listening test (see instrument/listening.js). -->
-      <aside
-        id="listening"
-        class="listening"
-        hidden
-        aria-label="Listening test"
-      ></aside>
+      <!-- Optional listening controls, opened with M during free play. -->
+      <aside id="listening" class="listening" hidden aria-label="Mixer"></aside>
     </main>
     <script type="module" src="/instrument/main.js"></script>
   </body>
