@@ -239,7 +239,7 @@ def test_compose_requests_are_validated(client, monkeypatch, changes):
     assert fake.requests == []
 
 
-def test_compose_is_local_only_and_its_status_hides_the_key(client, monkeypatch):
+def test_compose_is_local_only_and_its_status_hides_the_key(client, monkeypatch, credentials):
     fake = FakeComposer()
     monkeypatch.setattr(app_module, "COMPOSER", fake)
     response = client.post(
@@ -247,4 +247,6 @@ def test_compose_is_local_only_and_its_status_hides_the_key(client, monkeypatch)
     )
     assert response.status_code == 403 and fake.requests == []
     status = client.get("/api/compose/status").json()
-    assert "configured" in status and "api_key" not in json.dumps(status)
+    assert status["configured"]
+    shown = json.dumps(status)
+    assert not any(secret in shown for secret in json.loads(credentials.read_text()).values())
