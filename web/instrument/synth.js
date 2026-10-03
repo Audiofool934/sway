@@ -1,9 +1,15 @@
 // Web Audio instruments and mix. Every sound is scheduled at an exact AudioContext
 // time; sustained voices return a handle so the band can be cut mid-note.
 
-import { frequency } from "./theory.js";
+import { TYPICAL_VELOCITY, frequency } from "./theory.js";
 
 const SILENT = 0.0001;
+// The lead's peak at a typical velocity, the level the mix was balanced at.
+const LEAD_PEAK = 0.85;
+// A full swell, leaning in or back, changes the lead by this many octaves of amplitude
+// (about 5 dB) and of brightness.
+const SWELL_LEVEL = 0.85;
+const SWELL_BRIGHTNESS = 0.75;
 
 function noiseBuffer(ctx, seconds = 2) {
   const buffer = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
@@ -487,22 +493,28 @@ export class Synth {
     return this.#handle([amp.gain], [osc], 0.02);
   }
 
-  /** The performed voice: a warm two-saw lead that glides between legato notes. */
-  leadOn(t, pitch, velocity = 0.85) {
+  /**
+   * The performed voice: a warm two-saw lead that glides between legato notes. A harder
+   * strike is louder and brighter, both in its attack and as it holds.
+   */
+  leadOn(t, pitch, velocity = TYPICAL_VELOCITY) {
     const ctx = this.ctx;
     const f = frequency(pitch);
     const oscillators = [];
     const filter = this.#filter("lowpass", 900, 2);
-    filter.frequency.setValueAtTime(3600, t);
-    filter.frequency.setTargetAtTime(1500 + 900 * velocity, t + 0.01, 0.18);
+    filter.frequency.setValueAtTime(2200 + 2400 * velocity, t);
+    filter.frequency.setTargetAtTime(1000 + 1700 * velocity, t + 0.01, 0.18);
     const amp = this.#gain();
+    const peak = (LEAD_PEAK * velocity) / TYPICAL_VELOCITY;
     envelope(amp.gain, t, {
       attack: 0.012,
-      peak: velocity,
+      peak,
       decay: 0.3,
-      sustain: velocity * 0.72,
+      sustain: peak * 0.72,
     });
-    filter.connect(amp).connect(this.buses.lead);
+    // Leaning in or back moves the note's level here, and its brightness at the filter.
+    const swell = this.#gain(1);
+    filter.connect(amp).connect(swell).connect(this.buses.lead);
     const vibrato = ctx.createOscillator();
     vibrato.frequency.value = 5.2;
     const depth = this.#gain();
@@ -529,7 +541,9 @@ export class Synth {
       vibrato,
       depth,
       amp,
+      swell,
       filter,
+      velocity,
       start: t,
       released: false,
     };
@@ -543,12 +557,28 @@ export class Synth {
       osc.frequency.setTargetAtTime(f * ratio, t, 0.018);
     }
     // A soft re-articulation keeps legato notes distinct without a new attack.
+    const { velocity } = voice;
     voice.filter.frequency.cancelAndHoldAtTime(t);
-    voice.filter.frequency.setTargetAtTime(2800, t, 0.01);
-    voice.filter.frequency.setTargetAtTime(2000, t + 0.04, 0.15);
+    voice.filter.frequency.setTargetAtTime(1300 + 2000 * velocity, t, 0.01);
+    voice.filter.frequency.setTargetAtTime(
+      1000 + 1700 * velocity,
+      t + 0.04,
+      0.15,
+    );
     voice.depth.gain.cancelAndHoldAtTime(t);
     voice.depth.gain.setTargetAtTime(0, t, 0.02);
     voice.depth.gain.setTargetAtTime(11, t + 0.3, 0.25);
+  }
+
+  /** Swell (up to 1) or soften (down to -1) a sounding lead note from time `t`. */
+  leadSwell(voice, t, value) {
+    if (voice.released) return;
+    voice.swell.gain.setTargetAtTime(2 ** (value * SWELL_LEVEL), t, 0.06);
+    voice.filter.detune.setTargetAtTime(
+      value * SWELL_BRIGHTNESS * 1200,
+      t,
+      0.06,
+    );
   }
 
   leadOff(voice, t, release = 0.22) {

@@ -63,6 +63,7 @@ let trail = [];
 let captures = [];
 let lastLoopPulse = new Map();
 let noteCount = 0;
+let lastVelocity = null; // For the timing panel.
 let startedAt = 0;
 const overlay = new Overlay($("overlay"));
 const camera = new Camera($("video"), {
@@ -79,11 +80,13 @@ const camera = new Camera($("video"), {
       : "CPU",
 });
 
-function newControls() {
+// A player's usual strike carries over from one piece to the next.
+function newControls(strikes = []) {
   return new Controls({
     rungs: WORLD.ladder.length,
     levels: WORLD.levels.length,
     range: settings.range,
+    strikes,
   });
 }
 
@@ -196,9 +199,11 @@ function dispatch(events) {
       ...event,
       time: +(event.time - startedAt / 1000).toFixed(4),
     });
-    if (event.type === "noteOn") engine.noteOn(event.rung, event.time);
+    if (event.type === "noteOn")
+      engine.noteOn(event.rung, event.time, event.velocity);
     else if (event.type === "noteMove") engine.noteMove(event.rung, event.time);
     else if (event.type === "noteOff") engine.noteOff(event.time);
+    else if (event.type === "swell") engine.swell(event.value);
     else if (event.type === "energy") engine.setEnergy(event.level);
     else if (event.type === "cut") engine.setCut(event.on);
     else if (event.type === "capture" && !engine.capture())
@@ -358,7 +363,7 @@ async function start({ level, lesson = false } = {}) {
   const { ctx, synth } = await ensureAudio();
   engine?.stop();
   level ??= controls.band.level ?? 1;
-  controls = newControls();
+  controls = newControls(controls.strikes);
   trail = [];
   captures = [];
   noteCount = 0;
@@ -481,7 +486,9 @@ function onEngine(event) {
       start: beat,
       end: null,
       legato: Boolean(event.legato),
+      velocity: event.velocity,
     });
+    lastVelocity = event.velocity;
     if (trail.length > 64) trail.shift();
     noteCount++;
   } else if (event.type === "noteOff") {
@@ -706,6 +713,12 @@ function renderDetails() {
     ["Tracking (capture to hands)", ms(median(camera.stats.tracking))],
     ["Note delay (capture to sound)", ms(median(engine?.stats.delays ?? []))],
     [
+      "Last note's velocity, swell",
+      lastVelocity === null
+        ? "-"
+        : `${lastVelocity.toFixed(2)}, ${controls.lead.gate ? controls.lead.swell.toFixed(2) : "-"}`,
+    ],
+    [
       "Audio output",
       ms(
         ctx ? ((ctx.outputLatency || 0) + (ctx.baseLatency || 0)) * 1000 : null,
@@ -831,6 +844,7 @@ function frame() {
       hand: leadHand,
       rung: controls.lead.rung,
       gate: controls.lead.gate,
+      swell: controls.lead.gate ? controls.lead.swell : 0,
     },
     band: {
       hand: bandHand,

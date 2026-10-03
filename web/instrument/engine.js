@@ -7,7 +7,7 @@ import { STEPS_PER_BAR, bandEnding, bandStep, progressionFor } from "./band.js";
 import { Transport, alignOnset, applySwing, removeSwing } from "./clock.js";
 import { Looper } from "./looper.js";
 import { DRUM_NOTES } from "./midi.js";
-import { WORLD, chordAt, cycleBeats } from "./theory.js";
+import { TYPICAL_VELOCITY, WORLD, chordAt, cycleBeats } from "./theory.js";
 
 const LOOKAHEAD = 0.12;
 const TICK_MS = 20;
@@ -15,6 +15,8 @@ const TICK_MS = 20;
 const PLACE_MARGIN = 0.05;
 const STEP = 0.25;
 const LOOP_PANS = [-0.35, 0.35, -0.15, 0.15];
+// A note joined to the one before it is logged a little softer, as it is not struck again.
+const LEGATO = 0.82;
 
 export class Engine {
   constructor(
@@ -161,7 +163,7 @@ export class Engine {
     this.stats.notes++;
   }
 
-  noteOn(rung, seconds) {
+  noteOn(rung, seconds, velocity = TYPICAL_VELOCITY) {
     if (this.state !== "playing" && this.state !== "ending") return;
     const pitch = this.world.ladder[rung];
     const time = this.#onsetTime(seconds);
@@ -171,17 +173,17 @@ export class Engine {
         Math.max(time, this.lead.start + 0.03),
         0.03,
       );
-    const voice = this.synth.leadOn(time, pitch, 0.85);
+    const voice = this.synth.leadOn(time, pitch, velocity);
     this.#closeLeadLog(time);
     const [entry] = this.#logEvent(
-      { part: "lead", pitch, beats: null, velocity: 0.85 },
+      { part: "lead", pitch, beats: null, velocity },
       time,
     );
-    this.lead = { voice, pitch, rung, start: time, entry };
-    this.looper.noteOn(pitch, this.beatAt(time));
+    this.lead = { voice, pitch, rung, start: time, entry, velocity };
+    this.looper.noteOn(pitch, this.beatAt(time), velocity);
     this.#measure(seconds, time);
     const gesture = this.beatAt(this.#gestureTime(seconds));
-    this.#emit({ type: "note", pitch, rung, time, gesture });
+    this.#emit({ type: "note", pitch, rung, time, gesture, velocity });
   }
 
   noteMove(rung, seconds) {
@@ -190,15 +192,35 @@ export class Engine {
     const time = Math.max(this.#onsetTime(seconds), this.lead.start + 0.02);
     this.synth.leadMove(this.lead.voice, time, pitch);
     this.#closeLeadLog(time);
+    const velocity = +(this.lead.velocity * LEGATO).toFixed(3);
     const [entry] = this.#logEvent(
-      { part: "lead", pitch, beats: null, velocity: 0.7 },
+      { part: "lead", pitch, beats: null, velocity },
       time,
     );
     Object.assign(this.lead, { pitch, rung, start: time, entry });
-    this.looper.noteOn(pitch, this.beatAt(time));
+    this.looper.noteOn(pitch, this.beatAt(time), velocity);
     this.#measure(seconds, time);
     const gesture = this.beatAt(this.#gestureTime(seconds));
-    this.#emit({ type: "note", pitch, rung, time, gesture, legato: true });
+    this.#emit({
+      type: "note",
+      pitch,
+      rung,
+      time,
+      gesture,
+      legato: true,
+      velocity: this.lead.velocity,
+    });
+  }
+
+  /** Leaning in (up to 1) or back (down to -1) swells or softens the sounding note now. */
+  swell(value) {
+    if (!this.lead) return;
+    this.lead.swell = value;
+    this.synth.leadSwell(
+      this.lead.voice,
+      Math.max(this.ctx.currentTime, this.lead.start),
+      value,
+    );
   }
 
   noteOff() {
@@ -241,7 +263,8 @@ export class Engine {
     if (this.lead) this.looper.noteOff(this.beatAt(now));
     const beat = this.beatAt(now);
     const layer = this.looper.capture(beat);
-    if (this.lead) this.looper.noteOn(this.lead.pitch, beat);
+    if (this.lead)
+      this.looper.noteOn(this.lead.pitch, beat, this.lead.velocity);
     if (!layer) return null;
     // Replays due before the scheduler's horizon would otherwise be skipped.
     for (const note of this.looper.window(beat, this.step * STEP))
@@ -548,9 +571,10 @@ export class Engine {
       (layer) => layer.id === note.layer,
     );
     const pan = LOOP_PANS[Math.max(0, index) % LOOP_PANS.length];
+    // Each note replays at the velocity it was played.
     const handle = this.synth.pluck(
       time,
-      note.velocity * 0.9,
+      note.velocity,
       note.pitch,
       seconds,
       pan,
@@ -560,7 +584,7 @@ export class Engine {
         part: "loop",
         pitch: note.pitch,
         beats: note.beats,
-        velocity: note.velocity * 0.9,
+        velocity: note.velocity,
       },
       time,
     );
