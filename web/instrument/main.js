@@ -8,6 +8,7 @@ import { Controls } from "./controls.js";
 import { Engine } from "./engine.js";
 import { GeneratedHarmony, PALETTES } from "./harmony.js";
 import { HandTracker } from "./hands.js";
+import { ListeningPanel, Mixer } from "./listening.js";
 import { DRUM_NOTES, encodeMidi } from "./midi.js";
 import { Overlay } from "./overlay.js";
 import { Synth } from "./synth.js";
@@ -54,6 +55,7 @@ let harmony = null;
 const harmonyCheck = { done: false, available: false, warned: false };
 // The band's composer for the current piece, when Qwen is configured and chosen.
 let composer = null;
+let listening = null; // TEMPORARY listening test (see listening.js).
 const composeCheck = { done: false, configured: false, warned: false };
 let tracker = new HandTracker({ leadSide: settings.leadSide });
 let controls = newControls();
@@ -114,7 +116,7 @@ stage.addEventListener("pointerdown", (event) => {
   if (
     camera.active ||
     stage.dataset.state !== "playing" ||
-    event.target.closest("button")
+    event.target.closest("button, .listening")
   )
     return;
   pointer.pressed = true;
@@ -138,6 +140,7 @@ window.addEventListener("keydown", (event) => {
   if (event.target.closest("select") || event.metaKey || event.ctrlKey) return;
   const key = event.key.toLowerCase();
   if (key === "d") return toggleDetails();
+  if (key === "m") return listening?.toggle();
   if (stage.dataset.state !== "playing" || event.repeat) return;
   if (/^[1-5]$/.test(key)) keyBand().y = levelY(Number(key) - 1);
   else if (key === " ") keyBand().fist = true;
@@ -232,6 +235,10 @@ async function ensureAudio() {
     recorder = null; // Playing works without recording.
   }
   audio = { ctx, synth, recorder };
+  listening = new ListeningPanel($("listening"), {
+    mixer: new Mixer(synth),
+    onComposing: (on) => engine?.setComposing(on),
+  });
   return audio;
 }
 
@@ -384,6 +391,7 @@ async function start({ level, lesson = false } = {}) {
     composer,
   });
   engine.on(onEngine);
+  engine.setComposing(listening.composing);
   take = { chunks: [] };
   controlLog = [];
   if (!lesson) audio.recorder?.port.postMessage("start");
@@ -888,6 +896,14 @@ function frame() {
     );
   }
   renderDetails();
+  listening?.render({
+    visible: stage.dataset.state === "playing" && !coach.active,
+    engine,
+    harmony,
+    composer,
+    bar,
+    side: settings.leadSide === "Right" ? "left" : "right",
+  });
 }
 
 // Settings and buttons.
@@ -967,6 +983,9 @@ window.sway = {
   },
   get controls() {
     return controls;
+  },
+  get listening() {
+    return listening;
   },
   start,
   coach,

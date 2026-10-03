@@ -43,6 +43,7 @@ export class Engine {
     this.cycleLevels = new Map(); // The energy each cycle began at, for the composer.
     // The band's composer (see composer.js), and the composed plans the band played.
     this.composer = composer;
+    this.composing = true; // TEMPORARY listening test: whether its plans are used.
     this.composed = [];
     // Generated harmony (see harmony.js), and the bars it will play instead of the pad.
     this.harmony = harmony;
@@ -339,6 +340,19 @@ export class Engine {
         this.generated.get(bar);
       if (generated) {
         generated.notes.push(...this.#logEvent(event, time));
+        // TEMPORARY listening test: the synthesized part also plays, silently, so that
+        // muting MRT2 brings it in on the same bar.
+        const shadow = this.synth.play(
+          { ...event, shadow: true },
+          time,
+          beatSeconds,
+        );
+        if (shadow)
+          this.voices.push({
+            handle: shadow,
+            notes: [],
+            end: time + event.beats * beatSeconds + 0.1,
+          });
         continue;
       }
       const handle = this.synth.play(event, time, beatSeconds);
@@ -373,7 +387,8 @@ export class Engine {
       this.cycleLevels.set(cycle, this.level);
       this.cycleLevels.delete(cycle - 4);
       // While this cycle plays, the composer writes the next one.
-      this.composer?.request(cycle + 1, this.#context(cycle));
+      if (this.composing)
+        this.composer?.request(cycle + 1, this.#context(cycle));
       if (plan.composed) {
         const { names, texture, answer, caption, ms, model } = plan;
         this.composed.push({
@@ -414,7 +429,7 @@ export class Engine {
     const { world } = this;
     const cycle = Math.floor(bar / world.cycleBars);
     if (!this.plans.has(cycle)) {
-      const written = this.composer?.take(cycle);
+      const written = this.composing ? this.composer?.take(cycle) : null;
       const chords = world.progressions[progressionFor(this.level)];
       this.plans.set(
         cycle,
@@ -431,6 +446,19 @@ export class Engine {
       );
     }
     return this.plans.get(cycle);
+  }
+
+  /**
+   * TEMPORARY listening test: use the composer's plans or the built-in progression, from
+   * the first cycle not yet settled. Switched on mid-cycle, it asks for that cycle now.
+   */
+  setComposing(on) {
+    this.composing = on;
+    if (!on || !this.composer || this.state !== "playing") return;
+    const bar = Math.floor(this.step / STEPS_PER_BAR);
+    let cycle = Math.floor(bar / this.world.cycleBars) + 1;
+    while (this.plans.has(cycle)) cycle++;
+    this.composer.request(cycle, this.#context(cycle - 1));
   }
 
   /**
