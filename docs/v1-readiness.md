@@ -92,8 +92,11 @@ The strongest moment for him remains the earlier interface change that moved the
 
 This is positive qualitative feedback on stability, while the source of the product's strongest appeal remains the embodied camera interaction.
 It does not establish measured camera latency, completion of the lessons, a full 20-minute listening test, or that a particular piece was worth keeping.
-The next product question is whether the player's movements feel clearly responsible for the musical result, and which part of that connection still feels weak.
-That is a hypothesis to discuss with the player, not a diagnosed defect or an approved redesign.
+In follow-up, Everett confirmed that playing feels more like adding notes over a continuing accompaniment than leading a phrase.
+He described repeated sessions as the same Night Drive, with similar drums and lead timbre, and the right hand mainly changing pitch.
+Source inspection confirms one fixed musical world, energy-dependent rhythm patterns, one lead synthesis patch, and a composer that plans chords, texture, and an answering line one four-bar cycle ahead.
+The next design question is how to make the player's musical contribution perceptible in the accompaniment and in the development of a phrase.
+No new interaction design has been selected or implemented from this feedback.
 
 Performance JSON is optional supporting evidence when a specific behavior needs investigation.
 It contains recognized control events, notes, settings, composition plans, and generated-versus-synthesized bar counts, without camera images or audio.
