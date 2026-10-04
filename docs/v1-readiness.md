@@ -84,6 +84,21 @@ The final run used the normal audio download and saved periodic diagnostics inde
 The held-capture and export-duration corrections were subsequently checked through the page.
 The retained three-minute and 20-minute performance JSON files predate the duration correction; use the WAV headers for their exact audio lengths.
 
+## First hands-on feedback, October 4
+
+Everett tried the local candidate at `003d7d4` and described its overall effect positively, with a more stable feel and steadier perceived generation.
+He did not experience a new standout moment in this update.
+The strongest moment for him remains the earlier interface change that moved the camera from a side view into the background and made the hands feel mirrored in the same space as the instrument.
+
+This is positive qualitative feedback on stability, while the source of the product's strongest appeal remains the embodied camera interaction.
+It does not establish measured camera latency, completion of the lessons, a full 20-minute listening test, or that a particular piece was worth keeping.
+The next product question is whether the player's movements feel clearly responsible for the musical result, and which part of that connection still feels weak.
+That is a hypothesis to discuss with the player, not a diagnosed defect or an approved redesign.
+
+Performance JSON is optional supporting evidence when a specific behavior needs investigation.
+It contains recognized control events, notes, settings, composition plans, and generated-versus-synthesized bar counts, without camera images or audio.
+It cannot establish musical appeal or physical camera-to-speaker latency on its own.
+
 ## Remaining play tests
 
 These are inherited from the V1 plan, not substitutes for its original requirements.
