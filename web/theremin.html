@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sway · Generative Theremin</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/theremin.css" />
+  </head>
+  <body>
+    <main id="stage" data-phase="idle">
+      <video id="video" playsinline muted aria-hidden="true"></video>
+      <div class="shade" aria-hidden="true"></div>
+      <canvas
+        id="field"
+        aria-label="用鼠标按住并移动，也可以通过摄像头用手演奏"
+      ></canvas>
+      <header>
+        <a class="brand" href="/">Sway <span>generative theremin</span></a>
+        <div class="actions">
+          <span id="status" role="status">弦 · 第一次探索</span>
+          <button id="stop" hidden>结束演奏</button>
+        </div>
+      </header>
+      <section id="intro" aria-labelledby="title">
+        <p class="eyebrow">一个声音世界，在你的手里展开</p>
+        <h1 id="title">把声音慢慢拉开。</h1>
+        <p class="description">从一条弦音出发，让动作带出延展、颗粒与留白。</p>
+        <ol class="guide">
+          <li>
+            <span class="number">01</span>
+            <div>
+              <b>缓慢移动</b>
+              <p>声音随高度流动。双手拉开，织体展开。</p>
+            </div>
+          </li>
+          <li>
+            <span class="number">02</span>
+            <div>
+              <b>短促往返</b>
+              <p>用小而清楚的动作，带出拨弦般的颗粒。</p>
+            </div>
+          </li>
+          <li>
+            <span class="number">03</span>
+            <div>
+              <b>收住，留一点空白</b>
+              <p>停住或握拳，让尾音落下。再动，继续这一段。</p>
+            </div>
+          </li>
+        </ol>
+        <div class="start-actions">
+          <button id="start-camera" class="primary">
+            打开摄像头，开始演奏 <span>↗</span>
+          </button>
+          <button id="start-pointer" class="secondary">先用鼠标试奏</button>
+        </div>
+        <p id="message" class="note">
+          声音在这台 Mac 上生成。摄像头画面留在本机。
+        </p>
+      </section>
+      <div id="preparing" hidden aria-live="polite">
+        <i></i>
+        <p>正在准备这片声音…</p>
+        <small>第一次需要片刻，随后动作会直接进入生成。</small>
+      </div>
+      <div id="playing" hidden>
+        <div class="pitch">
+          <span id="pitch-name">A</span><small id="pitch-octave">3</small>
+        </div>
+        <p id="gesture-name">抬手，缓慢移动</p>
+        <p id="hint">高度改变音高 · 拉开双手展开声音 · 握拳留白</p>
+        <div class="qualities" aria-label="当前声音质地">
+          <span
+            >延展<i><b id="bow-meter"></b></i
+          ></span>
+          <span
+            >展开<i><b id="spread-meter"></b></i
+          ></span>
+          <span
+            >颗粒<i><b id="grain-meter"></b></i
+          ></span>
+        </div>
+      </div>
+      <footer>
+        <a id="save" hidden download="sway-theremin.wav">保存这段声音 ↓</a>
+        <span id="footer-note"
+          >一只手也可以。左右移动，改变声音的展开程度。</span
+        >
+        <label
+          >音量
+          <input
+            id="volume"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.7"
+        /></label>
+      </footer>
+      <pre id="diagnostics" hidden></pre>
+    </main>
+    <script type="module" src="/theremin.js"></script>
+  </body>
+</html>

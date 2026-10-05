@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 from pydantic import ValidationError
 
-from . import composer, harmony
+from . import composer, harmony, theremin
 from .config import MRT_DIR, MRT_FILES, RECORDINGS, ROOT, SEMANTIC_DIR, VISION_ASSETS, VISION_DIR
 from .flow import router as flow_router
 from .qwen import qwen_status
@@ -44,12 +44,14 @@ COMPOSER = None
 async def lifespan(app):
     yield
     await session.stop()
+    await theremin.SERVICE.close()
     if COMPOSER is not None:
         await COMPOSER.aclose()
 
 
 app = FastAPI(title="Sway", lifespan=lifespan, docs_url=None, redoc_url=None)
 app.include_router(flow_router)
+app.include_router(theremin.router)
 
 
 def same_origin(origin, host):

@@ -1,10 +1,11 @@
 // Bounded stereo PCM queue with linear resampling and an explicit underrun count.
 export class StereoBuffer {
-  constructor(outputRate = 48000) {
+  constructor(outputRate = 48000, { targetMs = 320, maxMs = 800 } = {}) {
     this.capacity = 48000;
     this.samples = new Float32Array(this.capacity * 2);
     this.ratio = 48000 / outputRate;
-    this.targetFrames = 15360; // 320 ms absorbs short vision/prefill bursts.
+    this.targetFrames = Math.round(targetMs * 48);
+    this.maxFrames = Math.round(maxMs * 48);
     this.reset();
   }
   reset() {
@@ -25,7 +26,7 @@ export class StereoBuffer {
       this.write++;
     }
     // Catch up if the browser stalls rather than accumulating seconds of delay.
-    if (this.write - this.read > 38400) {
+    if (this.write - this.read > this.maxFrames) {
       this.dropped += Math.floor(this.write - this.read - this.targetFrames);
       this.read = this.write - this.targetFrames;
       this.fade = 0;

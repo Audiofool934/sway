@@ -40,6 +40,10 @@ Press M during free play to compare the band's parts in the listening mixer.
 Closing it restores the full mix; its extra comparison voices run only while it is open.
 Stop the server with Ctrl-C when finished.
 
+The separate [generative theremin experiment](docs/generative-theremin-experiment.md) is at **http://127.0.0.1:8765/theremin.html**.
+It explores continuous hand control of MRT2's generated sound through sustained movement, short strokes, and rests.
+Either hand can play, and pointer input is also available.
+
 For a fresh checkout, use an Apple Silicon Mac, Python 3.12 through [uv](https://docs.astral.sh/uv/), Node.js/npm, and a recent Chrome browser:
 
 ```bash
