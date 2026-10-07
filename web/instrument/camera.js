@@ -72,7 +72,6 @@ export class Camera {
     this.worker.onmessage = ({ data }) => this.#message(data, epoch);
     this.worker.postMessage({
       type: "init",
-      handsOnly: true,
       delegate: this.delegate,
     });
   }

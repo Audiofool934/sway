@@ -49,7 +49,7 @@ class ThereminRenderer:
 
     def start(self, seed):
         if self.engine is None:
-            # Match the legacy live-audio worker's macOS priority before MLX creates
+            # Raise this thread to macOS's interactive priority before MLX creates
             # its native threads. Camera processing must not starve the audio stream.
             self.interactive = False
             if sys.platform == "darwin":
