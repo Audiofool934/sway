@@ -277,6 +277,21 @@ Known unknowns for the generated band:
 - MRT2 keeps the GPU busy about half the time while a piece plays; with a real camera, its effect on tracking and on the page has not been measured.
 - The composer makes one Qwen request per four bars, about six a minute while playing.
 
+### October 1
+
+V1 was merged into `main`.
+Everett played it with a camera and reported:
+
+- Pinch and fist detection worked, and the delay from gesture to sound felt fast enough; it was not measured.
+- Drumming fingers play stray lead notes, as the recorded clips suggested.
+- The generated parts were hard to pick out until a temporary listening build could mute each part.
+  In one measured piece at the Pulse level, MRT2's harmony was about 3.5 dB quieter than the synthesized bass, because it is matched to the pad it replaces.
+- Qwen's choices change what the band plays but not how it sounds, so its part was hard to notice.
+- The lead synthesizer is not lively: every note plays at the same velocity, and its vibrato is automatic.
+
+These findings started the V2 design proposal in [PR #3](https://github.com/Audiofool934/sway/pull/3).
+The [V1 readiness record](v1-readiness.md) covers the work that followed, including the October 4 play test.
+
 ## V1 checklist
 
 - Always in key and on the grid.
