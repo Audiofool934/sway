@@ -3,7 +3,7 @@
 Started: September 28, 2026, Asia/Singapore.
 Status: V1 merged on October 1, 2026; the current readiness work and remaining play tests are tracked in [V1 readiness](v1-readiness.md).
 This plan supersedes the paused Gesture ensemble direction as the definition of the product.
-The earlier Qwen and MRT2 pipeline remains available as a legacy experiment at `/ensemble.html`.
+That earlier Qwen and MRT2 pipeline was removed on October 7, 2026; Git history keeps it.
 
 ## What V1 is
 

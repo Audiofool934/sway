@@ -1,104 +1,116 @@
-# Project status and handoff
+# Project status
 
-Updated: September 27, 2026, Asia/Singapore.
-Status: historical record of the pause.
-Development resumed on September 28 with a first-principles redesign; the [V1 plan](v1-plan.md) is now the starting point.
-This note records the Qwen and MRT2 prototype as it stood at the pause, which remains available at `/ensemble.html`.
+Updated: October 7, 2026, Asia/Singapore.
+This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
+Update it when a piece of work starts or lands.
 
-## Product direction
+## Summary
 
-Sway is a generative instrument in which visual input inspires the music and the models are responsible for musical quality.
-The performer should not need exact finger technique, a rigid movement vocabulary, or precise beat timing.
-Different hands should be able to inspire simultaneous complementary parts while the music maintains its own coherent pulse.
+Sway is an instrument played with the hands in front of a camera, with generative models in the band.
+V1 is playable and stable.
+On October 4, Everett said that it feels like adding notes over an accompaniment, not like leading the music.
+The open question is what makes the music feel like the player's own.
+One experiment, the generative theremin, tests an answer.
+On October 7 the project was cleaned up: one line of history, and the paused prototypes removed.
 
-Gesture ensemble is the chosen direction when work resumes.
-Flow remains a separate, deferred experiment.
-Qwen3.8-Max stays as the visual interpreter and musical director.
-Jev was considered on September 27 and not adopted; no Jev integration or benchmark was performed.
-The decision is to improve the interaction around Qwen before another interpreter change.
+## Branches
 
-## State of the implementation
+| Branch        | Contains                                                                                                                                   | State                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `clean-start` | V1 with the code of #2, #4, and #5 and its fixes, the theremin experiment, and the October 7 cleanup.                                      | The new baseline. Local only, until Everett asks for its pull request. |
+| `main`        | V1 as merged on October 1 ([#1](https://github.com/Audiofool934/sway/pull/1)), and CI ([#8](https://github.com/Audiofool934/sway/pull/8)). | On GitHub. `clean-start` builds on it.                                 |
+| `v2-design`   | [#3](https://github.com/Audiofool934/sway/pull/3): the V2 proposal, `src/sway/pitch.py`, and the palette probe.                            | Open pull request, kept as a reference. Not built.                     |
 
-| Area              | Implemented                                                                                          | Practical limit                                                                         |
-| ----------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Visual input      | Browser MediaPipe tracking, separate hand observations, three ordered camera images per Qwen request | Sparse images and coarse motion hints can confuse gestures.                             |
-| Musical direction | Qwen chooses one to four parts, their roles, harmony, energy, and pace intent                        | Arrangement labels describe requests, not instruments detected in generated audio.      |
-| Timing            | Shared audio-time clock, bar-aligned arrangement updates, gradual tempo changes                      | The displayed BPM is a conditioning clock, not a measured audible beat.                 |
-| Music             | Local MRT2 Small and an optional private Colab MRT2 Base service                                     | The adapter renders a stereo mixture without independent instrument stems.              |
-| Flow              | Saved passages, local expression, return to original, recording, and optional DEMON variations       | Musical continuity and motion correlation remain insufficient for the intended product. |
-| Lifecycle         | Owned workers, bounded cloud runners, recording closure, and private credentials                     | Colab remains an experimental runtime, not an always-on service.                        |
+Numbers such as #3 are pull requests on GitHub.
+[#2](https://github.com/Audiofool934/sway/pull/2), [#4](https://github.com/Audiofool934/sway/pull/4), and [#5](https://github.com/Audiofool934/sway/pull/5) are still open there, but `clean-start` includes their work.
+They can close when `clean-start` goes up as one pull request.
+[Issue #6](https://github.com/Audiofool934/sway/issues/6) records an evaluation of DEMON, ACE-Step 1.5, and Stable Audio 3 for later.
 
-The latest performer feedback was that the interaction felt strange and drumming could be mistaken for strumming.
-The earlier ensemble revision preserved multiple parts in the plan but did not establish reliable audible separation or responsiveness.
-Keep that distinction explicit when presenting the prototype.
+## Pages
 
-## Unresolved work
+| URL              | What it is                                                                              | State                                                           |
+| ---------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `/`              | V1: the lead hand plays a pitch ladder, and the band hand sets energy, cuts, and loops. | Current. MRT2 plays the harmony, and Qwen can compose the band. |
+| `/theremin.html` | The hands shape MRT2's live sound directly.                                             | Experiment. Its interface is in Chinese.                        |
 
-1. **Drum-versus-strum ambiguity.**
-   The aggregate gesture mapper treats a moving hand beside a separated quiet hand as an anchored guitar gesture.
-   That branch precedes the vertical-strike branch, so drumming can receive a strumming label.
-   Per-hand and aggregate hints can disagree, and the fixed confidence values are not calibrated.
-   This is a code-supported failure path; the performer's particular misclassification was not reproduced from captured footage.
-2. **Delayed musical response.**
-   Qwen receives three 384-pixel-wide images about 500 ms apart.
-   Sampled ensemble requests took 4.68-6.49 seconds, with prompt preparation, bar scheduling, and playback buffering adding other delays.
-   There is no physical gesture-to-audio latency measurement.
-3. **Indirect control of the sound.**
-   All requested parts become one style prompt plus sparse harmonic cues.
-   Independent piano, guitar, and percussion control and a stable audible pulse remain unproven.
-4. **Playback reliability.**
-   Moving text encoding off the audio thread removed one source of stalls, but browser playback gaps remained in the repeated test.
-5. **Evidence coverage.**
-   Synthetic two-hand tests and a real API test on prerecorded one-hand footage do not establish real two-hand recognition or listening quality.
+The Qwen gesture ensemble and Flow pages from September 26 and 27, their pipeline, and their documents were removed on October 7.
+The [documentation index](README.md) says how to find them in Git.
 
-These are resume priorities, not fixes completed during the pause cleanup.
-The [ensemble guide](gesture-ensemble.md) contains the detailed implementation and measurements.
+## The open question
 
-## Verification at pause
+The two play tests found two different gaps.
 
-- 89 Python tests passed.
-- 18 JavaScript tests passed.
-- Ruff lint and formatting, web Prettier checks, and Git whitespace checks passed.
-- The Python test run emitted one existing Starlette warning about its deprecated `httpx` TestClient integration.
-- All 114 local documentation links passed file and heading checks.
-- `sway doctor` found all required assets and the configured Beijing Qwen3.8-Max account without making an API call.
+| Play test | Finding                                                                                                                               | What it asks for                                |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| October 1 | The AI changed what the band played but not how it sounded, and the lead was a plain synthesizer.                                     | Make the AI's part audible and the lead lively. |
+| October 4 | Playing feels like adding notes over an accompaniment. Each session is the same Night Drive, and the right hand mostly changes pitch. | Make the player's part shape the music.         |
 
-The cleanup did not run a new camera performance, listening study, billable Qwen call, or GPU generation job.
-Earlier validation remains dated evidence with its original limitations.
+The V2 proposal answers October 1.
+Its first step, the expressive lead, is in V1 now.
+Its later steps give the AI more decisions, which does not by itself give the player more.
+No design has been chosen for October 4.
+The theremin is the first experiment for it.
 
-## Runtime and retained data
+## The theremin experiment
 
-The owned local Sway server and model workers are stopped.
-No recording was active when the pause cleanup began.
-Colab reported no active sessions, zero active assignments, and a usage rate of 0.00 compute units per hour at the pause check.
-No background Sway work is scheduled as part of this handoff.
+The [experiment guide](generative-theremin-experiment.md) has the details.
+The first design on September 26 was also a generative theremin.
+That version sent gestures through Qwen to MRT2's text prompt and took 8 to 14 seconds to change the sound.
+This version sends hand controls to MRT2 every 40 ms.
 
-The checkout, model assets, generated passages, and recordings remain in place.
-Credentials remain outside Git in `~/.config/sway/qwen.json` on the development Mac.
-Recordings and evidence under `.cache/`, `outputs/`, and `work/` are intentionally untracked; see the [data map](development.md#data-and-evidence).
-Git history preserves the implementation and reports, but a clone alone does not preserve those local artifacts.
+- Hand height picks a pitch in A minor, and the distance between the hands widens the sound.
+- Short back-and-forth strokes make the sound plucked, and stillness lets it settle.
+- All pitched sound comes from MRT2.
+  There is no band and no Qwen.
+- To try it, run `uv run --locked sway serve` and open `http://127.0.0.1:8765/theremin.html`.
+  Pointer input works without a camera.
 
-## Return to the project
+With camera tracking running, MRT2 needed a median of 37 to 39 ms for each 40 ms frame, and two-minute replays had four or five dropouts.
+On October 7, with nothing else running, the same render path took a median of 22 ms, with 90% of frames under 24 ms.
+So the model itself has headroom, and the dropouts come from sharing the Mac with camera tracking and the browser.
+Pointer input does not run the tracker.
+The decisive checks are the four listening questions in the guide, and they need Everett's ears.
 
-1. Read this note and the [ensemble guide](gesture-ensemble.md).
-2. Run the [development checks](development.md#checks) and `uv run --locked sway doctor`.
-3. Restart locally through the [first-play guide](morning-test.md); Qwen with local MRT2 does not need a Colab allocation.
-4. Reproduce drum/strum confusion and simultaneous-hand performance while comparing motion hints, Qwen's arrangement, and recorded sound.
-5. Change one part of the perception-to-audio path at a time and evaluate audible correlation, response time, tempo, and gaps.
+## V1's open play tests
 
-The older [evaluation plan](evaluation-plan.md) supplies measurement methods, but its single-action assumptions need adapting to the ensemble contract.
-Choose a cloud experiment only when the question and comparison are prepared.
+The [readiness record](v1-readiness.md#remaining-play-tests) lists seven play tests that need Everett's hands.
+The October 4 session was informal play, not those tests.
+The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar.
 
-## Saved implementation history
+## Next
 
-Existing commits were preserved without rewriting history.
-The accumulated work was organized into these commits before the documentation handoff:
+1. **Everett plays the theremin with the mouse,** for about ten minutes, against the four listening questions.
+   This decides whether direct shaping of the generated sound is the answer to October 4.
+2. **At the same time, find what slows MRT2 when the camera runs,** and remove it, so that the camera version can be tested fairly.
+3. **Then choose the direction:** build the theremin's idea into the instrument, or make V1's band follow the player.
 
-| Commit    | Scope                                                                                           |
-| --------- | ----------------------------------------------------------------------------------------------- |
-| `b5eab8f` | Bounded MRT2 and DEMON Colab trials and lifecycle tests.                                        |
-| `11afe4a` | Qwen ensemble direction, shared timing, remote music services, Flow backend, and backend tests. |
-| `f9c8e48` | Ensemble controls, Flow interface, hand pickup, playback, and JavaScript tests.                 |
+## Working rules
 
-The following documentation commit records the paused state, operating guides, and historical experiment reports.
-These commits were made locally; the pause cleanup does not publish or push the repository.
+- One piece of work at a time, on its own branch and pull request.
+- Everett reviews on GitHub.
+  Nothing merges until he asks.
+- When more than one agent works on Sway, each reads this page first and updates it at the end.
+
+## Timeline
+
+| Date            | Event                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------- |
+| September 26    | First prototype: camera to Qwen to MRT2 text prompts.                                              |
+| September 26-27 | Gesture ensemble, Flow with DEMON, and Colab trials.                                               |
+| September 27    | Paused. A gesture took 8 to 14 seconds to change the sound.                                        |
+| September 28    | Restarted from first principles as V1: a hand-played lead, a band hand, and a music-game tutorial. |
+| October 1       | V1 merged (#1). First play test. Pull requests #2 to #5 and issue #6 opened.                       |
+| October 2       | CI merged (#8).                                                                                    |
+| October 3-4     | The V1 candidate: #2, #4, and #5 combined, with fixes and a 20-minute browser run.                 |
+| October 4       | Second play test: stable, but it does not feel like leading the music.                             |
+| October 5       | The theremin experiment.                                                                           |
+| October 7       | Cleanup: one branch, the paused prototypes and 15 historical documents removed.                    |
+
+## Where things are
+
+- The [documentation index](README.md) lists the current documents.
+- Recordings and test evidence are in `outputs/` and `work/`, which Git ignores.
+  The [data map](development.md#data-and-evidence) lists the current ones.
+- The Qwen credential is in `~/.config/sway/qwen.json`, outside the repository.
+- On `clean-start` on October 7, 58 Python tests and 128 JavaScript tests passed.
+- No Sway server or other Sway process was running at this update.

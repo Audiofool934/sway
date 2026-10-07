@@ -75,6 +75,8 @@ Limiting CPU tracking to at most 12 fps and buffering 160 ms reduced the interru
 Increasing the buffer to 240 ms still produced four underruns in a separate two-minute run, so it did not establish a fix and the shorter buffer is retained for responsiveness.
 The stream therefore remains an experimental listening prototype with audible-interruption risk, not a verified uninterrupted instrument.
 The desktop preview, controller, model steering, recording, and stop/restart flows can be tried now; sustained real-time headroom and the complete physical response delay remain open work.
+On October 7, with no browser or camera running, the same render path took a median of 22 ms per 40 ms frame, with 90% of frames under 24 ms.
+The model therefore has headroom on its own; the slowdown to 37-39 ms comes from sharing the Mac with tracking and the browser, and its exact cause is not yet measured.
 
 The decisive listening checks remain:
 

@@ -755,12 +755,12 @@ Files go to the location chosen by your browser, not to the server's model cache
 `uv run --locked sway serve` starts the server at 127.0.0.1:8765, reachable only from this computer.
 It serves the page, the hand-tracking files, and the models' endpoints, and refuses requests from other sites.
 
-- `sway setup --music-only` downloads what V1 needs: the hand tracker, the browser libraries, and MRT2.
+- `sway setup` downloads what V1 needs: the hand tracker, the browser libraries, and MRT2.
   `--instrument-only` skips MRT2, and the pad then plays the harmony.
 - `sway doctor` checks the installation, including whether Qwen is configured.
-- Models live in `.cache/`, outside Git, as do the paused prototypes' recordings.
+- Models live in `.cache/`, outside Git.
 
-The server also still runs the paused prototypes, `/ensemble.html` and `/flow.html`, and their endpoints.
+The server also runs the generative theremin experiment at `/theremin.html`, which has its own MRT2 stream.
 
 ## Part 3: One note, from hand to speaker
 
