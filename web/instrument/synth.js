@@ -1,9 +1,15 @@
 // Web Audio instruments and mix. Every sound is scheduled at an exact AudioContext
 // time; sustained voices return a handle so the band can be cut mid-note.
 
-import { frequency } from "./theory.js";
+import { TYPICAL_VELOCITY, frequency } from "./theory.js";
 
 const SILENT = 0.0001;
+// The lead's peak at a typical velocity, the level the mix was balanced at.
+const LEAD_PEAK = 0.85;
+// A full swell, leaning in or back, changes the lead by this many octaves of amplitude
+// (about 5 dB) and of brightness.
+const SWELL_LEVEL = 0.85;
+const SWELL_BRIGHTNESS = 0.75;
 
 function noiseBuffer(ctx, seconds = 2) {
   const buffer = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
@@ -123,6 +129,7 @@ export class Synth {
     this.duck = ctx.createGain();
     this.duck.connect(this.master);
     this.buses = {};
+    this.levels = {}; // Each bus's own gain, which the mixer mutes and restores.
     const bus = (
       name,
       gain,
@@ -136,6 +143,7 @@ export class Synth {
       if (reverb) this.#send(node, this.reverb, reverb);
       if (delay) this.#send(node, this.delay, delay);
       this.buses[name] = node;
+      this.levels[name] = gain;
     };
     bus("kick", 0.36);
     bus("snare", 1.2, { reverb: 0.18 });
@@ -150,6 +158,8 @@ export class Synth {
     // Generated harmony stands in for the pad; its audio already carries a room.
     bus("harmony", 1, { reverb: 0.15, ducked: true });
     bus("keys", 0.75, { reverb: 0.25, pan: -0.12, ducked: true });
+    // The composer's answering line in the keys' sound, on a bus of its own.
+    bus("answer", 0.75, { reverb: 0.25, pan: -0.12, ducked: true });
     bus("arp", 0.16, { delay: 0.4, reverb: 0.2, pan: 0.25, ducked: true });
     bus("lead", 0.65, { delay: 0.28, reverb: 0.22 });
     bus("loop", 0.36, { delay: 0.18, reverb: 0.3 });
@@ -158,6 +168,15 @@ export class Synth {
     this.kickDrive = saturation(ctx, 1.6);
     this.kickDrive.connect(this.buses.kick);
     this.openHat = null;
+    // While the mixer is open, stand-in voices route here for comparison with MRT2.
+    this.shadows = {};
+    for (const name of ["pad", "answer"]) {
+      const node = ctx.createGain();
+      node.gain.value = 0;
+      node.connect(this.buses[name]);
+      this.shadows[name] = node;
+    }
+    this.ducking = true; // Off while the drums are muted, so nothing pumps without a kick.
   }
 
   /** Insert a node, such as the recorder, between the finished mix and the speakers. */
@@ -229,12 +248,19 @@ export class Synth {
           event.pitches,
           seconds,
           event.brightness,
+          event.shadow ? this.shadows.pad : this.buses.pad,
         );
       case "keys":
         return this.keys(t, event.velocity, event.pitches, seconds);
       // The composer's answering line, when generated harmony is not playing it.
       case "answer":
-        return this.keys(t, event.velocity, [event.pitch], seconds);
+        return this.keys(
+          t,
+          event.velocity,
+          [event.pitch],
+          seconds,
+          event.shadow ? this.shadows.answer : this.buses.answer,
+        );
       case "arp":
         return this.arp(t, event.velocity, event.pitch, seconds);
     }
@@ -262,6 +288,7 @@ export class Synth {
       .connect(clickAmp)
       .connect(this.buses.kick);
     // Duck the harmony bus with the kick.
+    if (!this.ducking) return;
     const duck = this.duck.gain;
     duck.cancelScheduledValues(t);
     duck.setTargetAtTime(1 - 0.35 * velocity, t, 0.005);
@@ -402,13 +429,20 @@ export class Synth {
     return this.#handle([amp.gain], [sub, body], 0.02);
   }
 
-  pad(t, velocity, pitches, seconds, brightness = 0.4) {
+  pad(
+    t,
+    velocity,
+    pitches,
+    seconds,
+    brightness = 0.4,
+    destination = this.buses.pad,
+  ) {
     const ctx = this.ctx;
     const filter = this.#filter("lowpass", 350 + 2600 * brightness, 0.5);
     const amp = this.#gain();
     const end = t + seconds;
     envelope(amp.gain, t, { attack: 0.45, peak: velocity, release: 0.9, end });
-    filter.connect(amp).connect(this.buses.pad);
+    filter.connect(amp).connect(destination);
     const oscillators = [];
     for (const pitch of pitches)
       for (const detune of [-9, 7]) {
@@ -426,7 +460,7 @@ export class Synth {
   }
 
   // Two-operator FM electric piano: a bright attack that mellows as it rings.
-  keys(t, velocity, pitches, seconds) {
+  keys(t, velocity, pitches, seconds, destination = this.buses.keys) {
     const ctx = this.ctx;
     const amp = this.#gain();
     const end = t + seconds;
@@ -438,7 +472,7 @@ export class Synth {
       release: 0.35,
       end,
     });
-    amp.connect(this.buses.keys);
+    amp.connect(destination);
     const oscillators = [];
     for (const pitch of pitches) {
       const f = frequency(pitch);
@@ -487,22 +521,28 @@ export class Synth {
     return this.#handle([amp.gain], [osc], 0.02);
   }
 
-  /** The performed voice: a warm two-saw lead that glides between legato notes. */
-  leadOn(t, pitch, velocity = 0.85) {
+  /**
+   * The performed voice: a warm two-saw lead that glides between legato notes. A harder
+   * strike is louder and brighter, both in its attack and as it holds.
+   */
+  leadOn(t, pitch, velocity = TYPICAL_VELOCITY) {
     const ctx = this.ctx;
     const f = frequency(pitch);
     const oscillators = [];
     const filter = this.#filter("lowpass", 900, 2);
-    filter.frequency.setValueAtTime(3600, t);
-    filter.frequency.setTargetAtTime(1500 + 900 * velocity, t + 0.01, 0.18);
+    filter.frequency.setValueAtTime(2200 + 2400 * velocity, t);
+    filter.frequency.setTargetAtTime(1000 + 1700 * velocity, t + 0.01, 0.18);
     const amp = this.#gain();
+    const peak = (LEAD_PEAK * velocity) / TYPICAL_VELOCITY;
     envelope(amp.gain, t, {
       attack: 0.012,
-      peak: velocity,
+      peak,
       decay: 0.3,
-      sustain: velocity * 0.72,
+      sustain: peak * 0.72,
     });
-    filter.connect(amp).connect(this.buses.lead);
+    // Leaning in or back moves the note's level here, and its brightness at the filter.
+    const swell = this.#gain(1);
+    filter.connect(amp).connect(swell).connect(this.buses.lead);
     const vibrato = ctx.createOscillator();
     vibrato.frequency.value = 5.2;
     const depth = this.#gain();
@@ -529,7 +569,9 @@ export class Synth {
       vibrato,
       depth,
       amp,
+      swell,
       filter,
+      velocity,
       start: t,
       released: false,
     };
@@ -543,12 +585,28 @@ export class Synth {
       osc.frequency.setTargetAtTime(f * ratio, t, 0.018);
     }
     // A soft re-articulation keeps legato notes distinct without a new attack.
+    const { velocity } = voice;
     voice.filter.frequency.cancelAndHoldAtTime(t);
-    voice.filter.frequency.setTargetAtTime(2800, t, 0.01);
-    voice.filter.frequency.setTargetAtTime(2000, t + 0.04, 0.15);
+    voice.filter.frequency.setTargetAtTime(1300 + 2000 * velocity, t, 0.01);
+    voice.filter.frequency.setTargetAtTime(
+      1000 + 1700 * velocity,
+      t + 0.04,
+      0.15,
+    );
     voice.depth.gain.cancelAndHoldAtTime(t);
     voice.depth.gain.setTargetAtTime(0, t, 0.02);
     voice.depth.gain.setTargetAtTime(11, t + 0.3, 0.25);
+  }
+
+  /** Swell (up to 1) or soften (down to -1) a sounding lead note from time `t`. */
+  leadSwell(voice, t, value) {
+    if (voice.released) return;
+    voice.swell.gain.setTargetAtTime(2 ** (value * SWELL_LEVEL), t, 0.06);
+    voice.filter.detune.setTargetAtTime(
+      value * SWELL_BRIGHTNESS * 1200,
+      t,
+      0.06,
+    );
   }
 
   leadOff(voice, t, release = 0.22) {

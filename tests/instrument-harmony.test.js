@@ -337,10 +337,18 @@ function band(t) {
   t.mock.method(globalThis, "clearInterval", () => {});
   const ctx = { currentTime: 0 };
   const pads = [];
+  const shadows = [];
+  const standIns = [];
   const synth = {
     setTempo() {},
     play(event, time) {
-      if (event.part === "pad") pads.push(time);
+      if (event.part === "pad") (event.shadow ? shadows : pads).push(time);
+      if (event.shadow) {
+        const voice = { event, time, releasedAt: null };
+        voice.release = (at) => (voice.releasedAt = at);
+        standIns.push(voice);
+        return voice;
+      }
       return null;
     },
   };
@@ -355,13 +363,13 @@ function band(t) {
       tick();
     }
   };
-  return { ctx, engine, harmony, pads, until };
+  return { ctx, engine, harmony, pads, shadows, standIns, until };
 }
 
 const near = (a, b) => Math.abs(a - b) < 1e-6;
 
 test("a generated bar is placed ahead of its bar line and replaces the pad", (t) => {
-  const { engine, harmony, pads, until } = band(t);
+  const { engine, harmony, pads, shadows, until } = band(t);
   harmony.arrived.add(1);
   until(0.1);
   assert.equal(harmony.played.length, 1);
@@ -369,6 +377,8 @@ test("a generated bar is placed ahead of its bar line and replaces the pad", (t)
   until(BAR + 0.1);
   // The synthesized pad played bar 0 only; bar 1's chord still went into the log.
   assert.deepEqual(pads, [0]);
+  // Normal play does not allocate silent stand-in voices.
+  assert.deepEqual(shadows, []);
   const logged = engine.log.filter((note) => note.part === "pad");
   assert.deepEqual(new Set(logged.map((note) => note.start)), new Set([0, 4]));
   assert.deepEqual(harmony.passedBars, [
@@ -380,6 +390,50 @@ test("a generated bar is placed ahead of its bar line and replaces the pad", (t)
     [1, "F"],
     [2, "C"],
   ]);
+});
+
+test("the mixer builds stand-ins only while open and releases them when closed", (t) => {
+  const { ctx, engine, harmony, shadows, standIns, until } = band(t);
+  engine.setListening(true);
+  harmony.arrived.add(1);
+  until(BAR + 0.1);
+  assert.deepEqual(shadows, [BAR]);
+  engine.setListening(false);
+  assert.equal(standIns[0].releasedAt, ctx.currentTime);
+  assert.ok(engine.voices.every((voice) => !voice.shadow));
+  harmony.arrived.add(2);
+  until(2 * BAR + 0.1);
+  assert.deepEqual(shadows, [BAR]);
+  assert.ok(
+    harmony.passedBars.some(([bar, generated]) => bar === 2 && generated),
+  );
+});
+
+test("opening the mixer mid-bar plays the remainder without duplicating logged notes", (t) => {
+  const { ctx, engine, harmony, standIns, until } = band(t);
+  harmony.arrived.add(1);
+  until(BAR + 0.5);
+  const notes = structuredClone(engine.log);
+  engine.setListening(true);
+  assert.equal(standIns.length, 1);
+  assert.equal(standIns[0].time, ctx.currentTime);
+  assert.ok(
+    near(
+      standIns[0].event.beats,
+      (2 * BAR - ctx.currentTime) / engine.beatSeconds,
+    ),
+  );
+  assert.deepEqual(engine.log, notes);
+  engine.setListening(true);
+  assert.equal(standIns.length, 1, "enabling twice must not double the chord");
+  engine.setListening(false);
+  until(2 * BAR + 0.2);
+  engine.setListening(true);
+  assert.equal(
+    standIns.length,
+    1,
+    "an expired generated chord must not replay",
+  );
 });
 
 test("a bar that arrives too close to its bar line keeps the synthesized pad", (t) => {

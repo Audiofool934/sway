@@ -30,8 +30,8 @@ jobs:
           version: "0.9.7" # The development Mac's uv; change both together.
       - run: uv sync --locked
       - run: uv run --locked pytest -q
-      - run: uv run --locked ruff check src tests scripts
-      - run: uv run --locked ruff format --check src tests scripts
+      - run: uv run --locked ruff check src tests
+      - run: uv run --locked ruff format --check src tests
 
   javascript:
     name: JavaScript

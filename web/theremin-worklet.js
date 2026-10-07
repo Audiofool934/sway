@@ -1,9 +1,9 @@
 import { StereoBuffer } from "./audio-buffer.js";
 
-class SwayPlayer extends AudioWorkletProcessor {
+class ThereminPlayer extends AudioWorkletProcessor {
   constructor() {
     super();
-    this.queue = new StereoBuffer(sampleRate);
+    this.queue = new StereoBuffer(sampleRate, { targetMs: 160, maxMs: 280 });
     this.blocks = 0;
     this.port.onmessage = ({ data }) => {
       if (data === "reset") this.queue.reset();
@@ -13,7 +13,7 @@ class SwayPlayer extends AudioWorkletProcessor {
   process(inputs, outputs) {
     const [left, right] = outputs[0];
     this.queue.render(left, right);
-    if (++this.blocks % 100 === 0)
+    if (++this.blocks % 50 === 0)
       this.port.postMessage({
         queuedMs: this.queue.queuedMs,
         underruns: this.queue.underruns,
@@ -22,4 +22,4 @@ class SwayPlayer extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor("sway-player", SwayPlayer);
+registerProcessor("theremin-player", ThereminPlayer);

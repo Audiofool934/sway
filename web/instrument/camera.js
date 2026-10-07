@@ -5,16 +5,27 @@
 const TRACKING_WIDTH = 640;
 
 export class Camera {
-  constructor(video, { onHands, onStatus = () => {}, delegate = "CPU" } = {}) {
+  constructor(
+    video,
+    { onHands, onStatus = () => {}, delegate = "CPU", maxFps = Infinity } = {},
+  ) {
     this.video = video;
     this.onHands = onHands;
     this.onStatus = onStatus;
     this.delegate = delegate;
+    this.maxFps = maxFps;
+    this.lastSample = -Infinity;
     this.stream = null;
     this.worker = null;
     this.busy = false;
     this.epoch = 0;
-    this.stats = { frames: 0, dropped: 0, tracking: [], captureTimes: 0 };
+    this.stats = {
+      frames: 0,
+      dropped: 0,
+      skipped: 0,
+      tracking: [],
+      captureTimes: 0,
+    };
   }
 
   get active() {
@@ -28,6 +39,7 @@ export class Camera {
   async start() {
     if (this.stream) return;
     const epoch = ++this.epoch;
+    this.lastSample = -Infinity;
     this.onStatus("starting");
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
@@ -60,7 +72,6 @@ export class Camera {
     this.worker.onmessage = ({ data }) => this.#message(data, epoch);
     this.worker.postMessage({
       type: "init",
-      handsOnly: true,
       delegate: this.delegate,
     });
   }
@@ -105,11 +116,18 @@ export class Camera {
     if (epoch !== this.epoch) return;
     this.video.requestVideoFrameCallback((n, m) => this.#frame(n, m, epoch));
     this.stats.frames++;
+    // Continuous music generation can reserve headroom by sampling fewer camera
+    // frames, while the preview remains at the device's full frame rate.
+    if (now - this.lastSample < 1000 / this.maxFps - 1) {
+      this.stats.skipped++;
+      return;
+    }
     if (this.busy) {
       this.stats.dropped++;
       return;
     }
     this.busy = true;
+    this.lastSample = now;
     // Chrome reports when the camera captured the frame; otherwise use its arrival.
     if (meta.captureTime) this.stats.captureTimes++;
     const captureTime = meta.captureTime ?? meta.presentationTime ?? now;

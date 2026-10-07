@@ -1,0 +1,379 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+:root {
+  color-scheme: dark;
+  --ink: #efede8;
+  --muted: #929b9b;
+  --accent: #b9dccb;
+}
+body {
+  margin: 0;
+  background: #111716;
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+#stage {
+  min-height: 100svh;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at 65% 40%,
+    #25342c 0,
+    #131c19 43%,
+    #0c1211 100%
+  );
+}
+#video,
+#field,
+.shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+#video {
+  object-fit: cover;
+  transform: scaleX(-1);
+  opacity: 0.55;
+  filter: saturate(0.4);
+}
+.shade {
+  background: linear-gradient(180deg, #0b1113b0, #0b111322 35%, #0b111388);
+  pointer-events: none;
+}
+#field {
+  touch-action: none;
+}
+header,
+footer {
+  position: absolute;
+  left: 36px;
+  right: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 3;
+}
+header {
+  top: 28px;
+  gap: 24px;
+}
+footer {
+  bottom: 25px;
+  gap: 20px;
+  color: var(--muted);
+  font-size: 12px;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+.brand {
+  font-size: 23px;
+  letter-spacing: -0.8px;
+  font-weight: 650;
+}
+.brand span {
+  margin-left: 14px;
+  font-size: 12px;
+  letter-spacing: 0.8px;
+  color: #a7b6ae;
+  font-weight: 400;
+}
+.actions {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  font-size: 12px;
+  color: #b6c0ba;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid #b9dccb33;
+  border-radius: 7px;
+  color: var(--ink);
+  background: #26362d88;
+  padding: 10px 16px;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+button:hover {
+  border-color: #b9dccb88;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
+}
+#intro {
+  position: relative;
+  z-index: 2;
+  width: min(550px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 150px 0 100px;
+}
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #9bb4a6;
+  margin: 0 0 23px;
+}
+h1 {
+  font-size: clamp(30px, 3.6vw, 46px);
+  font-weight: 420;
+  letter-spacing: -1.5px;
+  margin: 0 0 16px;
+}
+.description {
+  font-size: 14px;
+  color: #bac5be;
+  line-height: 1.9;
+  margin: 0;
+}
+.guide {
+  padding: 0;
+  margin: 35px 0;
+  list-style: none;
+  border-top: 1px solid #c8ddca1c;
+}
+.guide li {
+  display: flex;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid #c8ddca1c;
+}
+.number {
+  color: #73917f;
+  font-size: 11px;
+  padding-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.guide b {
+  font-size: 14px;
+  font-weight: 500;
+}
+.guide p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #9fada4;
+  margin: 7px 0 0;
+}
+.start-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.primary {
+  background: #c9dfcf;
+  border-color: #c9dfcf;
+  color: #152319;
+  padding: 13px 19px;
+  font-size: 13px;
+  font-weight: 550;
+}
+.primary span {
+  margin-left: 20px;
+}
+.secondary {
+  font-size: 12px;
+  background: transparent;
+  border-color: transparent;
+  color: #a7b9ae;
+}
+.note {
+  margin: 18px 0 0;
+  font-size: 11px;
+  color: #89998f;
+  line-height: 1.8;
+}
+.note.error {
+  color: #edc396;
+}
+#preparing {
+  position: absolute;
+  top: 43%;
+  width: 100%;
+  text-align: center;
+  z-index: 2;
+}
+#preparing i {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #aaccad33;
+  border-top-color: #aaccad;
+  border-radius: 50%;
+  animation: turn 2s linear infinite;
+}
+#preparing p {
+  margin: 24px 0 10px;
+  font-size: 18px;
+  font-weight: 350;
+}
+#preparing small {
+  color: var(--muted);
+  font-size: 12px;
+}
+#playing {
+  position: absolute;
+  bottom: 92px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  pointer-events: none;
+}
+.pitch {
+  position: absolute;
+  bottom: 22px;
+  left: 42px;
+  color: #cfe5d8;
+  opacity: 0.9;
+}
+.pitch span {
+  font-size: 40px;
+  font-weight: 250;
+}
+.pitch small {
+  font-size: 14px;
+  margin-left: 5px;
+}
+#gesture-name {
+  font-size: 21px;
+  font-weight: 350;
+  letter-spacing: 2px;
+  margin: 0 0 10px;
+}
+#hint {
+  font-size: 11px;
+  color: #a8b5ae;
+  margin: 0;
+}
+.qualities {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  margin-top: 23px;
+  font-size: 10px;
+  color: #a7b6ad;
+}
+.qualities span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.qualities i {
+  display: inline-block;
+  width: 55px;
+  height: 2px;
+  background: #a7c5b633;
+}
+.qualities b {
+  display: block;
+  height: 2px;
+  width: 0;
+  background: #bfd9ca;
+}
+footer label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  white-space: nowrap;
+}
+input[type="range"] {
+  width: 90px;
+  accent-color: #b9d7c5;
+}
+#save {
+  color: #c5decd;
+  padding: 8px 0;
+}
+#diagnostics {
+  position: absolute;
+  top: 85px;
+  right: 30px;
+  font-size: 10px;
+  color: #b6cbbd;
+  background: #07100cbb;
+  padding: 14px;
+  z-index: 4;
+}
+[hidden] {
+  display: none !important;
+}
+@keyframes turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-height: 790px) and (min-width: 701px) {
+  #intro {
+    padding-top: 112px;
+  }
+  .guide {
+    margin: 25px 0;
+  }
+  .guide li {
+    padding: 15px 0;
+  }
+}
+@media (max-width: 700px) {
+  header,
+  footer {
+    left: 20px;
+    right: 20px;
+  }
+  .brand span {
+    display: block;
+    margin: 5px 0 0;
+    font-size: 9px;
+  }
+  .actions {
+    gap: 10px;
+  }
+  #status {
+    max-width: 130px;
+    text-align: right;
+  }
+  #intro {
+    padding-top: 145px;
+  }
+  .start-actions {
+    flex-wrap: wrap;
+  }
+  .guide li {
+    gap: 14px;
+  }
+  #footer-note {
+    max-width: 60%;
+    line-height: 1.7;
+    font-size: 10px;
+  }
+  .pitch {
+    bottom: 170px;
+    left: 23px;
+  }
+  #hint {
+    max-width: 85%;
+    margin: auto;
+    line-height: 1.8;
+  }
+  #playing {
+    bottom: 100px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #preparing i {
+    animation: none;
+  }
+}

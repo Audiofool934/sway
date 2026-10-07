@@ -1,14 +1,10 @@
-"""Qwen vision over HTTPS; credentials stay in the backend process."""
+"""Qwen credentials and endpoint; they stay in the backend process."""
 
 import json
 import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-
-import httpx
-
-from .semantics import conductor_prompt, parse_ensemble
 
 
 def credential_path() -> Path:
@@ -79,93 +75,3 @@ def qwen_status():
     except (OSError, ValueError) as exc:
         return {"configured": False, "error": str(exc)}
     return {"configured": True, "model": config.model, "region": config.region}
-
-
-class QwenRequestError(Exception):
-    def __init__(self, message, *, retryable=True, backoff=1):
-        super().__init__(message)
-        self.retryable = retryable
-        self.backoff = backoff
-
-
-class QwenSemanticModel:
-    def __init__(self, config=None, *, transport=None):
-        self.config = config or QwenConfig.load()
-        self.client = httpx.Client(
-            base_url=self.config.endpoint + "/",
-            headers={"Authorization": f"Bearer {self.config.api_key}"},
-            timeout=httpx.Timeout(8, connect=2, write=2, pool=2),
-            follow_redirects=False,
-            transport=transport,
-        )
-        self.last_metrics = {"provider": "qwen", "model": self.config.model}
-
-    def close(self):
-        self.client.close()
-
-    def interpret(self, frames: list[str], timestamps: list[float], motion: dict):
-        if not 2 <= len(frames) <= 4 or len(frames) != len(timestamps):
-            raise ValueError("Qwen observations need two to four timestamped frames")
-        content = [{"type": "text", "text": conductor_prompt(timestamps, motion)}]
-        for frame in frames:
-            content.append(
-                {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + frame}}
-            )
-        payload = {
-            "model": self.config.model,
-            "messages": [{"role": "user", "content": content}],
-            "enable_thinking": False,
-            "response_format": {"type": "json_object"},
-            "max_tokens": 640,
-            "stream": False,
-        }
-        try:
-            with self.client.stream("POST", "chat/completions", json=payload) as response:
-                code = response.status_code
-                if code != 200:
-                    # Provider bodies can contain echoed input. Never expose them in status/logs.
-                    retryable = code in (408, 429) or code >= 500
-                    raise QwenRequestError(
-                        f"Qwen returned HTTP {code}. "
-                        + (
-                            "Interpretation will retry; the current arrangement continues."
-                            if retryable
-                            else "Check the key, workspace, region, and model access."
-                        ),
-                        retryable=retryable,
-                        backoff=10 if code == 429 else 1,
-                    )
-                raw = bytearray()
-                for chunk in response.iter_bytes():
-                    raw.extend(chunk)
-                    if len(raw) > 65_536:
-                        raise QwenRequestError("Qwen returned an oversized response")
-        except httpx.TimeoutException:
-            raise QwenRequestError("Qwen timed out; the current arrangement continues") from None
-        except httpx.HTTPError:
-            raise QwenRequestError(
-                "Qwen connection failed; the current arrangement continues"
-            ) from None
-        try:
-            body = json.loads(raw)
-            choice = body["choices"][0]
-            if not isinstance(choice, dict) or choice.get("finish_reason") != "stop":
-                raise ValueError("Incomplete response")
-            text = choice["message"]["content"]
-            if not isinstance(text, str):
-                raise ValueError("Expected text")
-            result = parse_ensemble(text)
-        except (ValueError, KeyError, TypeError, IndexError):
-            raise QwenRequestError("Qwen did not return a complete, valid musical intent") from None
-        metrics = {"provider": "qwen", "model": self.config.model}
-        model = body.get("model")
-        if isinstance(model, str) and re.fullmatch(r"[a-zA-Z0-9._-]{1,128}", model):
-            metrics["resolved_model"] = model
-        usage = body.get("usage", {})
-        if isinstance(usage, dict):
-            for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
-                value = usage.get(key)
-                if type(value) is int and value >= 0:
-                    metrics[key] = value
-        self.last_metrics = metrics
-        return result
