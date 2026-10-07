@@ -15,15 +15,16 @@ On October 7 the project was cleaned up: one line of history, and the paused pro
 
 ## Branches
 
-| Branch        | Contains                                                                                                                                   | State                                                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| `clean-start` | V1 with the code of #2, #4, and #5 and its fixes, the theremin experiment, and the October 7 cleanup.                                      | The new baseline. Local only, until Everett asks for its pull request. |
-| `main`        | V1 as merged on October 1 ([#1](https://github.com/Audiofool934/sway/pull/1)), and CI ([#8](https://github.com/Audiofool934/sway/pull/8)). | On GitHub. `clean-start` builds on it.                                 |
-| `v2-design`   | [#3](https://github.com/Audiofool934/sway/pull/3): the V2 proposal, `src/sway/pitch.py`, and the palette probe.                            | Open pull request, kept as a reference. Not built.                     |
+| Branch        | Contains                                                                                                                                   | State                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `clean-start` | V1 with the code of #2, #4, and #5 and its fixes, the theremin experiment, and the October 7 cleanup.                                      | The new baseline. Open pull request [#9](https://github.com/Audiofool934/sway/pull/9). |
+| `readme`      | [#10](https://github.com/Audiofool934/sway/pull/10): the README rewritten for people who find Sway on GitHub.                              | Open pull request, stacked on #9.                                                      |
+| `main`        | V1 as merged on October 1 ([#1](https://github.com/Audiofool934/sway/pull/1)), and CI ([#8](https://github.com/Audiofool934/sway/pull/8)). | On GitHub. `clean-start` builds on it.                                                 |
+| `v2-design`   | [#3](https://github.com/Audiofool934/sway/pull/3): the V2 proposal, `src/sway/pitch.py`, and the palette probe.                            | Open pull request, kept as a reference. Not built.                                     |
 
 Numbers such as #3 are pull requests on GitHub.
 [#2](https://github.com/Audiofool934/sway/pull/2), [#4](https://github.com/Audiofool934/sway/pull/4), and [#5](https://github.com/Audiofool934/sway/pull/5) are still open there, but `clean-start` includes their work.
-They can close when `clean-start` goes up as one pull request.
+They can close when #9 merges.
 [Issue #6](https://github.com/Audiofool934/sway/issues/6) records an evaluation of DEMON, ACE-Step 1.5, and Stable Audio 3 for later.
 
 ## Pages
@@ -105,6 +106,7 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 | October 4       | Second play test: stable, but it does not feel like leading the music.                             |
 | October 5       | The theremin experiment.                                                                           |
 | October 7       | Cleanup: one branch, the paused prototypes and 15 historical documents removed.                    |
+| October 7       | `clean-start` opened as #9, and the README rewrite as #10.                                         |
 
 ## Where things are
 
