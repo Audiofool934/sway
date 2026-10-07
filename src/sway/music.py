@@ -63,6 +63,10 @@ class StyleEncoder:
         return tokens
 
 
+def _copy(array):
+    return None if array is None else array.copy()
+
+
 def conditioning(style, notes, *, drumless=False):
     """Exported graph uses 7 as offset; -1 means unspecified, 0 means off."""
     vector = np.concatenate([style, notes, [0 if drumless else -1]]).astype(np.int32) + 7
@@ -88,10 +92,7 @@ class MusicEngine:
         self.initial = [stored[f"state_{i}"] for i in range(len(stored))]
         if not self.initial:
             raise ValueError("MRT2 checkpoint has no initial state")
-        for i, tensor in enumerate(self.initial):
-            if tensor.dtype == mx.uint32 and tensor.shape[-1:] == (2,):
-                self.initial[i] = mx.broadcast_to(mx.random.key(seed), tensor.shape)
-        mx.eval(self.initial)
+        self.initial = self._seeded(self.initial, seed)
         self.state = list(self.initial)
         self.style = StyleEncoder(model_dir / "resources" / "musiccoca")
         # The style is unspecified until a caller applies one.
@@ -101,16 +102,39 @@ class MusicEngine:
         self.frame = 0
         self.last_ms = 0.0
 
-    def reset(self, seed: int):
-        """Start a fresh stream whose random choices follow `seed`."""
+    def _seeded(self, state, seed):
+        """`state` with its random keys replaced by ones that follow `seed`."""
         mx = self.mx
-        state = list(self.initial)
+        state = list(state)
         for i, tensor in enumerate(state):
             if tensor.dtype == mx.uint32 and tensor.shape[-1:] == (2,):
                 state[i] = mx.broadcast_to(mx.random.key(seed), tensor.shape)
         mx.eval(state)
-        self.state = state
+        return state
+
+    def reset(self, seed: int):
+        """Start a fresh stream whose random choices follow `seed`."""
+        self.state = self._seeded(self.initial, seed)
         self.frame = 0
+
+    def snapshot(self) -> dict:
+        """The stream as it is now, so that it can be continued more than once."""
+        return {
+            "state": list(self.state),  # MLX arrays are immutable, so sharing them is safe.
+            "frame": self.frame,
+            "target": _copy(self.target),
+            "current": _copy(self.current),
+            "style_tokens": self.style_tokens.copy(),
+        }
+
+    def restore(self, snapshot: dict, seed: int | None = None):
+        """Continue from `snapshot`. A `seed` changes only the random choices from here on."""
+        state = snapshot["state"]
+        self.state = list(state) if seed is None else self._seeded(state, seed)
+        self.frame = snapshot["frame"]
+        self.target = _copy(snapshot["target"])
+        self.current = _copy(snapshot["current"])
+        self.style_tokens = snapshot["style_tokens"].copy()
 
     def apply_style(self, embedding):
         self.target = embedding
