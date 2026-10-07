@@ -2,48 +2,58 @@
 
 **An instrument you play with your hands.**
 
-The [project status](docs/project-status.md) is the map: where the work stands and what comes next.
-The [V1 plan](docs/v1-plan.md) defines the instrument, the rules it is built by, and the milestones.
+Sway turns a laptop camera into an instrument.
+One hand plays a melody, and the other hand leads a band.
+You need no musical training: Sway keeps every note in time and in key, so nothing you play sounds wrong.
+Generative models play in the band, but your own notes never wait for a model or the network.
 
-Someone with no musical training should be able to make a piece they want to keep.
-One hand plays a melody on a pitch ladder, with quicker pinches making stronger notes and leaning toward the camera swelling a held note.
-The other hand sets the band's energy, cuts it, and loops what was played.
-Sway keeps every note in time and in key, and the notes you play are synthesized in the browser, so no network request or large model sits between a gesture and its sound.
-The band is generative: Qwen writes its next four bars while the current four play, from what you just played and the energy you set, and MRT2, a music model running on the same Mac, performs the harmony and Qwen's answering lines.
-The engine checks every plan and keeps it in key and on the beat, and the built-in band steps in whenever a model is late.
-V1 is playable and has had its first test with real hands.
-The current candidate adds expressive lead controls, a listening mixer, and a matching tutorial and manual.
-The [readiness record](docs/v1-readiness.md) tracks the checks and remaining play tests.
+> **Status:** V1 is playable on an Apple Silicon Mac, and it is still in early testing.
+> There is no release yet.
+> The [project status](docs/project-status.md) says where the work stands and what comes next.
 
-## Play
+## How it plays
 
-On the configured development Mac:
+| Hand      | Movement                      | Result                                                     |
+| --------- | ----------------------------- | ---------------------------------------------------------- |
+| Lead hand | Hand height                   | Picks a note on a ladder of ten notes in A minor.          |
+| Lead hand | Pinch thumb and index         | Plays the note, and holding the pinch holds it.            |
+| Lead hand | Move up or down while pinched | Draws a melody from note to note.                          |
+| Lead hand | Pinch quickly or gently       | Plays a louder, brighter note or a softer one.             |
+| Lead hand | Lean toward the camera        | Swells a held note.                                        |
+| Band hand | Hand height                   | Sets the band's energy, from a quiet pad to the full band. |
+| Band hand | Fist                          | Cuts the band, and opening the hand brings it back.        |
+| Band hand | Pinch and hold                | Loops the last four bars you played.                       |
+| Both      | Hold two fists                | Ends the piece.                                            |
 
-```bash
-cd ~/Projects/sway
-uv run --locked sway serve
-```
+The right hand leads by default, and a setting swaps the roles.
+Without a camera, the mouse plays the lead: its height picks the note, and a click plays it.
+Keys 1 to 5 set the energy, and holding Space cuts the band, holding L loops, and holding E ends the piece.
 
-Open **http://127.0.0.1:8765** in Chrome, turn the camera on, and press **Learn to play** for setup and short lessons, or **Start playing** to go straight to a piece.
-The camera tutorial includes expression practice; without a camera, it teaches the four core lessons with the mouse and keyboard.
-**Leave lesson** returns to free play at any time.
-The mirrored camera keeps your body, hands, and room visible for a sense of space.
-Subtle hand skeletons and small fingertip markers show which hand controls each part of the instrument.
-Without a camera, the mouse plays the lead and the keyboard steers the band; the start screen lists the keys.
-Two fists or **End piece** finish a piece, which offers its audio, MIDI, and a performance file to save.
-The **Harmony** setting on the start screen picks generated strings, piano, or choir, or the synthesized pad; a chip at the top lights while the generated harmony is playing.
-**Band** chooses whether Qwen composes the band's cycles or the built-in patterns play; while a composed cycle plays, "by Qwen" shows under the beat and its caption appears at the bottom.
-Qwen needs a DashScope API key in `~/.config/sway/qwen.json`, and `sway doctor` shows whether it is configured; only musical data is sent to it, never camera images.
-Press D while playing to see measured tracking, audio timing, and how many bars were generated.
-Press M during free play to compare the band's parts in the listening mixer.
-Closing it restores the full mix; its extra comparison voices run only while it is open.
-Stop the server with Ctrl-C when finished.
+At the end of a piece, you can save its audio, its MIDI, and a performance file.
 
-The separate [generative theremin experiment](docs/generative-theremin-experiment.md) is at **http://127.0.0.1:8765/theremin.html**.
-It explores continuous hand control of MRT2's generated sound through sustained movement, short strokes, and rests.
-Either hand can play, and pointer input is also available.
+## The band
 
-For a fresh checkout, use an Apple Silicon Mac, Python 3.12 through [uv](https://docs.astral.sh/uv/), Node.js/npm, and a recent Chrome browser:
+The band is generative, and it follows the energy you set.
+
+- **Harmony:** [Magenta RealTime 2](https://github.com/magenta/magenta-realtime) (MRT2), a real-time music model, runs on the same Mac and plays the chords as strings, piano, or choir.
+- **Composer:** [Qwen](https://www.alibabacloud.com/help/en/model-studio/text-generation), in the cloud, can write the band's next four bars while the current four play.
+  It writes from the energy you set and the notes you just played.
+- **Engine:** Sway checks every plan from a model and keeps it in key and on the beat.
+  If a model is late, the built-in band plays instead, so the music never stops.
+
+The lead, the drums, and the bass are synthesized in the browser.
+Both models are optional, and Sway plays without them.
+
+## Requirements
+
+- A Mac with Apple Silicon.
+- [uv](https://docs.astral.sh/uv/), which installs Python 3.12 for Sway.
+- Node.js and npm.
+- A recent version of Chrome.
+- About 1 GB of disk space for MRT2.
+- For the composer only: a [DashScope](https://www.alibabacloud.com/help/en/model-studio/get-api-key) API key.
+
+## Install
 
 ```bash
 git clone https://github.com/Audiofool934/sway.git
@@ -53,20 +63,65 @@ uv run --locked sway setup
 uv run --locked sway doctor
 ```
 
-`sway setup` installs hand tracking, browser dependencies, and MRT2 for the generated harmony.
-`--instrument-only` skips MRT2, and V1 then plays its synthesized pad; the theremin experiment needs MRT2.
+`sway setup` downloads hand tracking, the browser dependencies, and MRT2.
+To skip MRT2, use `sway setup --instrument-only`.
+Sway then plays a synthesized pad for the harmony.
 
-## Data and compute
+`sway doctor` checks the setup and shows whether the composer is configured.
 
-The server listens on loopback.
-In the V1 instrument, tracking and sound run in the browser, and camera images never leave the machine.
-When Qwen composes the band, the server sends it musical data only: the energy, the chords, and the notes just played.
-The theremin experiment sends nothing off the machine.
-The Qwen credential stays in backend configuration outside the repository and browser.
+### Optional: the composer
 
-Models and experiment outputs are ignored by Git and remain on the development machine.
-A clone does not include them.
-See [data locations](docs/development.md#data-and-evidence) before moving or archiving the checkout.
+To let Qwen compose the band, put your DashScope API key in `~/.config/sway/qwen.json`:
+
+```json
+{ "api_key": "your-dashscope-key", "region": "singapore" }
+```
+
+Use `"region": "beijing"` for a key from the China mainland console.
+The file must be private:
+
+```bash
+chmod 600 ~/.config/sway/qwen.json
+```
+
+## Play
+
+```bash
+uv run --locked sway serve
+```
+
+1. Open **http://127.0.0.1:8765** in Chrome.
+2. Turn the camera on.
+3. Press **Learn to play** for setup and short lessons, or **Start playing** to go straight to a piece.
+
+On the start screen, **Harmony** picks the sound of the chords, and **Band** picks the Qwen composer or the built-in patterns.
+While you play, press D to see tracking and timing measurements.
+In free play, press M to open a mixer that compares the band's parts.
+Stop the server with Ctrl-C.
+
+## Privacy
+
+- The server listens only on your own machine.
+- Hand tracking runs in the browser, and camera images never leave your machine.
+- When Qwen composes, Sway sends it musical data only: the energy, the chords, and the notes you just played.
+- The Qwen key stays in the server process, outside the repository and the browser.
+
+## Experiment: the generative theremin
+
+A second page, **http://127.0.0.1:8765/theremin.html**, tests a different idea.
+Your hands shape MRT2's sound directly, with no band and no composer.
+It needs MRT2, its interface is in Chinese, and the mouse also works.
+The [experiment guide](docs/generative-theremin-experiment.md) describes it.
+
+## Documentation
+
+| Document                                 | Read it for                                                 |
+| ---------------------------------------- | ----------------------------------------------------------- |
+| [Manual](docs/manual.md)                 | How Sway works, and the music and audio ideas behind it.    |
+| [V1 plan](docs/v1-plan.md)               | The design of the instrument, and why each choice was made. |
+| [Project status](docs/project-status.md) | Where the work stands and what comes next.                  |
+| [V1 readiness](docs/v1-readiness.md)     | The checks done so far, and the play tests still open.      |
+| [Development](docs/development.md)       | The source map, the checks, and where local data lives.     |
 
 ## Development
 
@@ -79,18 +134,14 @@ node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,c
 git diff --check
 ```
 
-[CI](.github/workflows/ci.yml) runs the same checks on Linux for every pull request and every push to `main`; the test that needs MRT2's model skips there.
-The JavaScript tests cover the V1 instrument's timing, harmony, hand tracking, controls, band, looper, camera, engine, generated harmony scheduling, exports, lessons, and the theremin's controls.
-These checks do not establish musical quality, recognition accuracy, or how the instrument feels to play.
-The [development guide](docs/development.md) maps the source, runtime, and evidence locations.
+[CI](.github/workflows/ci.yml) runs these checks on Linux for every pull request and every push to `main`.
+The test that needs MRT2 skips there.
+The tests check timing, harmony, tracking, and controls.
+They do not show how the music sounds or how the instrument feels to play.
 
-## Models and attribution
+## Credits and license
 
-V1 uses MediaPipe to track hands, synthesizes its lead and rhythm in the browser, and can use local MRT2 for harmony and cloud Qwen for composition.
+Sway uses [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js) for hand tracking, [Magenta RealTime 2](https://github.com/magenta/magenta-realtime) for the harmony, and [Qwen](https://www.alibabacloud.com/help/en/model-studio/text-generation) for the composer.
+The [third-party notices](THIRD_PARTY_NOTICES.md) give their attribution and licenses.
 
-- [Magenta RealTime 2](https://github.com/magenta/magenta-realtime): generated harmony in V1, and the whole sound of the theremin experiment.
-- [Qwen](https://www.alibabacloud.com/help/en/model-studio/text-generation): V1's band composer.
-- [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js): browser hand tracking.
-
-See [third-party notices](THIRD_PARTY_NOTICES.md) for attribution and model licensing references.
-No license for original Sway code has been selected.
+No license has been chosen yet for the original Sway code.
