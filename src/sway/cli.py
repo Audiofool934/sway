@@ -1,4 +1,4 @@
-"""Setup, diagnostics, a local performance server, and reproducible audio renders."""
+"""Setup, diagnostics, and the local server."""
 
 import argparse
 import importlib.metadata
@@ -6,21 +6,14 @@ import json
 import platform
 import shutil
 import subprocess
-import time
-from pathlib import Path
 
 from .config import (
-    ACTION_STYLES,
     DATA,
     MRT_DIR,
     MRT_FILES,
     MRT_REPO,
     MRT_REVISION,
-    PALETTES,
     ROOT,
-    SEMANTIC_DIR,
-    SEMANTIC_REPO,
-    SEMANTIC_REVISION,
     VISION_ASSETS,
     VISION_DIR,
 )
@@ -28,28 +21,22 @@ from .config import (
 
 def require_mac():
     if platform.system() != "Darwin" or platform.machine() != "arm64":
-        raise SystemExit("This first prototype requires an Apple Silicon Mac and Python 3.12.")
+        raise SystemExit("Sway requires an Apple Silicon Mac and Python 3.12.")
 
 
-def setup(include_music=True, include_semantics=True):
+def setup(include_music=True):
     require_mac()
     import httpx
     from huggingface_hub import snapshot_download
 
     DATA.mkdir(parents=True, exist_ok=True)
-    needed = 1
-    if include_music:
-        needed = 2
-    if include_semantics and not (SEMANTIC_DIR / "model.safetensors").exists():
-        needed = 6
+    needed = 2 if include_music else 1
     if shutil.disk_usage(DATA).free < needed * 1024**3:
         raise SystemExit(f"Setup needs at least {needed} GB of free space, including a reserve.")
     if include_music:
         snapshot_download(
             MRT_REPO, revision=MRT_REVISION, local_dir=MRT_DIR, allow_patterns=list(MRT_FILES)
         )
-    if include_semantics:
-        snapshot_download(SEMANTIC_REPO, revision=SEMANTIC_REVISION, local_dir=SEMANTIC_DIR)
     VISION_DIR.mkdir(parents=True, exist_ok=True)
     for name, url in VISION_ASSETS.items():
         target = VISION_DIR / name
@@ -73,7 +60,7 @@ def doctor():
     from .qwen import qwen_status
 
     # The V1 instrument needs only hand tracking. MRT2 is optional: it renders V1's generated
-    # harmony, and the legacy ensemble page needs it.
+    # harmony, and the theremin experiment needs it.
     missing = [
         str(VISION_DIR / name) for name in VISION_ASSETS if not (VISION_DIR / name).is_file()
     ]
@@ -82,7 +69,7 @@ def doctor():
         missing.append(str(vendor))
     music = [str(MRT_DIR / name) for name in MRT_FILES if not (MRT_DIR / name).is_file()]
     versions = {}
-    for package in ("mlx", "mlx-vlm", "ai-edge-litert", "fastapi"):
+    for package in ("mlx", "ai-edge-litert", "fastapi"):
         try:
             versions[package] = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:
@@ -95,7 +82,6 @@ def doctor():
                 "versions": versions,
                 "missing_required_assets": missing,
                 "missing_music_assets": music,
-                "semantic_model": (SEMANTIC_DIR / "model.safetensors").is_file(),
                 "qwen": qwen_status(),
                 "free_disk_gb": round(shutil.disk_usage(ROOT).free / 1024**3, 1),
             },
@@ -105,129 +91,23 @@ def doctor():
     return 1 if missing else 0
 
 
-def qwen_check():
-    """Verify the credential with synthetic images, never the user's camera."""
-    import base64
-    import io
-
-    from PIL import Image
-
-    from .qwen import QwenRequestError, QwenSemanticModel
-
-    model = None
-    try:
-        model = QwenSemanticModel()
-        output = io.BytesIO()
-        Image.new("RGB", (64, 64), "white").save(output, format="JPEG")
-        frame = base64.b64encode(output.getvalue()).decode()
-        started = time.monotonic()
-        result = model.interpret([frame, frame], [0, 500], {"hands": 0})
-        print(
-            json.dumps(
-                {
-                    "ok": True,
-                    "inference_ms": round((time.monotonic() - started) * 1000),
-                    "intent": result.model_dump(),
-                    **model.last_metrics,
-                },
-                indent=2,
-            )
-        )
-        return 0
-    except (OSError, ValueError, QwenRequestError) as exc:
-        print(json.dumps({"ok": False, "error": str(exc)}))
-        return 1
-    finally:
-        if model:
-            model.close()
-
-
-def render(args):
-    require_mac()
-    import numpy as np
-    import soundfile as sf
-
-    from .music import MusicEngine, NotePlanner
-
-    if not 1 <= args.seconds <= 600:
-        raise SystemExit("Choose a render length from 1 to 600 seconds.")
-    output = Path(args.output).expanduser().resolve()
-    if output.exists():
-        raise SystemExit(f"Refusing to overwrite {output}")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    engine = MusicEngine(seed=args.seed)
-    planner = NotePlanner()
-    engine.set_style(args.palette, args.action)
-    for _ in range(5):
-        engine.generate()
-    timings = []
-    sum_squares = 0.0
-    peak = 0.0
-    count = 0
-    started = time.monotonic()
-    with sf.SoundFile(output, mode="w", samplerate=48000, channels=2, subtype="PCM_16") as audio:
-        for _ in range(round(args.seconds / 0.04)):
-            samples = engine.generate(planner.next(args.tempo, args.action))
-            audio.write(samples)
-            timings.append(engine.last_ms)
-            sum_squares += float(np.sum(samples**2))
-            peak = max(peak, float(np.max(np.abs(samples))))
-            count += samples.size
-    report = {
-        "output": str(output),
-        "seconds": count / 2 / 48000,
-        "generation_seconds": round(time.monotonic() - started, 2),
-        "frame_median_ms": round(float(np.median(timings)), 2),
-        "frame_p95_ms": round(float(np.percentile(timings, 95)), 2),
-        "frames_over_40ms": sum(t > 40 for t in timings),
-        "rms": (sum_squares / count) ** 0.5,
-        "peak": peak,
-        "seed": args.seed,
-        "palette": args.palette,
-        "action": args.action,
-        "requested_tempo": args.tempo,
-        "model_revision": MRT_REVISION,
-    }
-    output.with_suffix(".json").write_text(json.dumps(report, indent=2) + "\n")
-    print(json.dumps(report, indent=2))
-
-
 def main():
-    parser = argparse.ArgumentParser(description="Sway - a generative theremin")
+    parser = argparse.ArgumentParser(description="Sway - an instrument you play with your hands")
     sub = parser.add_subparsers(dest="command", required=True)
     install = sub.add_parser("setup", help="Download pinned models and browser dependencies")
-    choice = install.add_mutually_exclusive_group()
-    choice.add_argument("--music-only", action="store_true", help="Skip the optional VLM")
-    choice.add_argument(
+    install.add_argument(
         "--instrument-only",
         action="store_true",
         help="Install only hand tracking and browser dependencies: V1 without generated harmony",
     )
     sub.add_parser("doctor", help="Check local assets, runtime versions, and disk space")
-    sub.add_parser("qwen-check", help="Make one Qwen vision request using synthetic blank images")
     serve = sub.add_parser("serve", help="Open the local instrument on loopback")
     serve.add_argument("--port", type=int, default=8765)
-    audio = sub.add_parser("render", help="Generate a WAV without a camera or browser")
-    audio.add_argument("--seconds", type=float, default=30)
-    audio.add_argument("--output", required=True)
-    audio.add_argument("--palette", choices=PALETTES, default="chamber")
-    audio.add_argument("--action", choices=ACTION_STYLES, default="piano")
-    audio.add_argument("--tempo", type=float, default=108)
-    audio.add_argument("--seed", type=int, default=7)
     args = parser.parse_args()
     if args.command == "setup":
-        setup(
-            include_music=not args.instrument_only,
-            include_semantics=not (args.music_only or args.instrument_only),
-        )
+        setup(include_music=not args.instrument_only)
     elif args.command == "doctor":
         raise SystemExit(doctor())
-    elif args.command == "qwen-check":
-        raise SystemExit(qwen_check())
-    elif args.command == "render":
-        if not 50 <= args.tempo <= 180:
-            parser.error("Tempo must be between 50 and 180 BPM")
-        render(args)
     else:
         require_mac()
         import uvicorn

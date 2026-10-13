@@ -13,6 +13,7 @@ const ALLOWED = {
   timing: [],
   notes: [],
   melody: [],
+  expression: [],
   band: ["energy", "cut"],
   piece: ["energy", "cut", "capture", "end"],
 };
@@ -28,6 +29,7 @@ export class Coach {
     this.hooks = hooks;
     this.phase = "idle";
     this.lessonIndex = 0;
+    this.lessons = LESSONS;
     this.judge = null;
     this.hold = null;
     this.reach = {};
@@ -39,7 +41,7 @@ export class Coach {
   }
 
   get lesson() {
-    return LESSONS[this.lessonIndex];
+    return this.lessons[this.lessonIndex];
   }
 
   /** Whether a band-hand control reaches the engine during the current step. */
@@ -50,6 +52,9 @@ export class Coach {
   }
 
   begin() {
+    this.lessons = LESSONS.filter(
+      (lesson) => !lesson.camera || this.hooks.camera(),
+    );
     this.lessonIndex = 0;
     if (this.hooks.camera()) this.#reachStep("high");
     else this.#timingIntro();
@@ -57,7 +62,10 @@ export class Coach {
 
   /** Go straight to a lesson's introduction, skipping setup. */
   openLesson(index) {
-    this.#lessonIntro(Math.max(0, Math.min(LESSONS.length - 1, index)));
+    this.lessons = LESSONS;
+    if (typeof index === "string")
+      index = LESSONS.findIndex((lesson) => lesson.id === index);
+    this.#lessonIntro(Math.max(0, Math.min(this.lessons.length - 1, index)));
   }
 
   exit() {
@@ -160,7 +168,7 @@ export class Coach {
     this.hooks.stopEngine();
     const lesson = this.lesson;
     this.hooks.showCard({
-      step: `Lesson ${index + 1} of ${LESSONS.length}`,
+      step: `Lesson ${index + 1} of ${this.lessons.length}`,
       title: lesson.title,
       body: lesson.goal,
       actions: [
@@ -225,6 +233,7 @@ export class Coach {
       beat: event.gesture - COUNT_IN,
       rung: event.rung,
       legato: Boolean(event.legato),
+      velocity: event.velocity,
     });
   }
 
@@ -246,6 +255,7 @@ export class Coach {
       return this.#timingDone();
     if (this.phase === "lesson") {
       this.judge.level(beat - COUNT_IN, this.hooks.engineLevel());
+      this.judge.swell(beat - COUNT_IN, this.hooks.leadExpression?.());
       this.judge.expire(beat - COUNT_IN);
       const end = COUNT_IN + this.lesson.bars * 4;
       // The player may end the piece themselves; results follow its final chord.
@@ -300,7 +310,7 @@ export class Coach {
     this.phase = "results";
     this.hooks.record?.(this.lesson.id, summary);
     const ok = passed(summary);
-    const last = this.lessonIndex === LESSONS.length - 1;
+    const last = this.lessonIndex === this.lessons.length - 1;
     const next = () =>
       last ? this.#graduate() : this.#lessonIntro(this.lessonIndex + 1);
     const lines = Object.entries(summary.kinds).map(([kind, stats]) => {
@@ -308,6 +318,9 @@ export class Coach {
         {
           note: "Notes",
           legato: "Legato moves",
+          soft: "Soft strikes",
+          strong: "Strong strikes",
+          swell: "Swells",
           energy: "Energy changes",
           cut: "Cuts",
           capture: "Loop",
@@ -320,7 +333,7 @@ export class Coach {
       return `${name}: ${stats.hit} of ${stats.total}${timing}`;
     });
     this.hooks.showCard({
-      step: `Lesson ${this.lessonIndex + 1} of ${LESSONS.length}`,
+      step: `Lesson ${this.lessonIndex + 1} of ${this.lessons.length}`,
       title: ok
         ? summary.perfect > summary.total / 2
           ? "Beautiful"
@@ -328,7 +341,7 @@ export class Coach {
         : "Almost",
       body: ok
         ? `You hit ${summary.hit} of ${summary.total} targets.`
-        : `You hit ${summary.hit} of ${summary.total} targets. Try once more, or move on when you're ready.`,
+        : `You hit ${summary.hit} of ${summary.total} targets. Practise each kind of gesture before moving on, or try the next lesson when you're ready.`,
       details: lines,
       actions: ok
         ? [

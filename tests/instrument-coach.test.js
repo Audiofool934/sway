@@ -141,9 +141,9 @@ test("a lesson played on its targets ends on the final chord with results", () =
   assert.equal(card().title, LESSONS[1].title);
 });
 
-test("lesson 3 credits the band's level at each cue, however early it was asked for", () => {
+test("the band lesson credits its level at each cue, however early it was asked for", () => {
   const { coach, card, press, setLevel } = harness({ camera: false });
-  coach.openLesson(2);
+  coach.openLesson("band");
   press("Start lesson");
   assert.equal(coach.allows("energy"), true);
   assert.equal(coach.allows("capture"), false);
@@ -163,4 +163,26 @@ test("lesson 3 credits the band's level at each cue, however early it was asked 
   coach.tick(at(42));
   assert.equal(coach.phase, "results");
   assert.equal(card().body, "You hit 6 of 6 targets.");
+});
+
+test("camera lessons include expression and mouse lessons skip it", () => {
+  for (const camera of [true, false]) {
+    const { coach } = harness({ camera });
+    coach.begin();
+    assert.equal(
+      coach.lessons.some((lesson) => lesson.id === "expression"),
+      camera,
+    );
+    assert.ok(coach.lessons.some((lesson) => lesson.id === "piece"));
+  }
+});
+
+test("expression judges the velocity actually played, not just a correctly timed note", () => {
+  const { coach, press } = harness();
+  coach.openLesson("expression");
+  press("Start lesson");
+  coach.onNote({ gesture: 4, rung: 4, velocity: 1 });
+  assert.equal(coach.judge.targets[0].result, null);
+  coach.onNote({ gesture: 4.05, rung: 4, velocity: 0.4 });
+  assert.equal(coach.judge.targets[0].result.grade, "perfect");
 });

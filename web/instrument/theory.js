@@ -7,6 +7,9 @@ export const frequency = (pitch) => 440 * 2 ** ((pitch - 69) / 12);
 export const clamp = (value, low = 0, high = 1) =>
   Math.min(high, Math.max(low, value));
 
+// The velocity of a strike as quick as the player's usual one; the mix is balanced for it.
+export const TYPICAL_VELOCITY = 0.72;
+
 // Voicings are written out so every chord change keeps common tones in place.
 export const CHORDS = {
   Am: { name: "Am", tones: [9, 0, 4], bass: 33, pad: [57, 60, 64, 67] },

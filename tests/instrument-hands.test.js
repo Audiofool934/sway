@@ -1,11 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { HandTracker, OneEuro, handShape } from "../web/instrument/hands.js";
 import {
   Controls,
   TIMING,
   stepWithHysteresis,
 } from "../web/instrument/controls.js";
+import { TYPICAL_VELOCITY } from "../web/instrument/theory.js";
 
 // A simple metric hand: wrist at the origin, fingers pointing up (+y).
 const MCP = {
@@ -15,6 +17,21 @@ const MCP = {
   17: [-0.033, 0.075],
 };
 const LENGTH = { 5: 0.07, 9: 0.08, 13: 0.075, 17: 0.06 };
+
+test("recorded finger drumming does not strike lead notes or capture loops", () => {
+  const replay = JSON.parse(
+    readFileSync(new URL("./fixtures/finger-drumming.json", import.meta.url)),
+  );
+  const tracker = new HandTracker({ aspect: replay.aspect });
+  const controls = new Controls();
+  const events = replay.frames.flatMap(({ hands, time }) =>
+    controls.update(tracker.update(hands, time), time),
+  );
+  assert.deepEqual(
+    events.filter(({ type }) => type === "noteOn" || type === "capture"),
+    [],
+  );
+});
 
 function worldHand(shape) {
   const points = Array.from({ length: 21 }, () => ({ x: 0, y: 0, z: 0 }));
@@ -248,7 +265,16 @@ test("a pinch plays, moving draws legato, and releasing ends the note", () => {
   const controls = new Controls();
   assert.deepEqual(controls.update({ lead: lead(0.25) }, 0), []);
   const on = controls.update({ lead: lead(0.25, true) }, 0.1);
-  assert.deepEqual(on, [{ type: "noteOn", rung: 2, time: 0.1 }]);
+  // Without a measured strike, as from a mouse, a note plays at the typical velocity.
+  assert.deepEqual(on, [
+    {
+      type: "noteOn",
+      rung: 2,
+      time: 0.1,
+      velocity: TYPICAL_VELOCITY,
+      strike: null,
+    },
+  ]);
   assert.deepEqual(controls.update({ lead: lead(0.26, true) }, 0.13), []);
   const moved = controls.update({ lead: lead(0.45, true) }, 0.2);
   assert.deepEqual(moved, [{ type: "noteMove", rung: 4, time: 0.2 }]);

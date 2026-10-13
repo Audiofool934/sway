@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Camera } from "../web/instrument/camera.js";
 
-function harness(t, bitmap) {
+function harness(t, bitmap, options = {}) {
   const callbacks = [];
   const workers = [];
   const tracks = [];
@@ -62,8 +62,9 @@ function harness(t, bitmap) {
   const camera = new Camera(video, {
     onHands() {},
     onStatus: (status) => statuses.push(status),
+    ...options,
   });
-  const frame = () => callbacks.shift()(100, { captureTime: 100 });
+  const frame = (time = 100) => callbacks.shift()(time, { captureTime: time });
   return { camera, video, frame, callbacks, workers, tracks, statuses };
 }
 
@@ -85,6 +86,34 @@ test("a failed camera frame releases the stream and worker and stops callbacks",
   await h.camera.start();
   assert.equal(h.camera.active, true);
   assert.equal(h.statuses.at(-1), "tracking");
+});
+
+test("a tracking budget skips preprocessing without stopping the camera preview", async (t) => {
+  let bitmaps = 0;
+  const h = harness(
+    t,
+    async () => {
+      bitmaps++;
+      return { close() {} };
+    },
+    { maxFps: 12 },
+  );
+  await h.camera.start();
+  for (let i = 0; i < 30; i++) {
+    await h.frame(100 + i * (1000 / 30));
+    h.workers[0].onmessage({
+      data: { type: "motion", capture_ms: 100 + i * (1000 / 30), hands: [] },
+    });
+  }
+  assert.equal(bitmaps, 10);
+  assert.equal(h.camera.stats.skipped, 20);
+  assert.equal(h.camera.stats.dropped, 0);
+  assert.ok(h.camera.active && !h.tracks[0].stopped);
+  h.camera.stop();
+  await h.camera.start();
+  await h.frame(1100); // Discard the already queued callback from the old session.
+  await h.frame(1101);
+  assert.equal(bitmaps, 11);
 });
 
 test("a failed frame from an old camera session cannot stop a restarted camera", async (t) => {

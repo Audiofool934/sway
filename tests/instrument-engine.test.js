@@ -2,6 +2,34 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Engine } from "../web/instrument/engine.js";
 
+test("the band stays scheduled through a 150 ms pause on the page thread", (t) => {
+  let tick;
+  t.mock.method(globalThis, "setInterval", (callback) => {
+    tick = callback;
+    return 1;
+  });
+  t.mock.method(globalThis, "clearInterval", () => {});
+  const ctx = { currentTime: 0 };
+  const lateNotes = [];
+  const synth = {
+    setTempo() {},
+    play(event, time) {
+      if (time < ctx.currentTime) lateNotes.push({ part: event.part, time });
+      return null;
+    },
+  };
+  const engine = new Engine(ctx, synth, { level: 4 });
+  engine.start(0);
+  t.after(() => engine.stop());
+  ctx.currentTime = 0.02;
+  tick();
+  // The next swung sixteenth is at 168 ms. A brief browser pause must not miss it.
+  ctx.currentTime = 0.17;
+  tick();
+  assert.deepEqual(lateNotes, []);
+  assert.equal(engine.stats.lateSteps, 0);
+});
+
 for (const offset of [-0.05, 0.5]) {
   test(`stopping an ended engine releases its final chord ${offset < 0 ? "before it starts" : "while it sounds"}`, (t) => {
     let tick;

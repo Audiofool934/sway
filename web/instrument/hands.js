@@ -13,11 +13,22 @@ const FINGERS = [
   [17, 20],
 ];
 const PALM = [0, 5, 9, 13, 17];
+// Palm bones whose lengths, on screen and in metres, give the hand's distance.
+const PALM_BONES = [
+  [0, 5],
+  [0, 9],
+  [0, 17],
+  [5, 17],
+];
+// A strike is timed from the most open the pinch was within this long before it caught.
+const STRIKE_WINDOW = 0.15;
 
 // Shape thresholds as ratios of hand size, with hysteresis between on and off.
 export const SHAPE = {
-  pinchOn: 0.3,
-  pinchOff: 0.42,
+  // Require closer fingertips: the recorded drumming reaches 0.217 hand lengths
+  // without a deliberate pinch. Keep a release gap so contact does not flicker.
+  pinchOn: 0.2,
+  pinchOff: 0.32,
   fistOn: 1.2,
   fistOff: 1.4,
   // A pinching index finger reaches the thumb in front of the palm; a fist's index
@@ -26,6 +37,23 @@ export const SHAPE = {
 };
 
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+const span = (points) =>
+  PALM_BONES.reduce(
+    (sum, [a, b]) =>
+      sum + Math.hypot(points[a].x - points[b].x, points[a].y - points[b].y),
+    0,
+  );
+
+/**
+ * How near the hand is to the camera: the palm's size on screen over its size in metres,
+ * both measured across the screen. Tilting the hand shrinks both alike, so only moving
+ * nearer or farther changes it. Null without metric landmarks.
+ */
+export function closeness(points, world) {
+  if (world?.length !== 21) return null;
+  const metres = span(world);
+  return metres > 0 ? span(points) / metres : null;
+}
 
 // One Euro filter: steady when still, responsive when moving (Casiez et al., 2012).
 export class OneEuro {
@@ -160,12 +188,18 @@ export class HandTracker {
         z: p.z / this.aspect,
       })),
       shape: handShape(shapePoints),
+      closeness: closeness(points, hand.world),
       right,
     };
   }
 
   #create(detection) {
-    const filters = { x: new OneEuro(), y: new OneEuro() };
+    const filters = {
+      x: new OneEuro(),
+      y: new OneEuro(),
+      // On a log scale, so nearing and receding are smoothed alike.
+      closeness: new OneEuro({ minCutoff: 1.5, beta: 1 }),
+    };
     // Before the label settles, screen side is weak evidence of anatomical side.
     const prior = 0.5 + (detection.x - 0.5) * 0.4;
     return {
@@ -175,6 +209,9 @@ export class HandTracker {
       role: null,
       pinch: false,
       fist: false,
+      pinches: [], // Recent [time, pinch distance] pairs, for strikes.
+      strike: null,
+      closeness: null,
       rawX: detection.x,
       rawY: detection.y,
       x: detection.x,
@@ -225,15 +262,40 @@ export class HandTracker {
     track.vy = dt > 0 && dt < 0.2 ? (track.y - previousY) / dt : 0;
     track.rightBelief += 0.15 * (detection.right - track.rightBelief);
     track.shape = shape;
+    track.closeness =
+      detection.closeness === null
+        ? null
+        : Math.exp(
+            track.filters.closeness.filter(Math.log(detection.closeness), time),
+          );
     // A fist also brings thumb and index together, so it overrides the pinch.
     track.fist = track.fist
       ? shape.curl < SHAPE.fistOff
       : shape.curl < SHAPE.fistOn && shape.indexCurl < SHAPE.fistIndex;
+    const pinched = track.pinch;
     track.pinch =
       !track.fist &&
       (track.pinch
         ? shape.pinch < SHAPE.pinchOff
         : shape.pinch < SHAPE.pinchOn);
+    // How quickly the pinch closed, in hand sizes per second: from the most open it was
+    // lately to now, measured on the unfiltered shape so the strike adds no delay. Unknown
+    // without an earlier frame to compare. A strike belongs to the frame its pinch caught,
+    // so a pinch that is held, or found again after a dropout, does not strike again.
+    track.pinches = track.pinches.filter(
+      ([t]) => t < time && time - t <= STRIKE_WINDOW,
+    );
+    track.strike = null;
+    if (track.pinch && !pinched) {
+      let widest = null;
+      for (const frame of track.pinches)
+        if (widest === null || frame[1] >= widest[1]) widest = frame;
+      track.strike =
+        widest === null
+          ? null
+          : Math.max(0, (widest[1] - shape.pinch) / (time - widest[0]));
+    }
+    track.pinches.push([time, shape.pinch]);
     track.seenAt = time;
   }
 
@@ -280,6 +342,10 @@ export class HandTracker {
       fist: track.fist,
       shape: track.shape,
       landmarks: track.landmarks,
+      // The strike of a pinch that caught on this frame, and the hand's smoothed nearness
+      // to the camera.
+      strike: track.strike,
+      closeness: track.closeness,
     };
   }
 }

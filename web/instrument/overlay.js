@@ -4,7 +4,7 @@
 // leaves toward the edge. The lead side is the pitch ladder; the band side shows
 // energy zones. Everything is positioned in the mirrored view's coordinates.
 
-import { isChordTone, noteName } from "./theory.js";
+import { TYPICAL_VELOCITY, isChordTone, noteName } from "./theory.js";
 import { HandVisuals } from "./hand-visual.js";
 
 const COLORS = {
@@ -192,7 +192,7 @@ export class Overlay {
     // A slide is joined to the note before it, as the melody trail joins legato notes.
     let before = null;
     for (const target of scene.targets ?? []) {
-      if (target.kind !== "note") continue;
+      if (target.kind !== "note" && target.kind !== "swell") continue;
       let x1 = side.x(target.beat),
         x2 = side.x(target.beat + target.beats);
       if (x1 > x2) [x1, x2] = [x2, x1];
@@ -220,7 +220,19 @@ export class Overlay {
         : rgba(COLORS.ink, soon ? 0.2 : 0.08);
       ctx.fill();
       ctx.stroke();
-      before = target;
+      const label =
+        target.kind === "swell"
+          ? target.value > 0
+            ? "SWELL"
+            : "SOFTEN"
+          : target.expression?.toUpperCase();
+      if (label) {
+        ctx.font = "600 10px ui-sans-serif, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillStyle = rgba(COLORS.ink, 0.95);
+        ctx.fillText(label, (x1 + x2) / 2, y - 8);
+      }
+      if (target.kind === "note") before = target;
     }
     const thick = Math.max(5, rowHeight * 0.18);
     let previous = null;
@@ -241,7 +253,9 @@ export class Overlay {
         ctx.lineTo(side.x(note.start), rowY(note.rung));
         ctx.stroke();
       }
-      stroke(note.start, end, note.rung, COLORS.lead, alpha, thick);
+      // A note is drawn as thick as it was struck.
+      const weight = (note.velocity ?? TYPICAL_VELOCITY) / TYPICAL_VELOCITY;
+      stroke(note.start, end, note.rung, COLORS.lead, alpha, thick * weight);
       previous = { rung: note.rung, end };
     }
     ctx.restore();
@@ -250,7 +264,7 @@ export class Overlay {
   #leadCursor(scene, side, top, bottom, view) {
     // The hand, joined to "now" on its row.
     const { ctx } = this;
-    const { hand, rung: current, gate } = scene.lead;
+    const { hand, rung: current, gate, swell = 0 } = scene.lead;
     if (!hand) return;
     const hx = view.x(hand.x);
     const hy = view.y(hand.y);
@@ -265,9 +279,10 @@ export class Overlay {
     ctx.setLineDash([]);
     this.#cursor(hx, hy, COLORS.lead, gate, false, Boolean(hand.landmarks));
     if (scene.leadHold > 0) this.#ring(hx, hy, 27, scene.leadHold, COLORS.lead);
+    // The note's swell: a larger dot as the hand leans in, a smaller one as it leans back.
     ctx.fillStyle = rgba(COLORS.lead, 1);
     ctx.beginPath();
-    ctx.arc(side.now, y, gate ? 7 : 4, 0, Math.PI * 2);
+    ctx.arc(side.now, y, gate ? 7 * (1 + 0.45 * swell) : 4, 0, Math.PI * 2);
     ctx.fill();
   }
 

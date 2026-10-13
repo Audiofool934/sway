@@ -62,6 +62,29 @@ export const LESSONS = [
     ].map(note),
   },
   {
+    id: "expression",
+    title: "Give notes expression",
+    goal: "Pinch gently for SOFT notes and quickly for STRONG ones. Hold the long notes at the same height: lean toward the camera for SWELL, and away for SOFTEN.",
+    camera: true,
+    level: 1,
+    bars: 8,
+    targets: [
+      ...[
+        [0, 4, "soft"],
+        [4, 4, "strong"],
+        [8, 5, "soft"],
+        [12, 5, "strong"],
+      ].map(([beat, rung, expression]) => ({
+        ...note([beat, rung, 2]),
+        expression,
+      })),
+      note([16, 4, 4]),
+      { kind: "swell", beat: 18, rung: 4, beats: 1, value: 0.5 },
+      note([24, 4, 4]),
+      { kind: "swell", beat: 26, rung: 4, beats: 1, value: -0.5 },
+    ],
+  },
+  {
     id: "band",
     title: "Lead the band",
     goal: "Raise and lower your band hand to set the energy. Make a fist to cut the band, and open it to bring them back.",
@@ -141,7 +164,7 @@ export class Judge {
    * Only the target's rung, struck or slid as charted, can hit it. Any other note
    * leaves it open, since a slide passes other rungs on the way to its target.
    */
-  note({ beat, rung, legato }) {
+  note({ beat, rung, legato, velocity }) {
     const found = this.#nearest(
       "note",
       beat,
@@ -150,6 +173,9 @@ export class Judge {
         target.rung === rung && Boolean(target.legato) === Boolean(legato),
     );
     if (!found) return null;
+    if (found.target.expression === "soft" && !(velocity <= 0.6)) return null;
+    if (found.target.expression === "strong" && !(velocity >= 0.85))
+      return null;
     const grade = this.#grade(found.error);
     if (grade === "late") return null;
     found.target.result = {
@@ -157,6 +183,24 @@ export class Judge {
       errorMs: found.error * this.beatMs,
       legato: Boolean(legato),
     };
+    return found.target;
+  }
+
+  /** A held note must reach the requested swell on its rung during the cue. */
+  swell(beat, lead) {
+    if (!lead?.gate) return null;
+    const found = this.#nearest(
+      "swell",
+      beat,
+      1,
+      (target) =>
+        lead.rung === target.rung &&
+        (target.value > 0
+          ? lead.swell >= target.value
+          : lead.swell <= target.value),
+    );
+    if (!found) return null;
+    found.target.result = { grade: "good", errorMs: found.error * this.beatMs };
     return found.target;
   }
 
@@ -205,7 +249,7 @@ export class Judge {
   #lateness(target) {
     if (target.kind === "note") return 0.5;
     if (target.kind === "energy") return Infinity; // Judged by level().
-    if (target.kind === "cut") return 1;
+    if (target.kind === "cut" || target.kind === "swell") return 1;
     return Infinity; // Capture and ending wait for the player.
   }
 
@@ -216,7 +260,8 @@ export class Judge {
   summary() {
     const byKind = {};
     for (const target of this.targets) {
-      const kind = target.legato ? "legato" : target.kind;
+      const kind =
+        target.expression ?? (target.legato ? "legato" : target.kind);
       const entry = (byKind[kind] ??= { total: 0, hit: 0, errors: [] });
       entry.total++;
       const grade = target.result?.grade;
@@ -247,8 +292,10 @@ export class Judge {
   }
 }
 
-/** A lesson passes when most targets are hit. */
-export const passed = (summary) => summary.rate >= 0.7;
+/** Hit most targets, including at least one of every skill the lesson teaches. */
+export const passed = (summary) =>
+  summary.rate >= 0.7 &&
+  Object.values(summary.kinds).every(({ hit }) => hit > 0);
 
 /**
  * Timing calibration: the median offset between pinches and the beats they aimed at.

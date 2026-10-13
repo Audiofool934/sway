@@ -136,6 +136,43 @@ test("cuts, captures, and endings are judged", () => {
   assert.ok(!piece.done || piece.targets.every((t) => t.result));
 });
 
+test("playing only the melody cannot pass making a piece without its loop and ending", () => {
+  const piece = lesson("piece");
+  const judge = new Judge(piece, { beatSeconds });
+  for (const target of piece.targets.filter((target) => target.kind === "note"))
+    judge.note(target);
+  assert.ok(judge.summary().rate > 0.7);
+  assert.equal(passed(judge.summary()), false);
+  judge.event("capture", 20);
+  assert.equal(passed(judge.summary()), false);
+  judge.event("end", 60);
+  assert.equal(passed(judge.summary()), true);
+});
+
+test("expression requires soft and strong strikes plus an actual held swell", () => {
+  const expression = lesson("expression");
+  const judge = new Judge(expression, { beatSeconds });
+  for (const target of expression.targets.filter(
+    (target) => target.kind === "note",
+  )) {
+    if (target.expression)
+      assert.equal(judge.note({ ...target, velocity: 0.72 }), null);
+    judge.note({ ...target, velocity: target.expression === "soft" ? 0.4 : 1 });
+  }
+  assert.equal(
+    passed(judge.summary()),
+    false,
+    "strikes alone do not teach swells",
+  );
+  assert.equal(judge.swell(18, { gate: false, rung: 4, swell: 1 }), null);
+  assert.equal(judge.swell(18, { gate: true, rung: 5, swell: 1 }), null);
+  assert.equal(judge.swell(18, { gate: true, rung: 4, swell: -1 }), null);
+  assert.ok(judge.swell(18, { gate: true, rung: 4, swell: 0.6 }));
+  assert.ok(judge.swell(26, { gate: true, rung: 4, swell: -0.6 }));
+  assert.equal(judge.summary().hit, expression.targets.length);
+  assert.equal(passed(judge.summary()), true);
+});
+
 test("calibration takes the median offset and bounds it", () => {
   // Pinches land about 50 ms (0.083 beats) late, with one outlier.
   const beats = [1.08, 2.09, 3.08, 4.07, 5.4, 6.08, 7.09];

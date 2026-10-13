@@ -690,7 +690,200 @@ select {
   color: rgba(244, 241, 234, 0.4);
 }
 
+/* Optional listening controls, on the band hand's side between its
+   level names and its "now" line, over the energy already played. */
+
+.listening {
+  position: absolute;
+  top: 110px;
+  left: 104px;
+  width: min(300px, calc(31vw - 104px));
+  max-height: calc(100% - 200px);
+  overflow: auto;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--faint);
+  border-radius: 14px;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  font-size: 12px;
+}
+
+.listening[data-side="right"] {
+  left: auto;
+  right: 104px;
+}
+
+.listening header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+
+.listening h2 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.listening header span {
+  color: rgba(244, 241, 234, 0.4);
+}
+
+.listening button {
+  padding: 5px 10px;
+  border: 1px solid var(--faint);
+  border-radius: 999px;
+  background: rgba(12, 14, 17, 0.55);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.listening button:hover:not(:disabled) {
+  border-color: rgba(244, 241, 234, 0.4);
+}
+
+.listening button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.listening .presets,
+.listening .parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.listening .presets {
+  margin-top: 12px;
+}
+
+.listening .preset.current {
+  border-color: rgba(244, 241, 234, 0.7);
+  background: rgba(244, 241, 234, 0.12);
+}
+
+.listening .group {
+  --role: var(--ink);
+  margin-top: 12px;
+}
+
+.listening .group.generated,
+.listening .group.composer {
+  --role: var(--generated);
+}
+
+.listening .group.band {
+  --role: var(--band);
+}
+
+.listening .group.you {
+  --role: var(--lead);
+}
+
+.listening h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--role);
+}
+
+.listening h3 span {
+  margin-left: 6px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+}
+
+.listening .part {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.listening .part::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--role);
+  transition: box-shadow 120ms linear;
+}
+
+.listening .part[aria-pressed="false"] {
+  color: rgba(244, 241, 234, 0.42);
+  text-decoration: line-through;
+}
+
+.listening .part[aria-pressed="false"]::before {
+  background: var(--faint);
+}
+
+/* Lit while a bar MRT2 generated is playing. */
+.listening .part.sounding {
+  border-color: var(--generated);
+}
+
+.listening .part.sounding::before {
+  box-shadow: 0 0 0 3px rgba(185, 167, 255, 0.35);
+}
+
+.listening dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 7px 12px;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--faint);
+}
+
+.listening dt {
+  color: var(--muted);
+}
+
+.listening dd {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.listening .by {
+  font-weight: 600;
+}
+
+.listening .by.qwen {
+  color: var(--generated);
+}
+
+.listening .chords {
+  color: var(--muted);
+}
+
+.listening .chords b {
+  color: var(--ink);
+}
+
+.listening .detail {
+  display: block;
+  color: var(--muted);
+}
+
 @media (max-width: 860px) {
+  .listening,
+  .listening[data-side="right"] {
+    top: auto;
+    bottom: 96px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-height: 45%;
+  }
   .settings {
     grid-template-columns: max-content;
   }

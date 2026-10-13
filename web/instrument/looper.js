@@ -1,6 +1,9 @@
 // Retrospective looping: the lead is always remembered, and a capture turns the last
-// cycle into a layer. Notes keep their position in the chord cycle, so a layer
-// replays over the harmony it was played on, starting right after the capture.
+// cycle into a layer. Each note keeps its pitch, velocity, and place in the cycle, and
+// replays there from right after the capture. The chords may differ by then, since each
+// cycle has its own plan, but every note is on the ladder, so the loop stays in key.
+
+import { TYPICAL_VELOCITY } from "./theory.js";
 
 export const MAX_LAYERS = 4;
 
@@ -12,7 +15,7 @@ export class Looper {
     this.nextId = 1;
   }
 
-  noteOn(pitch, beat, velocity = 0.8) {
+  noteOn(pitch, beat, velocity = TYPICAL_VELOCITY) {
     this.noteOff(beat);
     this.history.push({ pitch, start: beat, end: null, velocity });
     // Two cycles of history is enough for any capture.
