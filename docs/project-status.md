@@ -69,7 +69,8 @@ The results so far:
 Everett took the listening test on October 13 and picked the right clip in 20 of 24 pairs.
 Activity, stillness, and height are heard; spread is at chance in every variant, even in steered, where the audio measured its strongest effect.
 The [note's listening section](motion-to-music.md#listening-test) has the details.
-A spread check is waiting for Everett: 12 steered spread pairs that ask about the sound, not the hands, at `outputs/spread-check-2026-10-13/listening-test.html`.
+A spread check the same day asked about the sound instead: Everett heard the triad-to-scale change in 9 of 12 pairs, so it is audible but subtle, and the movement question did not point to it.
+The [spread check](motion-to-music.md#spread-check) has the details.
 
 The theremin page itself is at `/theremin.html`, and the [experiment guide](generative-theremin-experiment.md) describes it.
 With camera tracking running, MRT2 needed a median of 37 to 39 ms for each 40 ms frame, and two-minute replays had four or five dropouts; with nothing else running, it needed 22 ms.
@@ -83,8 +84,8 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 ## Next
 
 1. **Make steered respond within about half a second:** read the style every frame, smooth it less, and fade the output on rest; then measure again.
-2. **Decide what spread should do:** test whether the triad-to-scale change can be heard at all, or map spread to something more audible.
-3. **If both hold up, build a playable steered page** with the camera, reusing the theremin page's tracking and audio streaming.
+2. **Make spread clearer** when building the playable page: a bigger contrast than triad to scale, or a movement that suggests tension.
+3. **If the speed holds up, build a playable steered page** with the camera, reusing the theremin page's tracking and audio streaming.
 
 ## Working rules
 
@@ -109,6 +110,7 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 | October 7       | Cleanup: one branch, the paused prototypes and 15 historical documents removed.                    |
 | October 7       | Motion as music versus motion to music; the first steering measurements.                           |
 | October 13      | Listening test: 20 of 24 right; spread not heard.                                                  |
+| October 13      | Spread check: asked about the sound, 9 of 12 right.                                                |
 
 ## Where things are
 

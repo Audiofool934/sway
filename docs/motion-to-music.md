@@ -183,6 +183,25 @@ The answers are in `outputs/motion-to-music-2026-10-07/listening-results-2026-10
   With two pairs in each cell, 6 of 8 and 7 of 8 are within the same noise.
   The test confirms that steered's movements are audible, except spread; it does not rank steered against the others.
 
+### Spread check
+
+The same day, a second test asked about the sound instead of the hands.
+It had 12 steered spread pairs, one for each of 12 seeds, and asked "In which clip does the melody sound more tense, with notes beyond the chord?"
+The answers are in `outputs/spread-check-2026-10-13/listening-results-2026-10-13.json`, next to the clips.
+
+- **Everett picked the wide clip in 9 of 12 pairs.**
+  Guessing does that well about 7% of the time.
+- **One miss was the music's, not the ear's.**
+  In seed 107 the audio measured more tension in the narrow clip, and Everett chose that clip.
+  Counted against what the clips contain, he agreed in 10 of 12, which guessing does about 2% of the time.
+- **The other two misses, seeds 105 and 109, had large measured differences.**
+  Three right answers, seeds 102, 103, and 106, had almost none, so the measured tension is not all that he heard.
+- **He got the first eight right,** so the feedback after each answer does not explain the score.
+
+The change from triad to scale can be heard when the listener knows what to listen for, but not reliably.
+The first test's chance score came mostly from the question: "the hands spread wide" does not point a listener to tension.
+A playable page should make the spread's sound clearer or give it a movement that suggests it.
+
 ## Limits
 
 - The movements are scripted, not hands, and the renders are offline, so the response times leave out tracking and playback delay.
