@@ -25,8 +25,7 @@ The [motion-to-music note](motion-to-music.md) defines how to measure that, and 
 | `v2-design`       | [#3](https://github.com/Audiofool934/sway/pull/3): the V2 proposal, `src/sway/pitch.py`, and the palette probe.                                                                                                                                                                                             | Open pull request, kept as a reference. Not built.                                                    |
 
 Numbers such as #3 are pull requests on GitHub.
-[#2](https://github.com/Audiofool934/sway/pull/2), [#4](https://github.com/Audiofool934/sway/pull/4), and [#5](https://github.com/Audiofool934/sway/pull/5) are still open there, but `main` includes their work now.
-Whether to close them is Everett's decision.
+[#2](https://github.com/Audiofool934/sway/pull/2), [#4](https://github.com/Audiofool934/sway/pull/4), and [#5](https://github.com/Audiofool934/sway/pull/5) closed on October 13, because `main` includes their work.
 [Issue #6](https://github.com/Audiofool934/sway/issues/6) records an evaluation of DEMON, ACE-Step 1.5, and Stable Audio 3 for later.
 
 ## Pages
@@ -114,7 +113,7 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 | October 13      | Listening test: 20 of 24 right; spread not heard.                                                  |
 | October 13      | Spread check: asked about the sound, 9 of 12 right.                                                |
 | October 13      | `motion-to-music` opened as #11, stacked on #9.                                                    |
-| October 13      | #9 merged into `main`; #10 and #11 now target `main`.                                              |
+| October 13      | #9 merged into `main`; #10 and #11 now target `main`; #2, #4, and #5 closed.                       |
 | October 13      | Speed run: the fade makes rest fast; MRT2 itself takes 1.2 to 1.7 seconds to follow.               |
 | October 13      | The steering latency is accepted; next is a playable steered page.                                 |
 
