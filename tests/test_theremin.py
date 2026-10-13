@@ -38,6 +38,9 @@ class FakeEngine:
     def apply_style(self, embedding):
         self.target = embedding
 
+    def keep_busy(self, until):
+        pass
+
     def reset(self, seed):
         self.seeds.append(seed)
         self.rows.clear()

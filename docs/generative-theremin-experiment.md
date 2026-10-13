@@ -77,7 +77,8 @@ Increasing the buffer to 240 ms still produced four underruns in a separate two-
 The stream therefore remains an experimental listening prototype with audible-interruption risk, not a verified uninterrupted instrument.
 The desktop preview, controller, model steering, recording, and stop/restart flows can be tried now; sustained real-time headroom and the complete physical response delay remain open work.
 On October 7, with no browser or camera running, the same render path took a median of 22 ms per 40 ms frame, with 90% of frames under 24 ms.
-The model therefore has headroom on its own; the slowdown to 37-39 ms comes from sharing the Mac with tracking and the browser, and its exact cause is not yet measured.
+The model therefore has headroom on its own.
+On October 13 the slowdown was traced to the GPU clock, which macOS lowers when the GPU is idle for part of every frame; the [steered page guide](steered-page.md#the-gpu-filler) describes the measurements and the filler that now keeps frames at about 22 ms.
 
 The decisive listening checks remain:
 

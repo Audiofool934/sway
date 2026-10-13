@@ -69,11 +69,11 @@ The theremin experiment:
 
 | Path                                                        | Responsibility                                                              |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `web/theremin.html`, `theremin.css`, `theremin.js`          | The page, its camera and pointer input, and its drawing.                    |
+| `web/theremin.html`, `theremin.css`, `theremin.js`          | The page, its words, and its readouts.                                      |
 | `web/theremin-controls.js`                                  | Hand features to pitch, spread, articulation, and energy.                   |
 | `web/theremin-audio.js`, `theremin-worklet.js`              | Streamed playback with gain, filter, and room, and the recording of a take. |
 | `web/audio-buffer.js`                                       | The stereo buffer the worklet plays from.                                   |
-| `src/sway/theremin.py`, `/api/theremin/stream`              | One MRT2 stream steered by the newest controls, 40 ms at a time.            |
+| `src/sway/theremin.py`, `/api/theremin/stream`              | Turns the newest controls into MRT2's notes and style, 40 ms at a time.     |
 | `tests/theremin-controls.test.js`, `tests/test_theremin.py` | Controls, validation, stream ownership, and cleanup.                        |
 
 The motion-to-music measurements ([design note](motion-to-music.md)):
@@ -87,6 +87,22 @@ The motion-to-music measurements ([design note](motion-to-music.md)):
 
 `uv run --locked python -m sway.steering --out <new folder>` runs every variant with real MRT2 and writes `summary.md`, `results.json`, the kept clips, and `listening-test.html`.
 `--variants`, `--tests`, `--seeds`, and `--keep-audio` narrow the run, and `--ask sound` makes the listening test ask about the sound instead of the movement.
+
+The steered page ([guide](steered-page.md)):
+
+| Path                                                      | Responsibility                                                        |
+| --------------------------------------------------------- | --------------------------------------------------------------------- |
+| `web/steered.html`, `steered.js`                          | The page, its words, and its readouts; it uses `theremin.css`.        |
+| `web/steered-controls.js`                                 | Hand features to height, activity, and spread.                        |
+| `src/sway/steered.py`, `/api/steered/stream`              | Plays `steering.Steered` with the fade on stillness, 40 ms at a time. |
+| `tests/steered-controls.test.js`, `tests/test_steered.py` | Controls, validation, stream ownership, and the one model thread.     |
+
+Shared by the theremin and steered pages:
+
+| Path                 | Responsibility                                                                                 |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| `web/stream-page.js` | The camera and pointer input, the stream's socket, start and stop, recording, and drawing.     |
+| `src/sway/stream.py` | One window at a time plays a renderer on the model thread, with the GPU filler between frames. |
 
 Shared by both:
 

@@ -72,6 +72,9 @@ class SteeredRenderer:
             "gain": round(self.instrument.gain, 3),
         }
 
+    def idle(self, until):
+        self.engine.keep_busy(until)
+
 
 class SteeredService(StreamService):
     name = "steered"

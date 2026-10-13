@@ -13,6 +13,7 @@ from starlette.websockets import WebSocketDisconnect
 from .music import MODEL_THREAD
 
 log = logging.getLogger(__name__)
+FILL_MARGIN = 0.004  # Seconds before the next frame at which the GPU filler stops.
 
 
 def promote_thread() -> bool:
@@ -32,8 +33,9 @@ def promote_thread() -> bool:
 class StreamService:
     """Run one renderer on the model thread, and let one window at a time play it.
 
-    The renderer has `start(seed)`, which returns details for the page, and
-    `render(control)`, which returns 40 ms of stereo float32 audio and its stats.
+    The renderer has `start(seed)`, which returns details for the page,
+    `render(control)`, which returns 40 ms of stereo float32 audio and its stats, and
+    `idle(until)`, which keeps the GPU busy between frames (`MusicEngine.keep_busy`).
     Subclasses name the stream and its controls, say whether the model is installed,
     and say how a controller that went silent is released.
     """
@@ -123,6 +125,8 @@ class StreamService:
                     )
                 await asyncio.wait_for(websocket.send_bytes(audio), timeout=2)
                 deadline = max(deadline + 0.04, time.monotonic() - 0.08)
+                if deadline - time.monotonic() > FILL_MARGIN:
+                    await self.call(self.renderer.idle, deadline - FILL_MARGIN)
                 await asyncio.sleep(max(0, deadline - time.monotonic()))
         except (WebSocketDisconnect, TimeoutError):
             pass

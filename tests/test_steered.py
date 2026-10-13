@@ -25,6 +25,7 @@ class FakeEngine:
         self.target = self.current = None
         self.rows = []
         self.seeds = []
+        self.idled = []
 
     def reset(self, seed):
         self.seeds.append(seed)
@@ -32,6 +33,9 @@ class FakeEngine:
 
     def apply_style(self, embedding):
         self.target = embedding
+
+    def keep_busy(self, until):
+        self.idled.append(until)
 
     def generate(self, notes, drumless=False, note_guidance=1.0):
         assert drumless
@@ -98,7 +102,10 @@ def test_browser_stream_has_audio_rejects_second_window_and_releases_on_disconne
         assert ws.receive_json()["type"] == "loading"
         assert ws.receive_json()["type"] == "ready"
         ws.send_json({"seq": 1, "height": 0.7, "activity": 0.6, "spread": 0.5})
-        assert len(ws.receive_bytes()) == FRAME_SAMPLES * 2 * 4
+        for _ in range(3):
+            assert len(ws.receive_bytes()) == FRAME_SAMPLES * 2 * 4
+        # Between frames, the model thread keeps the GPU busy until just before the next.
+        assert service.renderer.engine.idled
         with pytest.raises(WebSocketDisconnect) as rejected:
             with browser.websocket_connect("/api/steered/stream"):
                 pass

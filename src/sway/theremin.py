@@ -109,6 +109,9 @@ class ThereminRenderer:
             "pitches": sorted(pitches),
         }
 
+    def idle(self, until):
+        self.engine.keep_busy(until)
+
 
 class ThereminService(StreamService):
     name = "theremin"
