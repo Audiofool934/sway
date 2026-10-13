@@ -232,6 +232,9 @@ The results are in `outputs/speed-2026-10-13/`.
   With the style and the notes changed at once, MRT2 still takes 1.2 to 1.7 seconds to follow.
   That is the model finishing what it plays, and these handles cannot make it faster.
 
+Everett decided the same day that this latency is acceptable for steering, so the half-second target is dropped.
+The fade on stillness stays, because it costs nothing.
+
 ## Limits
 
 - The movements are scripted, not hands, and the renders are offline, so the response times leave out tracking and playback delay.

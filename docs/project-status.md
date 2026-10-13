@@ -84,11 +84,10 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 
 ## Next
 
-1. **Decide how a steered page answers within half a second.**
-   The [speed run](motion-to-music.md#speed) found that MRT2 itself takes 1.2 to 1.7 seconds to follow a movement; only the fade on rest is fast.
-   One option is a direct sound layer, as on the theremin page, that answers the hands at once while the model's notes follow.
-2. **Make spread clearer** when building the playable page: a bigger contrast than triad to scale, or a movement that suggests tension.
-3. **Build a playable steered page** with the camera, reusing the theremin page's tracking and audio streaming.
+1. **Build a playable steered page** with the camera, reusing the theremin page's tracking and audio streaming.
+   Use steered with the fade on stillness.
+   Everett decided on October 13 that MRT2's 1.2 to 1.7 seconds to follow a movement is acceptable, so the half-second target is dropped.
+2. **Make spread clearer** on that page: a bigger contrast than triad to scale, or a movement that suggests tension.
 
 ## Working rules
 
@@ -117,6 +116,7 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 | October 13      | Spread check: asked about the sound, 9 of 12 right.                                                |
 | October 13      | `motion-to-music` opened as #11, stacked on #9.                                                    |
 | October 13      | Speed run: the fade makes rest fast; MRT2 itself takes 1.2 to 1.7 seconds to follow.               |
+| October 13      | The steering latency is accepted; next is a playable steered page.                                 |
 
 ## Where things are
 
