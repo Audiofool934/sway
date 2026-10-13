@@ -413,8 +413,9 @@ def features(audio: np.ndarray) -> dict:
         if energy.sum() > 0:
             share = energy / energy.sum()
             result["register"][i] = float((np.arange(128) * share).sum())
-            classes[i] = np.bincount(np.arange(128) % 12, weights=share, minlength=12)
-            result["tension"][i] = 1 - float(classes[i][triad].sum())
+            # Raw energy, so that a quiet window weighs less than a loud one over the span.
+            classes[i] = np.bincount(np.arange(128) % 12, weights=energy, minlength=12)
+            result["tension"][i] = 1 - float(classes[i][triad].sum() / classes[i].sum())
     reach = round(SPAN / 2 / HOP)
     result["notes"] = np.full((count, 12), np.nan)
     for i in range(count):

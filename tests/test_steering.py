@@ -146,6 +146,13 @@ def test_features_read_register_tension_loudness_silence_and_density():
     assert dense > 2 * sparse > 0
 
 
+def test_notes_weigh_each_window_by_its_energy():
+    # A loud A, then a C 32 dB quieter but still above SILENCE, within one span.
+    found = steering.features(np.concatenate([tone(69, 0.5), tone(60, 0.5, level=0.005)]))
+    middle = found["notes"][np.argmin(np.abs(found["time"] - 0.5))]
+    assert middle[9] > 0.9 and middle[0] < 0.1
+
+
 def test_measure_separates_the_hand_from_the_seed():
     times = np.arange(100) * steering.HOP + steering.WINDOW / 2
     runs = {}
