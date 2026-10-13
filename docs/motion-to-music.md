@@ -202,6 +202,35 @@ The change from triad to scale can be heard when the listener knows what to list
 The first test's chance score came mostly from the question: "the hands spread wide" does not point a listener to tension.
 A playable page should make the spread's sound clearer or give it a movement that suggests it.
 
+## Speed
+
+On October 13 a `quick` variant tested the three fixes that the results above suggested.
+It is steered with these changes:
+
+- The style blend follows the hands at once, instead of moving 18% of the way in each frame.
+- MRT2 reads the style in every frame, instead of every fifth frame.
+- Stillness fades the output out over about 0.08 seconds, as the theremin page does.
+
+Both variants ran again on six seeds; steered repeated its October 7 numbers exactly.
+The results are in `outputs/speed-2026-10-13/`.
+
+| Movement                 | Steered: half | Quick: half | Quick: consistency, effect |
+| ------------------------ | ------------- | ----------- | -------------------------- |
+| Height, register         | 1.23 s        | 1.53 s      | 100%, 2.0                  |
+| Activity, density        | 2.33 s        | 1.18 s      | 83%, 1.0                   |
+| Spread, harmonic tension | 1.68 s        | 1.68 s      | 100%, 2.6                  |
+| Stillness, loudness      | 1.83 s        | 0.68 s      | 100%, 42.2                 |
+
+- **The fade works.**
+  Stillness now becomes audible after 0.33 seconds, against 2.58 seconds before.
+- **Density is twice as fast, but weaker:** 83% of seeds and an effect of 1.0, against 100% and 1.9.
+- **Register is not faster.**
+  It is stronger, but it took 0.3 seconds longer.
+- **Spread did not change,** as expected: it uses the note conditioning, which already changed at once.
+- **The smoothing was not the bottleneck.**
+  With the style and the notes changed at once, MRT2 still takes 1.2 to 1.7 seconds to follow.
+  That is the model finishing what it plays, and these handles cannot make it faster.
+
 ## Limits
 
 - The movements are scripted, not hands, and the renders are offline, so the response times leave out tracking and playback delay.

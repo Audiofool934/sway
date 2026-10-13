@@ -80,6 +80,7 @@ TESTS = (
 # Instrument variants. Each turns a movement into one model frame, and can be copied.
 
 REST = 0.05  # Activity below this is stillness.
+FADE_IN = 0.02  # Seconds. How fast faded output returns, as on the theremin page.
 A_MINOR_TRIAD = {9, 0, 4}
 A_MINOR_PENTATONIC = {9, 0, 2, 4, 7}
 
@@ -93,17 +94,22 @@ class Styled:
 
     Subclasses choose the descriptions, how a movement weighs them, and which pitches the
     model may play. As in the theremin, the style is smoothed here, and MRT2 reads it every
-    five frames.
+    `style_every` frames. With `fade` set, the output fades out over about that many
+    seconds while the hands are still, as the theremin page does.
     """
 
     name = ""
     corners: tuple[str, str, str, str] = ("", "", "", "")
     guidance = 1.0
+    smoothing = 0.18  # The fraction of the way to a new blend in each frame.
+    style_every = 5
+    fade: float | None = None
 
     def __init__(self, engine):
         self.engine = engine
         self.styles = np.stack([engine.style.embed(text) for text in self.corners])
         self.weights = None
+        self.gain = 1.0
 
     def blend(self, move: Move) -> np.ndarray:
         raise NotImplementedError
@@ -113,7 +119,9 @@ class Styled:
 
     def start(self, seed: int):
         self.engine.reset(seed)
+        self.engine.style_every = self.style_every
         self.weights = self.blend(NEUTRAL)
+        self.gain = 1.0
         self._style()
 
     def _style(self):
@@ -122,16 +130,27 @@ class Styled:
         self.engine.current = embedding.copy()
 
     def render(self, move: Move) -> np.ndarray:
-        self.weights += 0.18 * (self.blend(move) - self.weights)
+        self.weights += self.smoothing * (self.blend(move) - self.weights)
         self._style()
-        return self.engine.generate(self.notes(move), drumless=True, note_guidance=self.guidance)
+        audio = self.engine.generate(self.notes(move), drumless=True, note_guidance=self.guidance)
+        return audio if self.fade is None else self._faded(audio, move.activity < REST)
+
+    def _faded(self, audio: np.ndarray, still: bool) -> np.ndarray:
+        """`audio` with its gain moving toward 0 while still and back to 1 otherwise."""
+        target, seconds = (0.0, self.fade) if still else (1.0, FADE_IN)
+        decay = np.exp(-np.arange(1, len(audio) + 1) / (seconds * SAMPLE_RATE))
+        gains = target + (self.gain - target) * decay
+        self.gain = float(gains[-1])
+        return audio * gains[:, None].astype(audio.dtype)
 
     def snapshot(self) -> dict:
-        return {"engine": self.engine.snapshot(), "weights": self.weights.copy()}
+        return {"engine": self.engine.snapshot(), "weights": self.weights.copy(), "gain": self.gain}
 
     def restore(self, snapshot: dict, seed: int):
         self.engine.restore(snapshot["engine"], seed)
+        self.engine.style_every = self.style_every
         self.weights = snapshot["weights"].copy()
+        self.gain = snapshot["gain"]
 
 
 def _plane(x: float, y: float) -> np.ndarray:
@@ -219,6 +238,17 @@ class Steered(Styled):
             if pitch % 12 in classes:
                 tokens[pitch] = FREE
         return tokens
+
+
+class Quick(Steered):
+    """Steered, made faster: the blend follows the hands at once, MRT2 reads the style
+    every frame, and stillness fades the output like the theremin page.
+    """
+
+    name = "quick"
+    smoothing = 1.0
+    style_every = 1
+    fade = 0.08
 
 
 # theremin-controls.js's pitch steps.
@@ -617,6 +647,7 @@ def main():
         "theremin": lambda: Theremin(engine),
         "window": lambda: Window(engine),
         "steered": lambda: Steered(engine),
+        "quick": lambda: Quick(engine),
     }
     seeds = list(range(100, 100 + args.seeds))
     tests = [next(t for t in TESTS if t.name == name) for name in args.tests.split(",")]

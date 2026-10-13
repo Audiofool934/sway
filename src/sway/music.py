@@ -99,6 +99,7 @@ class MusicEngine:
         self.target = None
         self.current = None
         self.style_tokens = np.full(12, -1, dtype=np.int32)
+        self.style_every = 5  # Frames between style updates.
         self.frame = 0
         self.last_ms = 0.0
 
@@ -175,7 +176,7 @@ class MusicEngine:
         return np.clip(samples, -1, 1)
 
     def update_style(self):
-        """Move the style a fifth of the way to its target every five frames."""
-        if self.current is not None and self.frame % 5 == 0:
+        """Move the style a fifth of the way to its target every `style_every` frames."""
+        if self.current is not None and self.frame % self.style_every == 0:
             self.current += 0.2 * (self.target - self.current)
             self.style_tokens = self.style.tokens(self.current)

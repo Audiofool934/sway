@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from sway import steering
-from sway.steering import FREE, NEUTRAL, SILENT, Move, Steered, ThereminHand, Window
+from sway.steering import FREE, NEUTRAL, SILENT, Move, Quick, Steered, ThereminHand, Window
 
 SR = steering.SAMPLE_RATE
 FRAME_SAMPLES = round(steering.FRAME * SR)
@@ -206,3 +206,35 @@ def test_a_listening_page_can_ask_about_the_sound_of_one_test(tmp_path):
     for trial in trials:
         a = f"steered/harmony-a-seed{trial['seed']}.wav"
         assert trial[trial["answer"]] == a
+
+
+def test_quick_follows_the_hands_at_once_and_reads_the_style_every_frame():
+    quick = Quick(FakeEngine())
+    quick.start(1)
+    assert quick.engine.style_every == 1
+    quick.render(Move(height=1.0, activity=1.0))
+    assert np.allclose(quick.weights, steering._plane(1.0, 1.0))
+
+
+def test_quick_fades_out_on_stillness_and_back_in_on_movement():
+    quick = Quick(FakeEngine())
+    quick.start(1)
+    still = Move(activity=0.0)
+    quick.render(still)
+    assert 0.5 < quick.gain < 0.7  # One 40 ms frame of an 80 ms fade.
+    for _ in range(5):
+        quick.render(still)
+    assert quick.gain < 0.05
+    quick.render(NEUTRAL)
+    assert quick.gain > 0.8
+
+
+def test_a_copied_moment_keeps_the_fade():
+    quick = Quick(FakeEngine())
+    quick.start(1)
+    quick.render(Move(activity=0.0))
+    moment = quick.snapshot()
+    gain = quick.gain
+    quick.render(NEUTRAL)
+    quick.restore(moment, 2)
+    assert quick.gain == gain
