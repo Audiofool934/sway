@@ -128,6 +128,7 @@ Each cell gives the consistency, the effect, and the half time of the test's own
 | Note freedom             | 0.06-0.35          | 0.46-0.55          | 0.43-0.66         |
 
 `outputs/motion-to-music-2026-10-07/summary.md` has every measurement, and `results.json` has every attribute.
+The note freedom figures come from an older note analysis, which gave a quiet window as much weight as a loud one; it was fixed on October 13, and no other figure changes.
 
 - **Steered is the first version in the goal's corner.**
   Each movement moved its attribute the expected way in at least five of six seeds, and harmony, density, and rest did so in all six.
