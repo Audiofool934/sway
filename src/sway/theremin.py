@@ -1,20 +1,14 @@
 """A gesture-steered MRT2 stream, with no autonomous accompaniment or bar queue."""
 
-import asyncio
-import ctypes
-import logging
-import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
-from urllib.parse import urlsplit
 
 import numpy as np
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from fastapi import APIRouter, WebSocket
+from pydantic import BaseModel, ConfigDict, Field
 
 from .harmony import assets_ready
+from .stream import StreamService, promote_thread
 
-log = logging.getLogger(__name__)
 router = APIRouter()
 
 STYLES = (
@@ -49,15 +43,7 @@ class ThereminRenderer:
 
     def start(self, seed):
         if self.engine is None:
-            # Raise this thread to macOS's interactive priority before MLX creates
-            # its native threads. Camera processing must not starve the audio stream.
-            self.interactive = False
-            if sys.platform == "darwin":
-                runtime = ctypes.CDLL("/usr/lib/libSystem.B.dylib")
-                promote = runtime.pthread_set_qos_class_self_np
-                promote.argtypes = (ctypes.c_uint, ctypes.c_int)
-                promote.restype = ctypes.c_int
-                self.interactive = promote(0x21, 0) == 0
+            self.interactive = promote_thread()
             if self.factory is None:
                 from .music import MusicEngine
 
@@ -124,105 +110,19 @@ class ThereminRenderer:
         }
 
 
-class ThereminService:
+class ThereminService(StreamService):
+    name = "theremin"
+    control = Control
+    busy = "A theremin performance is already open"
+
     def __init__(self, renderer=None):
-        self.renderer = renderer or ThereminRenderer()
-        self.executor = None
-        self.owner = None
+        super().__init__(renderer or ThereminRenderer())
 
-    async def call(self, fn, *args):
-        if self.executor is None:
-            self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sway-theremin")
-        future = asyncio.get_running_loop().run_in_executor(self.executor, fn, *args)
-        try:
-            return await asyncio.shield(future)
-        except asyncio.CancelledError:
-            # Finish the one in-flight model frame before releasing session ownership.
-            await future
-            raise
+    def ready(self):
+        return assets_ready()
 
-    async def close(self):
-        if self.executor is not None:
-            self.executor.shutdown(wait=True, cancel_futures=True)
-            self.executor = None
-
-    async def connect(self, websocket):
-        origin = websocket.headers.get("origin")
-        if websocket.url.hostname not in ("127.0.0.1", "localhost", "testserver") or (
-            origin and urlsplit(origin).netloc != websocket.headers.get("host")
-        ):
-            await websocket.close(code=1008)
-            return
-        if self.owner is not None:
-            await websocket.close(code=1008, reason="A theremin performance is already open")
-            return
-        if not assets_ready():
-            await websocket.close(code=1008, reason="Local MRT2 assets are missing")
-            return
-        owner = object()
-        self.owner = owner
-        control = Control()
-        received = time.monotonic()
-
-        async def receive():
-            nonlocal control, received
-            while True:
-                message = await websocket.receive_text()
-                if len(message) > 2048:
-                    await websocket.close(code=1009)
-                    return
-                try:
-                    candidate = Control.model_validate_json(message)
-                except ValidationError:
-                    await websocket.close(code=1008, reason="Invalid musical controls")
-                    return
-                if candidate.seq >= control.seq:
-                    control, received = candidate, time.monotonic()
-
-        receiver = None
-        try:
-            await websocket.accept()
-            receiver = asyncio.create_task(receive())
-            seed = time.time_ns() % (2**31 - 1)
-            await websocket.send_json({"type": "loading"})
-            prepared = await self.call(self.renderer.start, seed)
-            if receiver.done():
-                return
-            await websocket.send_json(
-                {"type": "ready", "seed": seed, "sampleRate": 48000, **prepared}
-            )
-            deadline = time.monotonic()
-            while not receiver.done():
-                current = control
-                # A disconnected/frozen controller must not sustain a note forever.
-                if time.monotonic() - received > 0.6:
-                    current = current.model_copy(update={"active": False, "energy": 0})
-                render_started = time.monotonic()
-                audio, stats = await self.call(self.renderer.render, current)
-                stats["renderMs"] = round((time.monotonic() - render_started) * 1000, 1)
-                if receiver.done():
-                    break
-                if stats["frame"] % 5 == 0:
-                    await asyncio.wait_for(
-                        websocket.send_json({"type": "frame", **stats}), timeout=2
-                    )
-                await asyncio.wait_for(websocket.send_bytes(audio), timeout=2)
-                deadline = max(deadline + 0.04, time.monotonic() - 0.08)
-                await asyncio.sleep(max(0, deadline - time.monotonic()))
-        except (WebSocketDisconnect, TimeoutError):
-            pass
-        except Exception:
-            log.exception("Theremin generation stopped")
-            try:
-                await websocket.close(code=1011, reason="Sound generation stopped; please restart")
-            except (RuntimeError, WebSocketDisconnect):
-                pass
-        finally:
-            if receiver is not None:
-                receiver.cancel()
-                await asyncio.gather(receiver, return_exceptions=True)
-            if self.owner is owner:
-                self.owner = None
+    def release(self, control):
+        return control.model_copy(update={"active": False, "energy": 0})
 
 
 SERVICE = ThereminService()

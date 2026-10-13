@@ -5,11 +5,17 @@ See THIRD_PARTY_NOTICES.md for attribution and the inspected source revision.
 """
 
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
 
 from .config import MRT_DIR
+
+# MLX keeps its GPU streams per thread: once one thread has run MRT2, another thread
+# fails with "There is no Stream(gpu, 1) in current thread" (mlx 0.31). Every engine in
+# the server therefore runs on this one thread.
+MODEL_THREAD = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sway-model")
 
 
 class StyleEncoder:

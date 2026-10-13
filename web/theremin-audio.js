@@ -1,7 +1,10 @@
 import { encodeWav } from "./instrument/wav.js";
 
 export class ThereminAudio {
-  constructor() {
+  // With `expression` off, the page plays the model's output as it is: the gain and
+  // the low-pass filter stay open, and control() changes nothing.
+  constructor({ expression = true } = {}) {
+    this.expressive = expression;
     this.context = new AudioContext({
       latencyHint: "interactive",
       sampleRate: 48000,
@@ -27,10 +30,10 @@ export class ThereminAudio {
     };
     this.filter = ctx.createBiquadFilter();
     this.filter.type = "lowpass";
-    this.filter.frequency.value = 4500;
+    this.filter.frequency.value = this.expressive ? 4500 : 16000;
     this.filter.Q.value = 0.35;
     this.expression = ctx.createGain();
-    this.expression.gain.value = 0;
+    this.expression.gain.value = this.expressive ? 0 : 1;
     const highpass = ctx.createBiquadFilter();
     highpass.type = "highpass";
     highpass.frequency.value = 45;
@@ -85,6 +88,7 @@ export class ThereminAudio {
     this.player.port.postMessage(buffer, [buffer]);
   }
   control(state) {
+    if (!this.expressive) return;
     const now = this.context.currentTime;
     // These expression controls shape the same model stream that receives the gesture.
     this.expression.gain.setTargetAtTime(

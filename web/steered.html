@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sway · Steered</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/theremin.css" />
+  </head>
+  <body>
+    <main id="stage" data-phase="idle">
+      <video id="video" playsinline muted aria-hidden="true"></video>
+      <div class="shade" aria-hidden="true"></div>
+      <canvas
+        id="field"
+        aria-label="Hold and move the mouse, or play with your hands through the camera"
+      ></canvas>
+      <header>
+        <a class="brand" href="/">Sway <span>steered</span></a>
+        <div class="actions">
+          <span id="status" role="status">Steered · ready</span>
+          <button id="stop" hidden>End the take</button>
+        </div>
+      </header>
+      <section id="intro" aria-labelledby="title">
+        <p class="eyebrow">YOUR HANDS STEER · THE MODEL WRITES</p>
+        <h1 id="title">Lead the music where it goes.</h1>
+        <p class="description">
+          Every note comes from the model, generated on this Mac. Your hands set
+          the direction, and the music follows within a second or two.
+        </p>
+        <ol class="guide">
+          <li>
+            <span class="number">01</span>
+            <div>
+              <b>Raise or lower your hands</b>
+              <p>The music moves to a higher or a lower register.</p>
+            </div>
+          </li>
+          <li>
+            <span class="number">02</span>
+            <div>
+              <b>Move more, or less</b>
+              <p>
+                Quick, wide movement makes it lively. Slow movement keeps it
+                calm.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="number">03</span>
+            <div>
+              <b>Spread your hands apart</b>
+              <p>
+                Close hands keep the melody on the chord. Wide hands open it to
+                the whole scale, with more tension.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="number">04</span>
+            <div>
+              <b>Hold still</b>
+              <p>The music rests. Move again to continue.</p>
+            </div>
+          </li>
+        </ol>
+        <div class="start-actions">
+          <button id="start-camera" class="primary">
+            Start with the camera <span>↗</span>
+          </button>
+          <button id="start-pointer" class="secondary">
+            Try with the mouse first
+          </button>
+        </div>
+        <p id="message" class="note">
+          The sound is generated on this Mac. The camera image stays here too.
+        </p>
+      </section>
+      <div id="preparing" hidden aria-live="polite">
+        <i></i>
+        <p>Preparing the sound…</p>
+        <small>The first time takes a moment.</small>
+      </div>
+      <div id="playing" hidden>
+        <p id="gesture-name">Resting</p>
+        <p id="hint"></p>
+        <div
+          class="qualities"
+          aria-label="Where the hands are taking the music"
+        >
+          <span
+            >Height<i><b id="height-meter"></b></i
+          ></span>
+          <span
+            >Energy<i><b id="energy-meter"></b></i
+          ></span>
+          <span
+            >Spread<i><b id="spread-meter"></b></i
+          ></span>
+        </div>
+      </div>
+      <footer>
+        <a id="save" hidden download="sway-steered.wav">Save this take ↓</a>
+        <span id="footer-note"
+          >One hand works too: left to right opens the harmony.</span
+        >
+        <label
+          >Volume
+          <input
+            id="volume"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.7"
+        /></label>
+      </footer>
+      <pre id="diagnostics" hidden></pre>
+    </main>
+    <script type="module" src="/steered.js"></script>
+  </body>
+</html>
