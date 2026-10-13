@@ -1,7 +1,7 @@
 # Motion to music
 
 Started: October 7, 2026, Asia/Singapore.
-Status: first measurements done on October 7; the listening test needs Everett.
+Status: first measurements done on October 7; Everett took the listening test on October 13.
 
 ## The problem
 
@@ -154,6 +154,34 @@ With eight pairs, guessing gets seven or more right only about 4% of the time.
 
 The first run measured density by counting onsets.
 That count fell for fast runs, whose flux stays high between notes, and it reversed the density result; the run was repeated with flux.
+
+## Listening test
+
+Everett took the test on October 13 and picked the right clip in 20 of 24 pairs.
+Guessing does that well about once in 1,300 tries.
+The answers are in `outputs/motion-to-music-2026-10-07/listening-results-2026-10-13.json`.
+
+| Movement                 | Theremin | Window | Steered | All   |
+| ------------------------ | -------- | ------ | ------- | ----- |
+| Height, register         | 2/2      | 2/2    | 1/2     | 5/6   |
+| Activity, density        | 2/2      | 2/2    | 2/2     | 6/6   |
+| Spread, harmonic tension | 1/2      | 1/2    | 1/2     | 3/6   |
+| Stillness, loudness      | 2/2      | 2/2    | 2/2     | 6/6   |
+| All                      | 7/8      | 7/8    | 6/8     | 20/24 |
+
+- **Activity and stillness are heard.**
+  Every pair was right, in every variant.
+- **Height is mostly heard.**
+  The one miss was steered, seed 101.
+- **Spread is not heard.**
+  The answers were at chance in every variant.
+  For theremin and window this matches the audio, which found no reliable effect.
+  For steered it does not: harmony was its strongest measured movement, at 100% and 2.6.
+  The test cannot tell which of two causes is at work:
+  the change from triad to scale is not audible enough, or "the hands spread wide" does not suggest "more tension" to a listener.
+- **The variants cannot be told apart.**
+  With two pairs in each cell, 6 of 8 and 7 of 8 are within the same noise.
+  The test confirms that steered's movements are audible, except spread; it does not rank steered against the others.
 
 ## Limits
 

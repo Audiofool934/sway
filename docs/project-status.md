@@ -1,6 +1,6 @@
 # Project status
 
-Updated: October 7, 2026, Asia/Singapore.
+Updated: October 13, 2026, Asia/Singapore.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
 
@@ -66,7 +66,9 @@ The results so far:
 - **It is too slow:** half of each change took 1.2 to 2.3 seconds; the target is about half a second.
 - **The theremin** moves its register in 0.12 seconds, but its notes are all the hand's.
 
-The listening test at `outputs/motion-to-music-2026-10-07/listening-test.html` checks whether the movements can be heard.
+Everett took the listening test on October 13 and picked the right clip in 20 of 24 pairs.
+Activity, stillness, and height are heard; spread is at chance in every variant, even in steered, where the audio measured its strongest effect.
+The [note's listening section](motion-to-music.md#listening-test) has the details.
 
 The theremin page itself is at `/theremin.html`, and the [experiment guide](generative-theremin-experiment.md) describes it.
 With camera tracking running, MRT2 needed a median of 37 to 39 ms for each 40 ms frame, and two-minute replays had four or five dropouts; with nothing else running, it needed 22 ms.
@@ -79,9 +81,8 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 
 ## Next
 
-1. **Everett takes the listening test,** 24 pairs in about ten minutes, and copies the results back.
-   It shows whether the measured steering can be heard.
-2. **Make steered respond within about half a second:** read the style every frame, smooth it less, and fade the output on rest; then measure again.
+1. **Make steered respond within about half a second:** read the style every frame, smooth it less, and fade the output on rest; then measure again.
+2. **Decide what spread should do:** test whether the triad-to-scale change can be heard at all, or map spread to something more audible.
 3. **If both hold up, build a playable steered page** with the camera, reusing the theremin page's tracking and audio streaming.
 
 ## Working rules
@@ -106,6 +107,7 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 | October 5       | The theremin experiment.                                                                           |
 | October 7       | Cleanup: one branch, the paused prototypes and 15 historical documents removed.                    |
 | October 7       | Motion as music versus motion to music; the first steering measurements.                           |
+| October 13      | Listening test: 20 of 24 right; spread not heard.                                                  |
 
 ## Where things are
 
