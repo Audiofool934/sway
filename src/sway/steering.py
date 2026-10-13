@@ -484,7 +484,7 @@ def _mean(values):
 # Running.
 
 
-def run_variant(variant, *, seeds, context_seed=1, warmup=6.0, length=6.0, keep=None):
+def run_variant(variant, *, seeds, tests=TESTS, context_seed=1, warmup=6.0, length=6.0, keep=None):
     """Play each test from one moment of music, in both movements, once per seed.
 
     `keep(test, seed, side, audio)` receives the audio of each run, preceded by the last
@@ -495,7 +495,7 @@ def run_variant(variant, *, seeds, context_seed=1, warmup=6.0, length=6.0, keep=
     context = warm[-3 * SAMPLE_RATE :]
     moment = variant.snapshot()
     results = {}
-    for test in TESTS:
+    for test in tests:
         runs = {}
         for seed in seeds:
             runs[seed] = {}
@@ -525,9 +525,18 @@ QUESTIONS = {
     "rest": "In which clip are the hands held still?",
 }
 
+# The same choices, asked about the sound, to tell an inaudible change from a movement
+# that does not suggest it.
+SOUND_QUESTIONS = {
+    "register": "In which clip does the music move higher?",
+    "density": "In which clip are there more notes?",
+    "harmony": "In which clip does the melody sound more tense, with notes beyond the chord?",
+    "rest": "In which clip does the music go quiet?",
+}
 
-def listening_page(out: Path, variants, seeds):
-    """A blind test page: for each pair, which clip matches the described movement?
+
+def listening_page(out: Path, variants, seeds, tests=TESTS, questions=QUESTIONS):
+    """A blind test page: for each pair, which clip matches the question?
 
     The clips are the kept runs of `variants` for `seeds`. The order of the pairs and of
     the clips within them is shuffled, with a fixed seed so the page is reproducible.
@@ -535,7 +544,7 @@ def listening_page(out: Path, variants, seeds):
     rng = np.random.default_rng(0)
     trials = []
     for variant in variants:
-        for test in TESTS:
+        for test in tests:
             for seed in seeds:
                 clips = [f"{variant}/{test.name}-{side}-seed{seed}.wav" for side in "ab"]
                 flip = bool(rng.integers(2))
@@ -545,7 +554,7 @@ def listening_page(out: Path, variants, seeds):
                         "variant": variant,
                         "test": test.name,
                         "seed": seed,
-                        "question": QUESTIONS[test.name],
+                        "question": questions[test.name],
                         "x": x,
                         "y": y,
                         "answer": "y" if flip else "x",
@@ -591,6 +600,13 @@ def main():
     parser.add_argument("--seeds", type=int, default=8)
     parser.add_argument("--variants", default="theremin,window,steered")
     parser.add_argument("--keep-audio", type=int, default=2, help="Seeds whose audio is saved")
+    parser.add_argument("--tests", default=",".join(test.name for test in TESTS))
+    parser.add_argument(
+        "--ask",
+        choices=("movement", "sound"),
+        default="movement",
+        help="Whether the listening test asks about the movement or the sound",
+    )
     args = parser.parse_args()
     out = Path(args.out).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=False)
@@ -603,6 +619,7 @@ def main():
         "steered": lambda: Steered(engine),
     }
     seeds = list(range(100, 100 + args.seeds))
+    tests = [next(t for t in TESTS if t.name == name) for name in args.tests.split(",")]
     results = {}
     for name in args.variants.split(","):
         started = time.monotonic()
@@ -613,10 +630,11 @@ def main():
             if seed < seeds[0] + args.keep_audio:
                 write_wav(audio_dir / f"{test.name}-{side}-seed{seed}.wav", audio)
 
-        results[name] = run_variant(makers[name](), seeds=seeds, keep=keep)
+        results[name] = run_variant(makers[name](), seeds=seeds, tests=tests, keep=keep)
         print(f"{name}: {time.monotonic() - started:.0f} s", flush=True)
     (out / "results.json").write_text(json.dumps(results, indent=2) + "\n")
-    listening_page(out, list(results), seeds[: args.keep_audio])
+    questions = SOUND_QUESTIONS if args.ask == "sound" else QUESTIONS
+    listening_page(out, list(results), seeds[: args.keep_audio], tests, questions)
     table = summary(results)
     (out / "summary.md").write_text(table + "\n")
     print(table)

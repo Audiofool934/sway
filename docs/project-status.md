@@ -69,6 +69,7 @@ The results so far:
 Everett took the listening test on October 13 and picked the right clip in 20 of 24 pairs.
 Activity, stillness, and height are heard; spread is at chance in every variant, even in steered, where the audio measured its strongest effect.
 The [note's listening section](motion-to-music.md#listening-test) has the details.
+A spread check is waiting for Everett: 12 steered spread pairs that ask about the sound, not the hands, at `outputs/spread-check-2026-10-13/listening-test.html`.
 
 The theremin page itself is at `/theremin.html`, and the [experiment guide](generative-theremin-experiment.md) describes it.
 With camera tracking running, MRT2 needed a median of 37 to 39 ms for each 40 ms frame, and two-minute replays had four or five dropouts; with nothing else running, it needed 22 ms.

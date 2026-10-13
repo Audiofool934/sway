@@ -190,3 +190,19 @@ def test_spreading_the_hands_adds_tension_to_what_the_model_plays():
     harmony = steering.run_variant(Steered(FakeEngine()), seeds=[1, 2, 3], warmup=1.0, length=2.0)
     assert harmony["harmony"]["consistency"] == 1.0
     assert harmony["harmony"]["effect"] > 1
+
+
+def test_a_listening_page_can_ask_about_the_sound_of_one_test(tmp_path):
+    import json
+
+    harmony = [steering.TESTS[2]]
+    steering.listening_page(
+        tmp_path, ["steered"], [100, 101, 102], harmony, steering.SOUND_QUESTIONS
+    )
+    page = (tmp_path / "listening-test.html").read_text()
+    trials = json.loads(page.split("const TRIALS = ")[1].split(";\n")[0])
+    assert len(trials) == 3
+    assert {t["question"] for t in trials} == {steering.SOUND_QUESTIONS["harmony"]}
+    for trial in trials:
+        a = f"steered/harmony-a-seed{trial['seed']}.wav"
+        assert trial[trial["answer"]] == a

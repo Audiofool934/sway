@@ -86,6 +86,7 @@ The motion-to-music measurements ([design note](motion-to-music.md)):
 | `tests/test_steering.py`, `tests/test_pitch.py` | Variants, features, measurements, and note finding, with a fake model.              |
 
 `uv run --locked python -m sway.steering --out <new folder>` runs every variant with real MRT2 and writes `summary.md`, `results.json`, the kept clips, and `listening-test.html`.
+`--variants`, `--tests`, `--seeds`, and `--keep-audio` narrow the run, and `--ask sound` makes the listening test ask about the sound instead of the movement.
 
 Shared by both:
 
