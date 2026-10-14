@@ -87,9 +87,8 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 
 Everett decided on October 14 to settle V1 first, then begin V2.
 
-1. **Fix V1's setup advice:** it still says `sway setup --music-only`, an option removed on October 7.
-2. **Settle V1 against its checklist:** a 20-minute run checked for gaps on the merged code, Everett's play tests, and a new player for lesson 1.
-3. **Then begin V2.** Building it around the steered design, with a clearer spread, is proposed but not decided.
+1. **Settle V1 against its checklist:** a 20-minute run checked for gaps on the merged code, Everett's play tests, and a new player for lesson 1.
+2. **Then begin V2.** Building it around the steered design, with a clearer spread, is proposed but not decided.
 
 ## Working rules
 
@@ -123,6 +122,7 @@ Everett decided on October 14 to settle V1 first, then begin V2.
 | October 13      | The playable steered page, as draft #12; the GPU slowdown found and filled.                        |
 | October 14      | Everett played the steered page: it feels like leading the music.                                  |
 | October 14      | #11 and #12 merged; V1 to be settled before V2.                                                    |
+| October 14      | V1's setup advice fixed: it named `sway setup --music-only`, an option removed on October 7 (#13). |
 
 ## Where things are
 
