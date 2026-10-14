@@ -1,6 +1,6 @@
 # Project status
 
-Updated: October 13, 2026, Asia/Singapore.
+Updated: October 14, 2026, Asia/Singapore.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
 
@@ -14,15 +14,16 @@ On October 7 the project was cleaned up: one line of history, and the paused pro
 The same day, Everett found that the theremin is motion as music: the hand plays every note, and the model only voices them.
 What he wants is motion to music: the hands steer the direction, and the model writes the content.
 The [motion-to-music note](motion-to-music.md) defines how to measure that, and its first measurement found a steered design that works, but too slowly.
+On October 13 Everett accepted that latency, and the steered design became a playable page.
+On October 14, after playing it with his hands, he said it does feel like leading the music.
 
 ## Branches
 
-| Branch            | Contains                                                                                                                                                                                                                                                                                                    | State                                                                                                 |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `main`            | V1 as merged on October 1 ([#1](https://github.com/Audiofool934/sway/pull/1)), CI ([#8](https://github.com/Audiofool934/sway/pull/8)), and `clean-start` ([#9](https://github.com/Audiofool934/sway/pull/9)): the code of #2, #4, and #5 and its fixes, the theremin experiment, and the October 7 cleanup. | The baseline. #9 merged on October 13.                                                                |
-| `motion-to-music` | `main` with the steering measurements, their design note, and copying MRT2's state.                                                                                                                                                                                                                         | Current work. Open pull request [#11](https://github.com/Audiofool934/sway/pull/11), based on `main`. |
-| `readme`          | [#10](https://github.com/Audiofool934/sway/pull/10): the README rewritten for people who find Sway on GitHub.                                                                                                                                                                                               | Open pull request, based on `main`.                                                                   |
-| `v2-design`       | [#3](https://github.com/Audiofool934/sway/pull/3): the V2 proposal, `src/sway/pitch.py`, and the palette probe.                                                                                                                                                                                             | Open pull request, kept as a reference. Not built.                                                    |
+| Branch      | Contains                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | State                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| `main`      | V1 as merged on October 1 ([#1](https://github.com/Audiofool934/sway/pull/1)), CI ([#8](https://github.com/Audiofool934/sway/pull/8)), `clean-start` ([#9](https://github.com/Audiofool934/sway/pull/9)): the code of #2, #4, and #5 and its fixes, the theremin experiment, and the October 7 cleanup; `motion-to-music` ([#11](https://github.com/Audiofool934/sway/pull/11)): the steering measurements; and `steered-page` ([#12](https://github.com/Audiofool934/sway/pull/12)): the playable steered page, one model thread, and the GPU filler. | The baseline. #9 merged on October 13, and #11 and #12 on October 14. |
+| `readme`    | [#10](https://github.com/Audiofool934/sway/pull/10): the README rewritten for people who find Sway on GitHub.                                                                                                                                                                                                                                                                                                                                                                                                                                          | Open pull request, based on `main`.                                   |
+| `v2-design` | [#3](https://github.com/Audiofool934/sway/pull/3): the V2 proposal, `src/sway/pitch.py`, and the palette probe.                                                                                                                                                                                                                                                                                                                                                                                                                                        | Open pull request, kept as a reference. Not built.                    |
 
 Numbers such as #3 are pull requests on GitHub.
 [#2](https://github.com/Audiofool934/sway/pull/2), [#4](https://github.com/Audiofool934/sway/pull/4), and [#5](https://github.com/Audiofool934/sway/pull/5) closed on October 13, because `main` includes their work.
@@ -30,10 +31,11 @@ Numbers such as #3 are pull requests on GitHub.
 
 ## Pages
 
-| URL              | What it is                                                                              | State                                                           |
-| ---------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `/`              | V1: the lead hand plays a pitch ladder, and the band hand sets energy, cuts, and loops. | Current. MRT2 plays the harmony, and Qwen can compose the band. |
-| `/theremin.html` | The hands shape MRT2's live sound directly.                                             | Experiment. Its interface is in Chinese.                        |
+| URL              | What it is                                                                              | State                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `/`              | V1: the lead hand plays a pitch ladder, and the band hand sets energy, cuts, and loops. | Current. MRT2 plays the harmony, and Qwen can compose the band.             |
+| `/theremin.html` | The hands shape MRT2's live sound directly.                                             | Experiment. Its interface is in Chinese.                                    |
+| `/steered.html`  | The hands steer the direction, and MRT2 writes every note.                              | Merged on October 14. Played the same day: it feels like leading the music. |
 
 The Qwen gesture ensemble and Flow pages from September 26 and 27, their pipeline, and their documents were removed on October 7.
 The [documentation index](README.md) says how to find them in Git.
@@ -72,7 +74,8 @@ A spread check the same day asked about the sound instead: Everett heard the tri
 The [spread check](motion-to-music.md#spread-check) has the details.
 
 The theremin page itself is at `/theremin.html`, and the [experiment guide](generative-theremin-experiment.md) describes it.
-With camera tracking running, MRT2 needed a median of 37 to 39 ms for each 40 ms frame, and two-minute replays had four or five dropouts; with nothing else running, it needed 22 ms.
+Its live stream slowed from 22 ms to about 40 ms for each 40 ms frame after about 25 seconds, which caused dropouts.
+On October 13 this was traced to macOS lowering the GPU clock between frames, and a filler now keeps the GPU busy; the [steered page guide](steered-page.md#the-gpu-filler) has the details.
 
 ## V1's open play tests
 
@@ -82,10 +85,11 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 
 ## Next
 
-1. **Build a playable steered page** with the camera, reusing the theremin page's tracking and audio streaming.
-   Use steered with the fade on stillness.
-   Everett decided on October 13 that MRT2's 1.2 to 1.7 seconds to follow a movement is acceptable, so the half-second target is dropped.
-2. **Make spread clearer** on that page: a bigger contrast than triad to scale, or a movement that suggests tension.
+Everett decided on October 14 to settle V1 first, then begin V2.
+
+1. **Fix V1's setup advice:** it still says `sway setup --music-only`, an option removed on October 7.
+2. **Settle V1 against its checklist:** a 20-minute run checked for gaps on the merged code, Everett's play tests, and a new player for lesson 1.
+3. **Then begin V2.** Building it around the steered design, with a clearer spread, is proposed but not decided.
 
 ## Working rules
 
@@ -116,6 +120,9 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 | October 13      | #9 merged into `main`; #10 and #11 now target `main`; #2, #4, and #5 closed.                       |
 | October 13      | Speed run: the fade makes rest fast; MRT2 itself takes 1.2 to 1.7 seconds to follow.               |
 | October 13      | The steering latency is accepted; next is a playable steered page.                                 |
+| October 13      | The playable steered page, as draft #12; the GPU slowdown found and filled.                        |
+| October 14      | Everett played the steered page: it feels like leading the music.                                  |
+| October 14      | #11 and #12 merged; V1 to be settled before V2.                                                    |
 
 ## Where things are
 
@@ -123,5 +130,5 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 - Recordings and test evidence are in `outputs/` and `work/`, which Git ignores.
   The [data map](development.md#data-and-evidence) lists the current ones.
 - The Qwen credential is in `~/.config/sway/qwen.json`, outside the repository.
-- On `motion-to-music` on October 7, 78 Python tests and 128 JavaScript tests passed.
-- No Sway server or other Sway process was running at this update.
+- On `steered-page` on October 13, 92 Python tests and 133 JavaScript tests passed.
+- At this update, Everett's own `sway serve` was running in his terminal; no agent-started Sway process was.

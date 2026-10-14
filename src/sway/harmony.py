@@ -7,11 +7,11 @@ in order from one model state, so each bar continues the last without a seam.
 """
 
 import time
-from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
 from .config import MRT_DIR, MRT_FILES
+from .music import MODEL_THREAD
 
 SAMPLE_RATE = 48_000
 FRAME_SAMPLES = 1920  # One model frame: 40 ms at 48 kHz.
@@ -77,7 +77,7 @@ class StaleStream(Exception):
 
 
 class HarmonyRenderer:
-    """One continuous MRT2 stream. Use it from a single thread, such as `EXECUTOR`."""
+    """One continuous MRT2 stream. Use it only from `EXECUTOR`, the model thread."""
 
     def __init__(self, engine_factory=None):
         self._factory = engine_factory
@@ -148,5 +148,5 @@ class HarmonyRenderer:
 
 
 # MLX work stays on one thread, and requests render in the order they arrive.
-EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sway-harmony")
+EXECUTOR = MODEL_THREAD
 RENDERER = HarmonyRenderer()

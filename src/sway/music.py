@@ -5,11 +5,17 @@ See THIRD_PARTY_NOTICES.md for attribution and the inspected source revision.
 """
 
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
 
 from .config import MRT_DIR
+
+# MLX keeps its GPU streams per thread: once one thread has run MRT2, another thread
+# fails with "There is no Stream(gpu, 1) in current thread" (mlx 0.31). Every engine in
+# the server therefore runs on this one thread.
+MODEL_THREAD = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sway-model")
 
 
 class StyleEncoder:
@@ -102,6 +108,7 @@ class MusicEngine:
         self.style_every = 5  # Frames between style updates.
         self.frame = 0
         self.last_ms = 0.0
+        self.filler = None
 
     def _seeded(self, state, seed):
         """`state` with its random keys replaced by ones that follow `seed`."""
@@ -174,6 +181,20 @@ class MusicEngine:
         self.frame += 1
         self.last_ms = (time.perf_counter() - started) * 1000
         return np.clip(samples, -1, 1)
+
+    def keep_busy(self, until: float):
+        """Run small GPU work until `time.monotonic()` reaches `until`.
+
+        A live stream renders one 40 ms frame at a time, so the GPU is idle for about half
+        of each frame. After about 25 seconds of that, macOS lowers the GPU clock until a
+        frame takes about 42 ms, and the stream falls behind. Filling each whole gap keeps
+        frames at about 22 ms; filling half of each gap does not. It costs GPU power.
+        """
+        mx = self.mx
+        if self.filler is None:
+            self.filler = mx.random.normal((1024, 1024)).astype(mx.float16)
+        while time.monotonic() < until:
+            mx.eval(self.filler @ self.filler)  # About 1 ms.
 
     def update_style(self):
         """Move the style a fifth of the way to its target every `style_every` frames."""

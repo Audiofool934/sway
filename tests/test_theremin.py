@@ -38,6 +38,9 @@ class FakeEngine:
     def apply_style(self, embedding):
         self.target = embedding
 
+    def keep_busy(self, until):
+        pass
+
     def reset(self, seed):
         self.seeds.append(seed)
         self.rows.clear()
@@ -166,7 +169,6 @@ def test_frozen_controls_release_and_late_sequences_do_not_rewind_the_instrument
             await service.connect(socket)
         finally:
             theremin.assets_ready = original
-            await service.close()
         assert socket.audio > 15
         assert any(row[64] > 0 for row in engine.rows)
         assert not any(row[48] > 0 for row in engine.rows)

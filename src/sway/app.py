@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import composer, harmony, theremin
+from . import composer, harmony, steered, theremin
 from .config import ROOT, VISION_DIR
 from .qwen import qwen_status
 from .schema import ComposeRequest, HarmonyBar, HarmonyStart
@@ -24,13 +24,13 @@ COMPOSER = None
 @asynccontextmanager
 async def lifespan(app):
     yield
-    await theremin.SERVICE.close()
     if COMPOSER is not None:
         await COMPOSER.aclose()
 
 
 app = FastAPI(title="Sway", lifespan=lifespan, docs_url=None, redoc_url=None)
 app.include_router(theremin.router)
+app.include_router(steered.router)
 
 
 def same_origin(origin, host):
