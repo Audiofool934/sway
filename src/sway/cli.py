@@ -91,7 +91,7 @@ def doctor():
     return 1 if missing else 0
 
 
-def main():
+def arguments():
     parser = argparse.ArgumentParser(description="Sway - an instrument you play with your hands")
     sub = parser.add_subparsers(dest="command", required=True)
     install = sub.add_parser("setup", help="Download pinned models and browser dependencies")
@@ -103,7 +103,11 @@ def main():
     sub.add_parser("doctor", help="Check local assets, runtime versions, and disk space")
     serve = sub.add_parser("serve", help="Open the local instrument on loopback")
     serve.add_argument("--port", type=int, default=8765)
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = arguments().parse_args()
     if args.command == "setup":
         setup(include_music=not args.instrument_only)
     elif args.command == "doctor":

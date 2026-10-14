@@ -673,7 +673,7 @@ async function checkHarmony() {
       }),
     }).catch(() => {});
   $("harmony-note").textContent =
-    "Generated harmony needs MRT2 on this Mac: run uv run --locked sway setup --music-only, then restart the server.";
+    "Generated harmony needs MRT2 on this Mac: run uv run --locked sway setup, then restart the server.";
   applySettings();
 }
 

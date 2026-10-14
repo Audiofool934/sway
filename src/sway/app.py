@@ -53,9 +53,7 @@ async def local_origin(request: Request, call_next):
     return await call_next(request)
 
 
-MISSING_MRT2 = (
-    "MRT2 is not installed. Run `uv run --locked sway setup --music-only` to add generated harmony."
-)
+MISSING_MRT2 = "MRT2 is not installed. Run `uv run --locked sway setup` to add generated harmony."
 
 
 async def on_harmony_thread(function, *args):
