@@ -128,13 +128,14 @@ With real MRT2 assets present, `tests/test_harmony.py` also renders two bars and
 These are default locations on the development machine.
 All repository-local paths in this table are ignored by Git.
 
-| Location                       | Contents                                                                     |
-| ------------------------------ | ---------------------------------------------------------------------------- |
-| `.cache/models/`               | Downloaded MRT2 and MediaPipe assets.                                        |
-| `outputs/v1-ready-2026-10-03/` | V1 candidate test results, browser recordings, exports, and UI screenshots.  |
-| `outputs/theremin-2026-10-05/` | Theremin test scripts, replays, recordings, and screenshots.                 |
-| `work/finger-drumming.y4m`     | The recorded drumming clip used as a fake camera in headless browser checks. |
-| `~/.config/sway/qwen.json`     | Private Qwen credential and region configuration outside the repository.     |
+| Location                        | Contents                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| `.cache/models/`                | Downloaded MRT2 and MediaPipe assets.                                         |
+| `outputs/v1-ready-2026-10-03/`  | V1 candidate test results, browser recordings, exports, and UI screenshots.   |
+| `outputs/theremin-2026-10-05/`  | Theremin test scripts, replays, recordings, and screenshots.                  |
+| `outputs/v1-settle-2026-10-14/` | The October 14 20-minute V1 run: script, recording, statistics, and analysis. |
+| `work/finger-drumming.y4m`      | The recorded drumming clip used as a fake camera in headless browser checks.  |
+| `~/.config/sway/qwen.json`      | Private Qwen credential and region configuration outside the repository.      |
 
 V1's finished pieces are browser downloads, and the theremin saves each take's WAV the same way.
 
