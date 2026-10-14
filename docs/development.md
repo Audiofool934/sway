@@ -3,6 +3,7 @@
 The [V1 plan](v1-plan.md) defines the instrument and its milestones, and the [project status](project-status.md) says where the work stands.
 The V1 instrument is browser code in `web/instrument/`; the Python server serves its files, renders its generated harmony with MRT2, and asks Qwen for the band's composer.
 The generative theremin experiment is a second page with its own MRT2 stream.
+The motion-to-music harness measures how much of the music a movement steers, offline.
 
 ## Runtime
 
@@ -31,11 +32,11 @@ node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,c
 git diff --check
 ```
 
-On October 7, 58 Python tests and 128 JavaScript tests passed, including the real MRT2 render on the development Mac.
+On October 7, 78 Python tests and 128 JavaScript tests passed, including the real MRT2 render on the development Mac.
 The Starlette TestClient emits one upstream deprecation warning about `httpx`.
 No dependency change was made to suppress it.
 
-These tests cover timing, harmony, hand tracking, controls, the band, loops, the camera, the engine, exports, lessons, the composer, and the theremin's controls and stream.
+These tests cover timing, harmony, hand tracking, controls, the band, loops, the camera, the engine, exports, lessons, the composer, the theremin's controls and stream, and the steering measurements.
 They do not substitute for a camera performance, physical output recording, or musical listening assessment.
 The [V1 readiness record](v1-readiness.md) describes the browser checks and the remaining human play tests.
 
@@ -74,6 +75,18 @@ The theremin experiment:
 | `web/audio-buffer.js`                                       | The stereo buffer the worklet plays from.                                   |
 | `src/sway/theremin.py`, `/api/theremin/stream`              | One MRT2 stream steered by the newest controls, 40 ms at a time.            |
 | `tests/theremin-controls.test.js`, `tests/test_theremin.py` | Controls, validation, stream ownership, and cleanup.                        |
+
+The motion-to-music measurements ([design note](motion-to-music.md)):
+
+| Path                                            | Responsibility                                                                      |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `src/sway/steering.py`                          | Scripted movements, instrument variants, copied model states, and the measurements. |
+| `src/sway/pitch.py`                             | Which notes a stretch of audio plays, found by harmonic summation.                  |
+| `src/sway/listening_test.html`                  | The blind listening page that a run writes next to its clips.                       |
+| `tests/test_steering.py`, `tests/test_pitch.py` | Variants, features, measurements, and note finding, with a fake model.              |
+
+`uv run --locked python -m sway.steering --out <new folder>` runs every variant with real MRT2 and writes `summary.md`, `results.json`, the kept clips, and `listening-test.html`.
+`--variants`, `--tests`, `--seeds`, and `--keep-audio` narrow the run, and `--ask sound` makes the listening test ask about the sound instead of the movement.
 
 Shared by both:
 

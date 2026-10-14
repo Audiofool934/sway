@@ -4,6 +4,7 @@ This October 5 experiment follows the hands-on observation that the stable V1 st
 The working question is whether a person can continuously shape the generated sound itself, recognize the result, and intentionally find it again.
 The experiment is a separate page at `/theremin.html`.
 The existing V1 remains available at `/`.
+On October 7, Everett found that the theremin is motion as music, with every note chosen by the hand; the [motion-to-music note](motion-to-music.md) measures it against a design in which the model writes the notes.
 
 ## Play
 
