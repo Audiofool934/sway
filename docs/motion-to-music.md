@@ -235,6 +235,11 @@ The results are in `outputs/speed-2026-10-13/`.
 Everett decided the same day that this latency is acceptable for steering, so the half-second target is dropped.
 The fade on stillness stays, because it costs nothing.
 
+## Played
+
+The [steered page](steered-page.md) plays this design with the hands and the camera.
+On October 14, after playing it, Everett said it does feel like leading the music: the answer to the October 4 complaint that V1 felt like adding notes over an accompaniment.
+
 ## Limits
 
 - The movements are scripted, not hands, and the renders are offline, so the response times leave out tracking and playback delay.

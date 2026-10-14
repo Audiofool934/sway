@@ -3,6 +3,7 @@
 Started: October 13, 2026, Asia/Singapore.
 This page plays the steered design from the [motion-to-music note](motion-to-music.md) with the hands.
 The hands steer the direction of the music, and MRT2 writes every note.
+On October 14, after playing it with his hands and the camera, Everett said it does feel like leading the music.
 
 ## Play
 

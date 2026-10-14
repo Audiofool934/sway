@@ -1,6 +1,6 @@
 # Project status
 
-Updated: October 13, 2026, Asia/Singapore.
+Updated: October 14, 2026, Asia/Singapore.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
 
@@ -14,6 +14,8 @@ On October 7 the project was cleaned up: one line of history, and the paused pro
 The same day, Everett found that the theremin is motion as music: the hand plays every note, and the model only voices them.
 What he wants is motion to music: the hands steer the direction, and the model writes the content.
 The [motion-to-music note](motion-to-music.md) defines how to measure that, and its first measurement found a steered design that works, but too slowly.
+On October 13 Everett accepted that latency, and the steered design became a playable page.
+On October 14, after playing it with his hands, he said it does feel like leading the music.
 
 ## Branches
 
@@ -31,11 +33,11 @@ Numbers such as #3 are pull requests on GitHub.
 
 ## Pages
 
-| URL              | What it is                                                                              | State                                                                    |
-| ---------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `/`              | V1: the lead hand plays a pitch ladder, and the band hand sets energy, cuts, and loops. | Current. MRT2 plays the harmony, and Qwen can compose the band.          |
-| `/theremin.html` | The hands shape MRT2's live sound directly.                                             | Experiment. Its interface is in Chinese.                                 |
-| `/steered.html`  | The hands steer the direction, and MRT2 writes every note.                              | New on October 13, in draft pull request #12. Not yet played with hands. |
+| URL              | What it is                                                                              | State                                                                                                |
+| ---------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `/`              | V1: the lead hand plays a pitch ladder, and the band hand sets energy, cuts, and loops. | Current. MRT2 plays the harmony, and Qwen can compose the band.                                      |
+| `/theremin.html` | The hands shape MRT2's live sound directly.                                             | Experiment. Its interface is in Chinese.                                                             |
+| `/steered.html`  | The hands steer the direction, and MRT2 writes every note.                              | New on October 13, in draft pull request #12. Played on October 14: it feels like leading the music. |
 
 The Qwen gesture ensemble and Flow pages from September 26 and 27, their pipeline, and their documents were removed on October 7.
 The [documentation index](README.md) says how to find them in Git.
@@ -85,8 +87,7 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 
 ## Next
 
-1. **Everett plays `/steered.html` with his hands** and says whether it feels like leading the music.
-   The [steered page guide](steered-page.md) says how to play it; the draft is [#12](https://github.com/Audiofool934/sway/pull/12).
+1. **Review and merge** [#11](https://github.com/Audiofool934/sway/pull/11), then [#12](https://github.com/Audiofool934/sway/pull/12), when Everett is ready.
 2. **Make spread clearer:** a bigger contrast than triad to scale, or a movement that suggests tension.
 
 ## Working rules
@@ -119,6 +120,7 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 | October 13      | Speed run: the fade makes rest fast; MRT2 itself takes 1.2 to 1.7 seconds to follow.               |
 | October 13      | The steering latency is accepted; next is a playable steered page.                                 |
 | October 13      | The playable steered page, as draft #12; the GPU slowdown found and filled.                        |
+| October 14      | Everett played the steered page: it feels like leading the music.                                  |
 
 ## Where things are
 
