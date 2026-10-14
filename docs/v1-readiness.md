@@ -124,8 +124,9 @@ The evidence is in `outputs/v1-settle-2026-10-14/`.
   The band schedules 180 ms ahead, so a pause this long can delay its notes; the worst step was 191 ms late.
   The recording has no silence there, but the slip may be audible.
   What paused the page is not known; the take keeps its whole recording in memory, and the heap reached 475 MB.
-- **The audio has no gaps outside the cuts.**
-  Every quiet interval of 300 ms or longer falls at a scripted cut.
+- **The audio has no quiet interval of 300 ms or longer outside the cuts.**
+  Every such interval falls at a scripted cut.
+  This check cannot see a shorter dropout, so it does not show that there are no gaps; only listening can.
 
 The page closed after it sent the 231 MB WAV to the test's receiver, so the MIDI and the performance JSON of this take were not saved.
 The test script, not V1, most likely caused this: unlike the October 3 script, it read the whole WAV into memory to send it, instead of downloading it as a player does.
@@ -140,7 +141,7 @@ These are inherited from the V1 plan, not substitutes for its original requireme
 
 1. Measure camera-to-sound delay on the intended camera and audio device, aiming below about 150 ms.
 2. Play for 20 minutes and check for audible gaps; scheduler statistics alone do not prove this.
-   The October 14 run found none in the signal; listening to its recording, especially at 17:27, is still open.
+   The October 14 run found no quiet interval of 300 ms or longer outside the cuts; shorter gaps need listening, which is still open, especially at 17:27.
 3. Have a new player finish the first lesson in under three minutes.
 4. Deliberately play the same phrase twice.
 5. Make a three-minute piece with a build, a cut, a loop, and an ending that the player wants to keep.
