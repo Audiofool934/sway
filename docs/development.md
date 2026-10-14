@@ -13,7 +13,7 @@ The MRT2 MLX export failed to import under MLX 0.32.2 and loaded under the pinne
 Do not treat a dependency upgrade as routine cleanup without rerunning a real model workload.
 
 `uv run --locked sway setup` installs the tracking assets, browser dependencies, and MRT2.
-`--instrument-only` skips MRT2; V1 then plays its synthesized pad, and the theremin cannot start.
+`--instrument-only` skips MRT2; V1 then plays its synthesized pad, and the theremin and steered pages cannot start.
 `uv run --locked sway doctor` checks local assets and credential configuration without calling Qwen; only missing V1 assets make it fail.
 
 The server listens on `127.0.0.1:8765` by default.
