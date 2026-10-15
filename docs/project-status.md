@@ -1,6 +1,6 @@
 # Project status
 
-Updated: October 14, 2026, Asia/Singapore.
+Updated: October 15, 2026, Asia/Singapore.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
 
@@ -87,7 +87,10 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 
 Everett decided on October 14 to settle V1 first, then begin V2.
 
-1. **Settle V1 against its checklist:** a 20-minute run checked for gaps on the merged code, Everett's play tests, and a new player for lesson 1.
+1. **Settle V1 against its checklist.**
+   The [October 14 20-minute run](v1-readiness.md#20-minute-run-october-14) found no quiet interval of 300 ms or longer outside the cuts, which cannot rule out shorter gaps, and kept MRT2's harmony for all but 3 of 484 bars; one 399 ms page pause at 17:27 made two band steps late.
+   On October 15 Everett listened to it and heard only the scripted cuts and the fallback bars, so the gap test is met.
+   Still open: his play tests, and a new player for lesson 1.
 2. **Then begin V2.** Building it around the steered design, with a clearer spread, is proposed but not decided.
 
 ## Working rules
@@ -99,30 +102,32 @@ Everett decided on October 14 to settle V1 first, then begin V2.
 
 ## Timeline
 
-| Date            | Event                                                                                              |
-| --------------- | -------------------------------------------------------------------------------------------------- |
-| September 26    | First prototype: camera to Qwen to MRT2 text prompts.                                              |
-| September 26-27 | Gesture ensemble, Flow with DEMON, and Colab trials.                                               |
-| September 27    | Paused. A gesture took 8 to 14 seconds to change the sound.                                        |
-| September 28    | Restarted from first principles as V1: a hand-played lead, a band hand, and a music-game tutorial. |
-| October 1       | V1 merged (#1). First play test. Pull requests #2 to #5 and issue #6 opened.                       |
-| October 2       | CI merged (#8).                                                                                    |
-| October 3-4     | The V1 candidate: #2, #4, and #5 combined, with fixes and a 20-minute browser run.                 |
-| October 4       | Second play test: stable, but it does not feel like leading the music.                             |
-| October 5       | The theremin experiment.                                                                           |
-| October 7       | Cleanup: one branch, the paused prototypes and 15 historical documents removed.                    |
-| October 7       | Motion as music versus motion to music; the first steering measurements.                           |
-| October 7       | `clean-start` opened as #9, and the README rewrite as #10.                                         |
-| October 13      | Listening test: 20 of 24 right; spread not heard.                                                  |
-| October 13      | Spread check: asked about the sound, 9 of 12 right.                                                |
-| October 13      | `motion-to-music` opened as #11, stacked on #9.                                                    |
-| October 13      | #9 merged into `main`; #10 and #11 now target `main`; #2, #4, and #5 closed.                       |
-| October 13      | Speed run: the fade makes rest fast; MRT2 itself takes 1.2 to 1.7 seconds to follow.               |
-| October 13      | The steering latency is accepted; next is a playable steered page.                                 |
-| October 13      | The playable steered page, as draft #12; the GPU slowdown found and filled.                        |
-| October 14      | Everett played the steered page: it feels like leading the music.                                  |
-| October 14      | #11 and #12 merged; V1 to be settled before V2.                                                    |
-| October 14      | V1's setup advice fixed: it named `sway setup --music-only`, an option removed on October 7 (#13). |
+| Date            | Event                                                                                                                                        |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| September 26    | First prototype: camera to Qwen to MRT2 text prompts.                                                                                        |
+| September 26-27 | Gesture ensemble, Flow with DEMON, and Colab trials.                                                                                         |
+| September 27    | Paused. A gesture took 8 to 14 seconds to change the sound.                                                                                  |
+| September 28    | Restarted from first principles as V1: a hand-played lead, a band hand, and a music-game tutorial.                                           |
+| October 1       | V1 merged (#1). First play test. Pull requests #2 to #5 and issue #6 opened.                                                                 |
+| October 2       | CI merged (#8).                                                                                                                              |
+| October 3-4     | The V1 candidate: #2, #4, and #5 combined, with fixes and a 20-minute browser run.                                                           |
+| October 4       | Second play test: stable, but it does not feel like leading the music.                                                                       |
+| October 5       | The theremin experiment.                                                                                                                     |
+| October 7       | Cleanup: one branch, the paused prototypes and 15 historical documents removed.                                                              |
+| October 7       | Motion as music versus motion to music; the first steering measurements.                                                                     |
+| October 7       | `clean-start` opened as #9, and the README rewrite as #10.                                                                                   |
+| October 13      | Listening test: 20 of 24 right; spread not heard.                                                                                            |
+| October 13      | Spread check: asked about the sound, 9 of 12 right.                                                                                          |
+| October 13      | `motion-to-music` opened as #11, stacked on #9.                                                                                              |
+| October 13      | #9 merged into `main`; #10 and #11 now target `main`; #2, #4, and #5 closed.                                                                 |
+| October 13      | Speed run: the fade makes rest fast; MRT2 itself takes 1.2 to 1.7 seconds to follow.                                                         |
+| October 13      | The steering latency is accepted; next is a playable steered page.                                                                           |
+| October 13      | The playable steered page, as draft #12; the GPU slowdown found and filled.                                                                  |
+| October 14      | Everett played the steered page: it feels like leading the music.                                                                            |
+| October 14      | #11 and #12 merged; V1 to be settled before V2.                                                                                              |
+| October 14      | V1's setup advice fixed: it named `sway setup --music-only`, an option removed on October 7 (#13).                                           |
+| October 14      | 20-minute V1 run on `main`: 3 fallback bars instead of 78, no quiet interval of 300 ms or longer outside the cuts, one late moment at 17:27. |
+| October 15      | Everett listened to the 20-minute recording: only the planned cuts and fallback bars.                                                        |
 
 ## Where things are
 
