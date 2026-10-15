@@ -1,6 +1,6 @@
 # Project status
 
-Updated: October 14, 2026, Asia/Singapore.
+Updated: October 15, 2026, Asia/Singapore.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
 
@@ -89,7 +89,8 @@ Everett decided on October 14 to settle V1 first, then begin V2.
 
 1. **Settle V1 against its checklist.**
    The [October 14 20-minute run](v1-readiness.md#20-minute-run-october-14) found no quiet interval of 300 ms or longer outside the cuts, which cannot rule out shorter gaps, and kept MRT2's harmony for all but 3 of 484 bars; one 399 ms page pause at 17:27 made two band steps late.
-   Still open: Everett listens to that recording, his play tests, and a new player for lesson 1.
+   On October 15 Everett listened to it and heard only the scripted cuts and the fallback bars, so the gap test is met.
+   Still open: his play tests, and a new player for lesson 1.
 2. **Then begin V2.** Building it around the steered design, with a clearer spread, is proposed but not decided.
 
 ## Working rules
@@ -126,6 +127,7 @@ Everett decided on October 14 to settle V1 first, then begin V2.
 | October 14      | #11 and #12 merged; V1 to be settled before V2.                                                                                              |
 | October 14      | V1's setup advice fixed: it named `sway setup --music-only`, an option removed on October 7 (#13).                                           |
 | October 14      | 20-minute V1 run on `main`: 3 fallback bars instead of 78, no quiet interval of 300 ms or longer outside the cuts, one late moment at 17:27. |
+| October 15      | Everett listened to the 20-minute recording: only the planned cuts and fallback bars.                                                        |
 
 ## Where things are
 

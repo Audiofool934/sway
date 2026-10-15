@@ -132,8 +132,18 @@ The page closed after it sent the 231 MB WAV to the test's receiver, so the MIDI
 The test script, not V1, most likely caused this: unlike the October 3 script, it read the whole WAV into memory to send it, instead of downloading it as a player does.
 The audio analysis and the sampled statistics are in `audio-analysis.json` and `soak-progress.json`.
 
-This run is signal evidence, not a listening test.
-The checklist's "no audible gaps over 20 minutes" still needs Everett to listen to `soak-final.wav`, especially around 17:27.
+Everett listened to `soak-final.wav` on October 15.
+Every break he heard was planned:
+
+| What he heard | What it was |
+| --- | --- |
+| The music stops and comes back between 2:25 and 2:40 | The first scripted cut, silent from 2:32 to 2:36 |
+| A blank around 17:30 | The seventh scripted cut, silent from 17:32 to 17:36 |
+| The sound changes around 12:00 | The two bars of synthesized fallback, 12:05 to 12:15 |
+| The end sounds as clean as the start | No slowdown by the end |
+
+He reported no stumble at 17:27, where the page paused, so the 191 ms slip was not noticeable to him.
+The checklist's "no audible gaps over 20 minutes" is therefore met for this run.
 
 ## Remaining play tests
 
@@ -141,7 +151,7 @@ These are inherited from the V1 plan, not substitutes for its original requireme
 
 1. Measure camera-to-sound delay on the intended camera and audio device, aiming below about 150 ms.
 2. Play for 20 minutes and check for audible gaps; scheduler statistics alone do not prove this.
-   The October 14 run found no quiet interval of 300 ms or longer outside the cuts; shorter gaps need listening, which is still open, especially at 17:27.
+   Done: the October 14 run had no quiet interval of 300 ms or longer outside the cuts, and on October 15 Everett heard only the scripted cuts and the fallback bars.
 3. Have a new player finish the first lesson in under three minutes.
 4. Deliberately play the same phrase twice.
 5. Make a three-minute piece with a build, a cut, a loop, and an ending that the player wants to keep.
