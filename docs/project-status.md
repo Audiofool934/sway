@@ -86,12 +86,14 @@ The V1 checklist in the [V1 plan](v1-plan.md#v1-checklist) stays the release bar
 ## Next
 
 Everett decided on October 14 to settle V1 first, then begin V2.
+On October 15 he called V1 OK and began V2's design; V1's remaining play tests are still open.
 
 1. **Settle V1 against its checklist.**
    The [October 14 20-minute run](v1-readiness.md#20-minute-run-october-14) found no quiet interval of 300 ms or longer outside the cuts, which cannot rule out shorter gaps, and kept MRT2's harmony for all but 3 of 484 bars; one 399 ms page pause at 17:27 made two band steps late.
    On October 15 Everett listened to it and heard only the scripted cuts and the fallback bars, so the gap test is met.
    Still open: his play tests, and a new player for lesson 1.
-2. **Then begin V2.** Building it around the steered design, with a clearer spread, is proposed but not decided.
+2. **V2:** on October 15 Everett called V1 OK and started V2's design.
+   The [V2 design draft](v2-design.md) is under review: one continuous piece that anyone leads in five minutes, without playing a note.
 
 ## Working rules
 
@@ -128,6 +130,7 @@ Everett decided on October 14 to settle V1 first, then begin V2.
 | October 14      | V1's setup advice fixed: it named `sway setup --music-only`, an option removed on October 7 (#13).                                           |
 | October 14      | 20-minute V1 run on `main`: 3 fallback bars instead of 78, no quiet interval of 300 ms or longer outside the cuts, one late moment at 17:27. |
 | October 15      | Everett listened to the 20-minute recording: only the planned cuts and fallback bars.                                                        |
+| October 15      | V1 called OK; the V2 design draft started.                                                                                                   |
 
 ## Where things are
 
