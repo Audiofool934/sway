@@ -288,7 +288,7 @@ class Spine(Steered):
     # played in fragments: its note rate varied 34% from second to second, against 18%
     # for an ensemble and 25% for flowing arpeggios, which Everett heard as far more
     # continuous. Instruments, not register words, move the register: over six seeds on
-    # October 20, height moved it in all six (effect 3.7) and activity the density in all
+    # October 19, height moved it in all six (effect 3.7) and activity the density in all
     # six (effect 3.8).
     corners = (
         "Calm cinematic ensemble: slow sustained cellos and double bass with soft low "

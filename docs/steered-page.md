@@ -63,13 +63,13 @@ Striking the chord's root in the bass on each bar line also put the melody on th
 
 `uv run --locked python -m sway.steering --out <new folder> --continuity` renders a 40-second scripted performance, which steers, rests twice, and starts again, with and without the spine, and writes a blind listening page that asks which of each pair sounds more like one continuous piece.
 On October 19, over six seeds, the clips without the spine were silent 18% of the time, and those with it 1%.
-On October 20, Everett chose the clip with the spine as the more continuous one in all six pairs; with no preference, that happens once in 64 tries.
+On October 19, Everett chose the clip with the spine as the more continuous one in all six pairs; with no preference, that happens once in 64 tries.
 The clips without the spine fall silent when the hands rest, which is an obvious cue, so this shows that the largest seam is gone, not yet that the music feels like one piece while it plays.
-The answers are in `outputs/continuity-2026-10-19/listening-results-2026-10-20.json`.
+The answers are in `outputs/continuity-2026-10-19/listening-results-2026-10-19.json`.
 
 ### Texture
 
-On October 20, Everett played the spine and still heard "individual piano fragments", with transitions that are not blank, even with a steady motion; the note rate sped up and slowed down.
+On October 19, Everett played the spine and still heard "individual piano fragments", with transitions that are not blank, even with a steady motion; the note rate sped up and slowed down.
 The controller was not the cause: a simulated steady sway moved activity only between 0.49 and 0.58.
 The model was: with the hands held constant and no chord changes at all, solo piano's note rate still varied 27% from second to second, and narrow chords made it more hesitant.
 
@@ -96,7 +96,8 @@ Naming instruments fixed both controls: low is cellos, double bass, and low pian
 
 The last is the spine's texture now.
 Its note rate varied 21% to 32% from second to second across its corners and middle, so this measure alone does not settle continuity; Everett's ears do.
-The clips are in `outputs/fragments-2026-10-20/`.
+On October 20, Everett played the ensemble with his hands and said: "this is GREAT!!!"
+The clips are in `outputs/fragments-2026-10-19/`.
 
 ## The model thread
 
