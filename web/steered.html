@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sway · Steered</title>
+    <title>Sway · Film score</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/theremin.css" />
   </head>
@@ -16,25 +16,27 @@
         aria-label="Hold and move the mouse, or play with your hands through the camera"
       ></canvas>
       <header>
-        <a class="brand" href="/">Sway <span>steered</span></a>
+        <a class="brand" href="/">Sway <span>film score</span></a>
         <div class="actions">
-          <span id="status" role="status">Steered · ready</span>
+          <span id="status" role="status">Film score · ready</span>
           <button id="stop" hidden>End the take</button>
         </div>
       </header>
       <section id="intro" aria-labelledby="title">
-        <p class="eyebrow">YOUR HANDS STEER · THE MODEL WRITES</p>
-        <h1 id="title">Lead the music where it goes.</h1>
+        <p class="eyebrow">YOU LEAD · AN ORCHESTRA PLAYS</p>
+        <h1 id="title">Score the scene with your hands.</h1>
         <p class="description">
-          Every note comes from the model, generated on this Mac. Your hands set
-          the direction, and the music follows within a second or two.
+          An orchestra, generated on this Mac, plays a film score that grows as
+          you play. Your hands lead it, and an arranger plans what comes next.
         </p>
         <ol class="guide">
           <li>
             <span class="number">01</span>
             <div>
               <b>Raise or lower your hands</b>
-              <p>The music moves to a higher or a lower register.</p>
+              <p>
+                Low hands bring cellos and basses; high hands bring violins.
+              </p>
             </div>
           </li>
           <li>
@@ -53,7 +55,7 @@
               <b>Spread your hands apart</b>
               <p>
                 Close hands keep the melody on the chord. Wide hands open it to
-                the whole scale, with more tension.
+                the whole scale.
               </p>
             </div>
           </li>
@@ -66,6 +68,13 @@
               </p>
             </div>
           </li>
+          <li>
+            <span class="number">05</span>
+            <div>
+              <b>Clap</b>
+              <p>The music moves on to its next section, on the next bar.</p>
+            </div>
+          </li>
         </ol>
         <div class="start-actions">
           <button id="start-camera" class="primary">
@@ -76,15 +85,18 @@
           </button>
         </div>
         <p id="message" class="note">
-          The sound is generated on this Mac. The camera image stays here too.
+          The music is generated on this Mac, and the camera image stays here.
+          To plan what comes next, the arranger may describe the music to Qwen,
+          in the cloud: in words and numbers, never an image.
         </p>
       </section>
       <div id="preparing" hidden aria-live="polite">
         <i></i>
-        <p>Preparing the sound…</p>
+        <p>Preparing the orchestra…</p>
         <small>The first time takes a moment.</small>
       </div>
       <div id="playing" hidden>
+        <p id="section" class="section" aria-live="polite"></p>
         <p id="chords" class="chords" aria-label="The chords, one a bar"></p>
         <p id="gesture-name">Resting</p>
         <p id="hint"></p>

@@ -56,6 +56,12 @@ class StreamService:
         """Keyword arguments for the renderer's `start`, from the stream's address."""
         return {}
 
+    def frame_done(self, stats: dict):
+        """Called on the event loop after each frame; it must not block."""
+
+    def closed(self):
+        """Called when a performance ends, however it ends."""
+
     def release(self, control):
         raise NotImplementedError
 
@@ -124,6 +130,7 @@ class StreamService:
                 render_started = time.monotonic()
                 audio, stats = await self.call(self.renderer.render, current)
                 stats["renderMs"] = round((time.monotonic() - render_started) * 1000, 1)
+                self.frame_done(stats)
                 if receiver.done():
                     break
                 if stats["frame"] % 5 == 0:
@@ -148,4 +155,5 @@ class StreamService:
                 receiver.cancel()
                 await asyncio.gather(receiver, return_exceptions=True)
             if self.owner is owner:
+                self.closed()
                 self.owner = None

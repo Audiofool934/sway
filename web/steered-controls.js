@@ -5,6 +5,13 @@ export const REST = 0.05; // steering.REST: activity below this is stillness.
 const HOLD = 0.65; // Seconds of stillness before the music rests.
 const MOVING = 0.035; // Hand speed, in frame widths per second, that counts as motion.
 const FLOOR = 0.15; // The activity of the slowest movement that still plays.
+// A clap: two hands close at least CLAP_CLOSING, in frame widths, within CLAP_WINDOW
+// seconds, and end within CLAP_NEAR of each other, or merge into one hand for the
+// tracker. Another clap counts only after CLAP_REST seconds.
+const CLAP_WINDOW = 0.35;
+const CLAP_CLOSING = 0.18;
+const CLAP_NEAR = 0.12;
+const CLAP_REST = 0.8;
 
 export class SteeredControls {
   constructor() {
@@ -18,6 +25,33 @@ export class SteeredControls {
     this.lastTime = null;
     this.seen = false;
     this.points = [];
+    this.claps = 0;
+    this.lastClap = -Infinity;
+    this.gaps = []; // [time, distance between the hands], while two are seen.
+  }
+
+  /** A clap from another input, such as a double-click. */
+  cue() {
+    this.claps++;
+    this.lastClap = this.lastTime ?? 0;
+  }
+
+  #listenForClap(time) {
+    if (this.points.length === 2) {
+      const [a, b] = this.points;
+      this.gaps.push([time, Math.hypot(a.x - b.x, a.y - b.y)]);
+    }
+    this.gaps = this.gaps.filter(([at]) => time - at <= CLAP_WINDOW);
+    if (!this.gaps.length || time - this.lastClap < CLAP_REST) return;
+    const widest = Math.max(...this.gaps.map(([, gap]) => gap));
+    const [lastSeen, last] = this.gaps.at(-1);
+    const merged =
+      this.points.length < 2 && time - lastSeen < 0.2 && last < 2 * CLAP_NEAR;
+    if (widest - last >= CLAP_CLOSING && (last <= CLAP_NEAR || merged)) {
+      this.claps++;
+      this.lastClap = time;
+      this.gaps = [];
+    }
   }
 
   update(hands, time) {
@@ -40,6 +74,7 @@ export class SteeredControls {
       next.set(hand.id, { ...hand, time });
     }
     this.previous = next;
+    this.#listenForClap(time);
     const wasSeen = this.seen;
     this.seen = this.points.length > 0;
     if (this.seen && !wasSeen) this.lastMotion = time;
@@ -71,6 +106,7 @@ export class SteeredControls {
       height: this.height,
       activity: this.activity,
       spread: this.spread,
+      cue: this.claps,
     };
   }
 }

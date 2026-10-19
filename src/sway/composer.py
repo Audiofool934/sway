@@ -10,11 +10,8 @@ answer is missing, invalid, or late.
 
 import json
 import re
-import time
 
-import httpx
-
-from .qwen import QwenConfig
+from .qwen import QwenClient, QwenError, content
 from .schema import ComposeRequest
 
 TEXTURES = ("hold", "pulse", "arpeggio")
@@ -147,70 +144,30 @@ class Composer:
     """Asks Qwen for plans; the API key stays in this process."""
 
     def __init__(self, config=None, *, transport=None, timeout=6.0):
-        self.config = config or QwenConfig.load()
-        self.client = httpx.AsyncClient(
-            base_url=self.config.endpoint + "/",
-            headers={"Authorization": f"Bearer {self.config.api_key}"},
-            timeout=httpx.Timeout(timeout, connect=2),
-            follow_redirects=False,
-            transport=transport,
-        )
+        self.qwen = QwenClient(config, transport=transport, timeout=timeout)
+        self.config = self.qwen.config
 
     async def aclose(self):
-        await self.client.aclose()
+        await self.qwen.aclose()
 
     async def compose(self, request: ComposeRequest) -> dict:
-        payload = {
-            "model": self.config.model,
-            "messages": [{"role": "user", "content": prompt(request)}],
-            "enable_thinking": False,
-            "response_format": {"type": "json_object"},
-            "max_tokens": 400,
-            "stream": False,
-        }
-        started = time.perf_counter()
         try:
-            response = await self.client.post("chat/completions", json=payload)
-        except httpx.TimeoutException:
-            raise ComposerError(
-                "Qwen took too long; the band keeps its own progression", 504
-            ) from None
-        except httpx.HTTPError:
-            raise ComposerError(
-                "Qwen could not be reached; the band keeps its own progression", 502
-            ) from None
-        ms = (time.perf_counter() - started) * 1000
-        code = response.status_code
-        # Provider bodies can echo the request; they are never passed on.
-        if code in (401, 403):
-            raise ComposerError("Qwen refused the request; check the key and model access", 503)
-        if code == 429:
-            raise ComposerError(
-                "Qwen is limiting requests; the band keeps its own progression", 429
-            )
-        if code != 200:
-            raise ComposerError(f"Qwen returned HTTP {code}", 502)
-        if len(response.content) > 65_536:
-            raise ComposerError("Qwen returned an oversized response", 502)
+            body, ms = await self.qwen.json_reply(prompt(request), max_tokens=400)
+        except QwenError as error:
+            message = str(error)
+            if error.transient:
+                message += "; the band keeps its own progression"
+            raise ComposerError(message, error.status) from None
         try:
-            body = response.json()
-            choice = body["choices"][0]
-            if choice.get("finish_reason") != "stop":
-                raise ValueError("Incomplete reply")
-            plan = parse_plan(choice["message"]["content"], request)
+            plan = parse_plan(content(body), request)
         except (ValueError, KeyError, TypeError, IndexError):
             raise ComposerError("Qwen did not return a usable plan", 502) from None
         usage = body.get("usage") if isinstance(body.get("usage"), dict) else {}
-        model = body.get("model")
         return {
             "cycle": request.cycle,
             "plan": plan,
             "ms": round(ms),
-            "model": (
-                model
-                if isinstance(model, str) and re.fullmatch(r"[a-zA-Z0-9._-]{1,128}", model)
-                else self.config.model
-            ),
+            "model": self.qwen.model(body),
             "tokens": {
                 key: usage[key]
                 for key in ("prompt_tokens", "completion_tokens")

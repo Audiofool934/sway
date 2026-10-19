@@ -153,6 +153,7 @@ Each is one piece of work on its own branch and pull request, and Everett plays 
    On October 19 Everett chose it as more continuous in six of six blind pairs, but still heard piano fragments when he played it; solo piano itself was the cause, so the spine became an ensemble whose instruments follow the hands.
    Later that day he played the ensemble and said: "this is GREAT!!!"
 2. **A world and the arranger:** one preset world, with the arranger planning chords and sections, and the first cue.
+   Built on October 19: a film score world, Qwen as the arranger, and a clap; the [steered page guide](steered-page.md#the-film-score) describes it.
 3. **Catch:** looping a caught phrase, and the arranger bringing it back, varied.
 4. **Custom worlds from text.**
 5. **New players:** the five-minute test with people who have never played Sway.

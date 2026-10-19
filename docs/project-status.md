@@ -32,11 +32,11 @@ Numbers such as #3 are pull requests on GitHub.
 
 ## Pages
 
-| URL              | What it is                                                                              | State                                                                       |
-| ---------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `/`              | V1: the lead hand plays a pitch ladder, and the band hand sets energy, cuts, and loops. | Current. MRT2 plays the harmony, and Qwen can compose the band.             |
-| `/theremin.html` | The hands shape MRT2's live sound directly.                                             | Experiment. Its interface is in Chinese.                                    |
-| `/steered.html`  | The hands steer the direction, and MRT2 writes every note.                              | Merged on October 14. Played the same day: it feels like leading the music. |
+| URL              | What it is                                                                              | State                                                           |
+| ---------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `/`              | V1: the lead hand plays a pitch ladder, and the band hand sets energy, cuts, and loops. | Current. MRT2 plays the harmony, and Qwen can compose the band. |
+| `/theremin.html` | The hands shape MRT2's live sound directly.                                             | Experiment. Its interface is in Chinese.                        |
+| `/steered.html`  | A film score that the hands lead, an arranger plans, and a clap moves on.               | V2. Milestone 1 merged October 19; milestone 2 in review.       |
 
 The Qwen gesture ensemble and Flow pages from September 26 and 27, their pipeline, and their documents were removed on October 7.
 The [documentation index](README.md) says how to find them in Git.
@@ -99,6 +99,7 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
    On October 19 Everett chose it as more continuous in six of six blind pairs, but playing it he still heard piano fragments.
    The cause was solo piano itself, so the spine now plays an ensemble whose instruments follow the hands.
    Later that day he played it and said: "this is GREAT!!!"
+   The second milestone, a film score world with Qwen as the arranger and a clap that moves on, was built the same day ([guide](steered-page.md#the-film-score)); Everett plays it next.
 
 ## Working rules
 
@@ -141,6 +142,7 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 | October 19      | Blind comparison: the spine chosen as more continuous in six of six pairs.                                                                   |
 | October 19      | Still fragments when played; the spine changes from solo piano to an ensemble.                                                               |
 | October 19      | Everett played the ensemble spine: "this is GREAT!!!"                                                                                        |
+| October 19      | V2 milestone 2: the film score world, Qwen as the arranger, and the clap.                                                                    |
 
 ## Where things are
 

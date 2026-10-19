@@ -4,6 +4,7 @@ Started: October 13, 2026, Seattle time.
 This page plays the steered design from the [motion-to-music note](motion-to-music.md) with the hands.
 The hands steer the direction of the music, and MRT2 writes every note.
 On October 14, after playing it with his hands and the camera, Everett said it does feel like leading the music.
+Since V2's second milestone it plays a [film score](#the-film-score): an arranger plans its phrases, and a clap moves it on.
 
 ## Play
 
@@ -15,11 +16,12 @@ The sound is generated on this Mac, and the camera image stays on this Mac.
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | Raise or lower the hands                       | It moves to a higher or a lower register.                                                |
 | Move more, or less                             | Quick, wide movement makes it lively; slow movement keeps it calm.                       |
-| Spread the hands apart                         | Close hands keep the melody on the A minor triad; wide hands open it to the whole scale. |
+| Spread the hands apart                         | Close hands keep the melody on the chord's tones; wide hands open it to the whole scale. |
 | Hold still, close the hands, or leave the view | After about 0.65 seconds it thins to a quiet chord. Moving again grows it back.          |
+| Clap                                           | The music moves on to its next section, on the next bar line it can reach.               |
 
 With one hand, its left-to-right position sets the spread.
-With the mouse, hold the stage and move: height sets the register, left to right sets the spread, and speed sets the energy.
+With the mouse, hold the stage and move: height sets the register, left to right sets the spread, and speed sets the energy; a double-click claps.
 The music follows a movement within a second or two; Everett accepted this latency on October 13.
 
 End the take to save it as a WAV file.
@@ -98,6 +100,38 @@ The last is the spine's texture now.
 Its note rate varied 21% to 32% from second to second across its corners and middle, so this measure alone does not settle continuity; Everett's ears do.
 On October 19, Everett played the ensemble with his hands and said: "this is GREAT!!!"
 The clips are in `outputs/fragments-2026-10-19/`.
+
+## The film score
+
+V2's second milestone, built on October 19 after Everett chose a film score world, the clap, and an arranger that moves on by itself ([design](v2-design.md)).
+
+- **The world** (`src/sway/world.py`) is D minor at 80 beats a minute: a bar is 3 seconds, and a phrase is four bars, 12 seconds.
+  Its chords are Dm, Gm, Am, Bb, F, and C, all from the scale, so that wide hands never clash with the chord.
+  It keeps the ensemble corners, and its four sections, intro, build, peak, and release, each have a default direction for the sound and default chords.
+- **The arranger** (`src/sway/arranger.py`) is Qwen.
+  When a phrase is told to MRT2, the piece asks for two plans for the phrase after it: the one to play next, and the one to play if the player claps.
+  A plan is a section, a chord for each bar, a direction for the sound in words, and a caption for the player.
+  The request describes the last phrase in words and numbers: the player's energy and its trend, register, spread, stillness, and claps, and the sections so far; no image is sent.
+  Every answer is checked, and the world's own plan plays when an answer is missing, invalid, or late: each section for two phrases, then the next.
+- **The piece** (`src/sway/piece.py`) plays the plans on the spine.
+  A phrase's direction is 40% of MRT2's style, and the hands blend the ensemble corners in the rest.
+  A clap lands the clap plan on the first bar line that MRT2 can still be told in time: 1.2 to 4.2 seconds later.
+- **On the page,** a clap is two hands meeting quickly, or a double-click with the mouse.
+  At once, filtered noise swells, and it lands with a soft low impact on the bar line where the new section begins.
+  The page shows the section, the arranger's caption, and the phrase's chords.
+- `?variant=spine` plays the first milestone's spine, and `?variant=free` the page as it was on October 14.
+
+Measured on October 19, before Everett played it:
+
+| Check                                         | Result                                                                                                                                     |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Hands with a section's direction in the style | Over six seeds in build, height moved the register in all six (effect 5.6), and activity the density (4.4).                                |
+| Sections with the same hands                  | The peak's note rate was 6.1 seed spreads above the intro's; register and loudness differed too.                                           |
+| Embedding a direction for the style           | 173 ms, too long for the model thread, so it runs on another thread; MusicCoCa's text encoder is not MLX.                                  |
+| A scripted 80-second take, with Qwen          | Qwen planned every phrase after the first; both claps landed on bar lines, 3.8 s later; frames took a median of 21.3 ms, with no underrun. |
+
+The sections' loudness also differed more than the music implies: with the same hands, release was about 19 dB louder than build.
+A slow level control for each section can follow if it sounds like a jump.
 
 ## The model thread
 

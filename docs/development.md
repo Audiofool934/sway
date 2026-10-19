@@ -91,12 +91,14 @@ The motion-to-music measurements ([design note](motion-to-music.md)):
 
 The steered page ([guide](steered-page.md)):
 
-| Path                                                      | Responsibility                                                        |
-| --------------------------------------------------------- | --------------------------------------------------------------------- |
-| `web/steered.html`, `steered.js`                          | The page, its words, and its readouts; it uses `theremin.css`.        |
-| `web/steered-controls.js`                                 | Hand features to height, activity, and spread.                        |
-| `src/sway/steered.py`, `/api/steered/stream`              | Plays `steering.Steered` with the fade on stillness, 40 ms at a time. |
-| `tests/steered-controls.test.js`, `tests/test_steered.py` | Controls, validation, stream ownership, and the one model thread.     |
+| Path                                                      | Responsibility                                                            |
+| --------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `web/steered.html`, `steered.js`                          | The page, its words, and its readouts; it uses `theremin.css`.            |
+| `web/steered-controls.js`                                 | Hand features to height, activity, and spread.                            |
+| `src/sway/steered.py`, `/api/steered/stream`              | Plays the film score, or an earlier variant, 40 ms at a time.             |
+| `src/sway/world.py`, `arranger.py`, `piece.py`            | The film score world, Qwen's phrase plans, and the piece that plays them. |
+| `tests/steered-controls.test.js`, `tests/test_steered.py` | Controls, claps, validation, stream ownership, and the one model thread.  |
+| `tests/test_arranger.py`, `tests/test_piece.py`           | The world, the arranger's prompt and checks, phrases, and claps.          |
 
 Shared by the theremin and steered pages:
 
@@ -107,14 +109,14 @@ Shared by the theremin and steered pages:
 
 Shared by both:
 
-| Path                 | Responsibility                                                                           |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| `src/sway/music.py`  | The MRT2 adapter: the exported model, MusicCoCa style embeddings, and note conditioning. |
-| `src/sway/app.py`    | The loopback-only server and its static files.                                           |
-| `src/sway/cli.py`    | `sway setup`, `doctor`, and `serve`.                                                     |
-| `src/sway/config.py` | Data paths and pinned model revisions.                                                   |
-| `src/sway/schema.py` | Validated harmony and composer messages.                                                 |
-| `src/sway/qwen.py`   | The Qwen credential and endpoint.                                                        |
+| Path                 | Responsibility                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------- |
+| `src/sway/music.py`  | The MRT2 adapter: the exported model, MusicCoCa style embeddings, and note conditioning.  |
+| `src/sway/app.py`    | The loopback-only server and its static files.                                            |
+| `src/sway/cli.py`    | `sway setup`, `doctor`, and `serve`.                                                      |
+| `src/sway/config.py` | Data paths and pinned model revisions.                                                    |
+| `src/sway/schema.py` | Validated harmony and composer messages.                                                  |
+| `src/sway/qwen.py`   | The Qwen credential, endpoint, and the client that V1's composer and V2's arranger share. |
 
 In the browser console, `window.sway` exposes the engine, controls, and a scripted `input()` that feeds the same features as a hand.
 Hand features carry 21 mirrored, smoothed image landmarks, centred on the same palm position that drives the controls.

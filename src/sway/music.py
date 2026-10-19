@@ -4,6 +4,7 @@ Conditioning and text tokenization follow Google's Apache-2.0 Magenta RT code.
 See THIRD_PARTY_NOTICES.md for attribution and the inspected source revision.
 """
 
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -35,8 +36,16 @@ class StyleEncoder:
         self.encoder.allocate_tensors()
         self.quantizer.allocate_tensors()
         self.cache = {}
+        # The text encoder is TensorFlow Lite, not MLX, so any thread may embed, one at
+        # a time. An embedding takes about 170 ms: too long for the model thread while
+        # a stream plays.
+        self.embedding = threading.Lock()
 
     def embed(self, text: str) -> np.ndarray:
+        with self.embedding:
+            return self._embed(text)
+
+    def _embed(self, text: str) -> np.ndarray:
         if text in self.cache:
             return self.cache[text]
         ids = [1, *self.vocab.encode(text.lower())[:127]]

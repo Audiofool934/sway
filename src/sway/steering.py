@@ -303,6 +303,8 @@ class Spine(Steered):
     tempo = 100
     beats_per_bar = 4
     progression = PROGRESSION
+    scale = A_MINOR
+    pentatonic = A_MINOR_PENTATONIC
     fade = 0.3
     rest_level = 0.35  # About -9 dB.
     lead = 30  # Frames: 1.2 s.
@@ -342,7 +344,7 @@ class Spine(Steered):
             return {root, (root + 7) % 12}
         if move.spread < 0.35:
             return tones
-        return tones | (A_MINOR_PENTATONIC if move.spread < 0.65 else A_MINOR)
+        return tones | (self.pentatonic if move.spread < 0.65 else self.scale)
 
     def notes(self, move):
         if self.held is None or (self.frame + self.lead) % self.bar_frames == 0:

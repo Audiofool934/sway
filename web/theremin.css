@@ -259,6 +259,15 @@ h1 {
   color: #a8b5ae;
   margin: 0;
 }
+.section {
+  margin: 0 0 12px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--accent);
+}
+.section:empty {
+  display: none;
+}
 .chords {
   display: flex;
   justify-content: center;

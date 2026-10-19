@@ -1,5 +1,12 @@
 import { encodeWav } from "./instrument/wav.js";
 
+function whiteNoise(ctx, seconds) {
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+  return buffer;
+}
+
 export class ThereminAudio {
   // With `expression` off, the page plays the model's output as it is: the gain and
   // the low-pass filter stay open, and control() changes nothing.
@@ -98,6 +105,53 @@ export class ThereminAudio {
     );
     this.filter.frequency.setTargetAtTime(1700 + state.spread * 6200, now, 0.1);
   }
+  // A clap's sign: filtered noise swells from now until `at`, in context time, where
+  // the new section lands with a soft low impact. Calling it again moves the landing.
+  cue(at) {
+    const ctx = this.context;
+    const now = ctx.currentTime;
+    at = Math.max(at, now + 0.3);
+    if (!this.swell) {
+      const noise = ctx.createBufferSource();
+      noise.buffer = this.noise ??= whiteNoise(ctx, 2);
+      noise.loop = true;
+      const band = ctx.createBiquadFilter();
+      band.type = "bandpass";
+      band.Q.value = 1.2;
+      band.frequency.value = 300;
+      const level = ctx.createGain();
+      level.gain.value = 0;
+      noise.connect(band).connect(level).connect(this.expression);
+      noise.start(now);
+      const swell = { noise, band, level };
+      noise.onended = () => {
+        if (this.swell === swell) this.swell = null;
+      };
+      this.swell = swell;
+    }
+    const { noise, band, level } = this.swell;
+    for (const param of [band.frequency, level.gain]) {
+      param.cancelScheduledValues(now);
+      param.setValueAtTime(param.value, now);
+    }
+    band.frequency.exponentialRampToValueAtTime(5000, at);
+    level.gain.linearRampToValueAtTime(0.2, at);
+    level.gain.setTargetAtTime(0, at, 0.06);
+    noise.stop(at + 0.5);
+    this.swell.impact?.stop();
+    const boom = ctx.createOscillator();
+    boom.frequency.setValueAtTime(70, at);
+    boom.frequency.exponentialRampToValueAtTime(38, at + 0.5);
+    const thump = ctx.createGain();
+    thump.gain.setValueAtTime(0, at);
+    thump.gain.linearRampToValueAtTime(0.45, at + 0.01);
+    thump.gain.setTargetAtTime(0, at + 0.01, 0.15);
+    boom.connect(thump).connect(this.expression);
+    boom.start(at);
+    boom.stop(at + 0.9);
+    this.swell.impact = boom;
+  }
+
   volume(value) {
     this.master?.gain.setTargetAtTime(value, this.context.currentTime, 0.02);
   }

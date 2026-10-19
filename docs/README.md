@@ -11,7 +11,7 @@ Start with the [project status](project-status.md): where the work stands and wh
 | [Development](development.md)                                       | Source map, checks, runtime constraints, and local data locations.                   |
 | [Generative theremin experiment](generative-theremin-experiment.md) | The October 5 experiment at `/theremin.html`, its limits, and its listening checks.  |
 | [Motion to music](motion-to-music.md)                               | How much of the music the hands steer and how much the model writes, measured.       |
-| [Steered page](steered-page.md)                                     | Playing the steered design at `/steered.html`, the model thread, and the GPU filler. |
+| [Steered page](steered-page.md)                                     | Playing V2's film score at `/steered.html`: the spine, the arranger, and the clap.   |
 | [V2 design](v2-design.md)                                           | The goal, principles, verbs, and milestones for V2, approved on October 19.          |
 
 The paused prototypes from September 26 and 27 and their documents were removed on October 7.

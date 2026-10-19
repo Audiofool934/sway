@@ -24,6 +24,7 @@ COMPOSER = None
 @asynccontextmanager
 async def lifespan(app):
     yield
+    await steered.SERVICE.aclose()
     if COMPOSER is not None:
         await COMPOSER.aclose()
 

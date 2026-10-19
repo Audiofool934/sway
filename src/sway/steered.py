@@ -2,22 +2,28 @@
 
 docs/motion-to-music.md measured this design as "steered". Height moves the style from a
 low register to a high one, activity from calm to lively, and spread opens the harmony.
-It plays on V2's spine by default (`steering.Spine`): a bar grid and chords, harmony that
-changes on bar lines, and stillness that thins the music. The free variant, without the
-spine, opens the harmony from the A minor triad to the whole scale, and its stillness
-silences every pitch and fades the output.
+By default it plays a film score (`piece.Piece`): V2's spine, with phrases that an
+arranger plans and a clap that moves the music on. `?variant=spine` plays the spine of
+V2's first milestone, Night Drive's four chords on repeat, and `?variant=free` the page
+as it was on October 14, without the spine.
 """
 
+import asyncio
+import logging
 import time
 
 import numpy as np
 from fastapi import APIRouter, WebSocket
 from pydantic import BaseModel, ConfigDict, Field
 
+from .arranger import Arranger
 from .harmony import assets_ready
+from .piece import Piece
+from .qwen import QwenClient
 from .steering import REST, Live, Move, Spine, Steered
 from .stream import StreamService, promote_thread
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -28,9 +34,10 @@ class Control(BaseModel):
     height: float = Field(default=0.5, ge=0, le=1)
     activity: float = Field(default=0, ge=0, le=1)  # Below steering.REST is stillness.
     spread: float = Field(default=0.5, ge=0, le=1)
+    cue: int = Field(default=0, ge=0, le=2**31 - 1)  # Claps so far in the performance.
 
 
-VARIANTS = {"spine": Spine, "free": Live}
+VARIANTS = {"film": Piece, "spine": Spine, "free": Live}
 
 
 class SteeredRenderer:
@@ -40,7 +47,7 @@ class SteeredRenderer:
         self.factory = factory
         self.engine = None
 
-    def start(self, seed, variant="spine"):
+    def start(self, seed, variant="film"):
         if self.engine is None:
             self.interactive = promote_thread()
             if self.factory is None:
@@ -54,11 +61,16 @@ class SteeredRenderer:
         self.instrument = self.instruments[variant]
         self.instrument.start(seed)
         self.frames = 0
+        self.cues = 0
         return {"interactive": self.interactive, "variant": variant}
 
     def render(self, control):
         started = time.perf_counter()
         move = Move(height=control.height, activity=control.activity, spread=control.spread)
+        if control.cue > self.cues:
+            self.cues = control.cue
+            if isinstance(self.instrument, Piece):
+                self.instrument.cue()
         audio = self.instrument.render(move)
         self.frames += 1
         stats = {
@@ -81,10 +93,21 @@ class SteeredRenderer:
                 * instrument.beats_per_bar,
                 2,
             )
+            if isinstance(instrument, Piece):
+                stats.update(instrument.describe())
         else:
             still = control.activity < REST
             stats["pitchClasses"] = [] if still else sorted(Steered.pitch_classes(control.spread))
         return audio.astype("<f4").tobytes(), stats
+
+    def embed(self, plans):
+        """The plans' directions embedded for the style. Slow: call it off the model thread."""
+        return {plan.direction: self.engine.style.embed(plan.direction) for plan in plans}
+
+    def offer(self, ticket, plans, embedded):
+        """Hand the arranger's plans to the piece, on the model thread."""
+        instrument = self.instrument
+        return isinstance(instrument, Piece) and instrument.offer(ticket, plans, embedded)
 
     def idle(self, until):
         self.engine.keep_busy(until)
@@ -95,19 +118,54 @@ class SteeredService(StreamService):
     control = Control
     busy = "A steered performance is already open"
 
-    def __init__(self, renderer=None):
+    def __init__(self, renderer=None, arranger=None):
         super().__init__(renderer or SteeredRenderer())
+        # None until first needed; False when Qwen is not configured, so that the
+        # world's own plans play.
+        self.arranger = arranger
+        self.tasks = set()
 
     def ready(self):
         return assets_ready()
+
+    def _arranger(self):
+        if self.arranger is None:
+            try:
+                self.arranger = Arranger(self.renderer.instrument.world, QwenClient())
+            except (OSError, ValueError) as error:
+                log.warning("No arranger, so the world's own plans play: %s", error)
+                self.arranger = False
+        return self.arranger or None
+
+    def frame_done(self, stats):
+        instrument = self.renderer.instrument
+        request = instrument.request() if isinstance(instrument, Piece) else None
+        if request is not None and self._arranger() is not None:
+            task = asyncio.create_task(self._arrange(*request))
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
+
+    async def _arrange(self, ticket, summary):
+        plans = await self.arranger.plan(summary)
+        if plans is not None:
+            embedded = await asyncio.to_thread(self.renderer.embed, plans)
+            await self.call(self.renderer.offer, ticket, plans, embedded)
+
+    def closed(self):
+        for task in self.tasks:
+            task.cancel()
+
+    async def aclose(self):
+        if self.arranger:
+            await self.arranger.aclose()
 
     def release(self, control):
         return control.model_copy(update={"activity": 0})
 
     def options(self, websocket):
-        """`?variant=free` plays the steered design without the spine, for comparison."""
-        variant = websocket.query_params.get("variant", "spine")
-        return {"variant": variant if variant in VARIANTS else "spine"}
+        """`?variant=spine` or `?variant=free` plays an earlier design, for comparison."""
+        variant = websocket.query_params.get("variant", "film")
+        return {"variant": variant if variant in VARIANTS else "film"}
 
 
 SERVICE = SteeredService()
