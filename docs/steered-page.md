@@ -63,6 +63,9 @@ Striking the chord's root in the bass on each bar line also put the melody on th
 
 `uv run --locked python -m sway.steering --out <new folder> --continuity` renders a 40-second scripted performance, which steers, rests twice, and starts again, with and without the spine, and writes a blind listening page that asks which of each pair sounds more like one continuous piece.
 On October 19, over six seeds, the clips without the spine were silent 18% of the time, and those with it 1%.
+On October 20, Everett chose the clip with the spine as the more continuous one in all six pairs; with no preference, that happens once in 64 tries.
+The clips without the spine fall silent when the hands rest, which is an obvious cue, so this shows that the largest seam is gone, not yet that the music feels like one piece while it plays.
+The answers are in `outputs/continuity-2026-10-19/listening-results-2026-10-20.json`.
 
 ## The model thread
 

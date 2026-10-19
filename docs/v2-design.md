@@ -149,7 +149,8 @@ Each is one piece of work on its own branch and pull request, and Everett plays 
 
 1. **Continuity:** the steered page with a spine: a bar grid, a chord progression that MRT2 follows, changes only on bar lines, and stillness that thins instead of stopping.
    It tests the answer to "random pieces joined together" first, because it is the most uncertain.
-   Built on October 19 and waiting for Everett's ears; the [steered page guide](steered-page.md#the-spine) describes it.
+   Built on October 19; the [steered page guide](steered-page.md#the-spine) describes it.
+   On October 20 Everett chose it as more continuous in six of six blind pairs; his live play test is next.
 2. **A world and the arranger:** one preset world, with the arranger planning chords and sections, and the first cue.
 3. **Catch:** looping a caught phrase, and the arranger bringing it back, varied.
 4. **Custom worlds from text.**
