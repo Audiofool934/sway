@@ -47,10 +47,10 @@ def classes(row):
     return {pitch % 12 for pitch in np.flatnonzero(row == FREE)}
 
 
-def test_the_hands_reach_the_style_the_harmony_and_the_fade():
+def test_the_free_variant_follows_the_hands_at_once_and_fades():
     engine = FakeEngine()
     renderer = steered.SteeredRenderer(lambda: engine)
-    renderer.start(17)
+    assert renderer.start(17, variant="free")["variant"] == "free"
     narrow = steered.Control(seq=1, height=0.5, activity=0.6, spread=0.1)
     audio, stats = renderer.render(narrow)
     assert len(audio) == FRAME_SAMPLES * 2 * 4
@@ -66,9 +66,30 @@ def test_the_hands_reach_the_style_the_harmony_and_the_fade():
     assert not np.any(engine.rows[-1] == FREE)
     assert stats["pitchClasses"] == [] and stats["gain"] < 0.05
     assert np.abs(np.frombuffer(audio, dtype="<f4")).max() < 0.01
-    renderer.start(18)
+    renderer.start(18, variant="free")
     assert engine.seeds[-1] == 18 and renderer.frames == 0
     assert renderer.instrument.gain == 1.0
+
+
+def test_the_spine_is_the_default_and_reports_its_chord_and_beat():
+    engine = FakeEngine()
+    renderer = steered.SteeredRenderer(lambda: engine)
+    assert renderer.start(17)["variant"] == "spine"
+    playing = steered.Control(seq=1, activity=0.6, spread=0.1)
+    _, stats = renderer.render(playing)
+    assert (stats["chord"], stats["bar"], stats["chords"]) == ("Am", 0, ["Am", "F", "C", "G"])
+    assert classes(engine.rows[-1]) == A_MINOR_TRIAD
+    still = playing.model_copy(update={"activity": 0.0})
+    for _ in range(29):
+        renderer.render(still)
+    assert classes(engine.rows[-1]) == {9, 0, 4}  # Stillness waits for the next chord.
+    _, stats = renderer.render(still)  # F is told 1.2 s before its bar line.
+    assert classes(engine.rows[-1]) == {5, 0}  # F's root and fifth.
+    assert stats["pitchClasses"] == [0, 5] and stats["gain"] > 0.3  # Thinned, not silent.
+    assert stats["chord"] == "Am"  # Am is still the chord being heard.
+    for _ in range(29):  # To frame 60, F's bar line.
+        _, stats = renderer.render(still)
+    assert (stats["chord"], stats["bar"], stats["beat"]) == ("F", 1, 0)
 
 
 @pytest.mark.parametrize(
@@ -111,6 +132,14 @@ def test_browser_stream_has_audio_rejects_second_window_and_releases_on_disconne
                 pass
         assert rejected.value.code == 1008
     assert service.owner is None
+
+
+def test_the_stream_s_address_chooses_the_variant(client):
+    browser, _ = client
+    for query, variant in (("", "spine"), ("?variant=free", "free"), ("?variant=nope", "spine")):
+        with browser.websocket_connect("/api/steered/stream" + query) as ws:
+            assert ws.receive_json()["type"] == "loading"
+            assert ws.receive_json()["variant"] == variant
 
 
 def test_cross_origin_websocket_is_rejected_before_loading(client):

@@ -2,6 +2,7 @@
 
 import asyncio
 import ctypes
+import functools
 import logging
 import sys
 import time
@@ -51,11 +52,17 @@ class StreamService:
     def ready(self) -> bool:
         raise NotImplementedError
 
+    def options(self, websocket) -> dict:
+        """Keyword arguments for the renderer's `start`, from the stream's address."""
+        return {}
+
     def release(self, control):
         raise NotImplementedError
 
-    async def call(self, fn, *args):
-        future = asyncio.get_running_loop().run_in_executor(MODEL_THREAD, fn, *args)
+    async def call(self, fn, *args, **kwargs):
+        future = asyncio.get_running_loop().run_in_executor(
+            MODEL_THREAD, functools.partial(fn, *args, **kwargs)
+        )
         try:
             return await asyncio.shield(future)
         except asyncio.CancelledError:
@@ -102,7 +109,7 @@ class StreamService:
             receiver = asyncio.create_task(receive())
             seed = time.time_ns() % (2**31 - 1)
             await websocket.send_json({"type": "loading"})
-            prepared = await self.call(self.renderer.start, seed)
+            prepared = await self.call(self.renderer.start, seed, **self.options(websocket))
             if receiver.done():
                 return
             await websocket.send_json(

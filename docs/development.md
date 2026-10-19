@@ -87,6 +87,7 @@ The motion-to-music measurements ([design note](motion-to-music.md)):
 
 `uv run --locked python -m sway.steering --out <new folder>` runs every variant with real MRT2 and writes `summary.md`, `results.json`, the kept clips, and `listening-test.html`.
 `--variants`, `--tests`, `--seeds`, and `--keep-audio` narrow the run, and `--ask sound` makes the listening test ask about the sound instead of the movement.
+`--continuity` instead compares a scripted performance with and without V2's spine, in a listening page that counts preferences rather than right answers.
 
 The steered page ([guide](steered-page.md)):
 

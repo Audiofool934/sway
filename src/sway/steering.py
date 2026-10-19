@@ -94,8 +94,9 @@ class Styled:
 
     Subclasses choose the descriptions, how a movement weighs them, and which pitches the
     model may play. As in the theremin, the style is smoothed here, and MRT2 reads it every
-    `style_every` frames. With `fade` set, the output fades out over about that many
-    seconds while the hands are still, as the theremin page does.
+    `style_every` frames. With `fade` set, the output fades over about that many seconds
+    to `rest_level` while the hands are still: to silence, as the theremin page does,
+    unless a subclass keeps some of it.
     """
 
     name = ""
@@ -104,6 +105,7 @@ class Styled:
     smoothing = 0.18  # The fraction of the way to a new blend in each frame.
     style_every = 5
     fade: float | None = None
+    rest_level = 0.0  # The output's gain while the hands are still.
 
     def __init__(self, engine):
         self.engine = engine
@@ -136,8 +138,8 @@ class Styled:
         return audio if self.fade is None else self._faded(audio, move.activity < REST)
 
     def _faded(self, audio: np.ndarray, still: bool) -> np.ndarray:
-        """`audio` with its gain moving toward 0 while still and back to 1 otherwise."""
-        target, seconds = (0.0, self.fade) if still else (1.0, FADE_IN)
+        """`audio` with its gain moving toward `rest_level` while still, and back to 1."""
+        target, seconds = (self.rest_level, self.fade) if still else (1.0, FADE_IN)
         decay = np.exp(-np.arange(1, len(audio) + 1) / (seconds * SAMPLE_RATE))
         gains = target + (self.gain - target) * decay
         self.gain = float(gains[-1])
@@ -249,6 +251,121 @@ class Quick(Steered):
     smoothing = 1.0
     style_every = 1
     fade = 0.08
+
+
+class Live(Steered):
+    """Steered as the page played it before the spine: `Quick`'s fade on stillness."""
+
+    name = "free"
+    fade = Quick.fade
+
+
+# Night Drive's progression, as in web/instrument/theory.js, with full triads.
+PROGRESSION = (("Am", (9, 0, 4)), ("F", (5, 9, 0)), ("C", (0, 4, 7)), ("G", (7, 11, 2)))
+
+
+class Spine(Steered):
+    """Steered on a spine, V2's first milestone (docs/v2-design.md).
+
+    The steered page sounded like "random music pieces joined together". Here the music
+    keeps a bar grid at Night Drive's 100 beats a minute and its chords, one a bar:
+
+    - The notes MRT2 may play follow the bar's chord. Spread opens them around it: the
+      chord's tones when the hands are close, the pentatonic scale in between, and the
+      whole scale when they are wide.
+    - The harmony runs `lead` frames ahead of the bar line, so that MRT2's delay lands
+      each chord on its downbeat. Measured on October 19 over six seeds, the melody's
+      share on the bar's chord, early and late in the bar, rose from 0.26 and 0.55 with
+      no lead to 0.60 and 0.98 with 1.2 s; 0.8 s and 1.6 s did worse.
+    - The harmony that the hands ask for takes effect where the next chord does, not on
+      the next frame. The style still follows them continuously, as it changes gradually.
+    - Stillness thins the music instead of stopping it: the output falls to about a third
+      at once, and from the next chord only its root and fifth may sound.
+    """
+
+    name = "spine"
+    # A continuous ensemble instead of solo piano. With the hands held still, solo piano
+    # played in fragments: its note rate varied 34% from second to second, against 18%
+    # for an ensemble and 25% for flowing arpeggios, which Everett heard as far more
+    # continuous. Instruments, not register words, move the register: over six seeds on
+    # October 19, height moved it in all six (effect 3.7) and activity the density in all
+    # six (effect 3.8).
+    corners = (
+        "Calm cinematic ensemble: slow sustained cellos and double bass with soft low "
+        "piano chords, warm and continuous, instrumental",
+        "Calm cinematic ensemble: slow sustained high violins and soft high piano, airy, "
+        "bright and continuous, instrumental",
+        "Energetic cinematic ensemble: fast rhythmic low piano arpeggios and pulsing "
+        "staccato cellos over a driving double bass, continuous, instrumental",
+        "Energetic cinematic ensemble: fast rhythmic high piano arpeggios and pulsing "
+        "staccato violins, bright and continuous, instrumental",
+    )
+    tempo = 100
+    beats_per_bar = 4
+    progression = PROGRESSION
+    fade = 0.3
+    rest_level = 0.35  # About -9 dB.
+    lead = 30  # Frames: 1.2 s.
+
+    def __init__(self, engine):
+        super().__init__(engine)
+        self.bar_frames = round(self.beats_per_bar * 60 / self.tempo / FRAME)
+        self.frame = 0
+        self.held = None  # The movement that the current chord's harmony follows.
+
+    def start(self, seed: int):
+        super().start(seed)
+        self.frame = 0
+        self.held = None
+
+    @property
+    def bar(self) -> int:
+        """The bar being heard."""
+        return self.frame // self.bar_frames
+
+    @property
+    def chord(self) -> tuple[str, tuple[int, ...]]:
+        """The chord being heard."""
+        return self.progression[self.bar % len(self.progression)]
+
+    @property
+    def harmony(self) -> tuple[str, tuple[int, ...]]:
+        """The chord MRT2 is told to play now: the one `lead` frames ahead."""
+        bar = (self.frame + self.lead) // self.bar_frames
+        return self.progression[bar % len(self.progression)]
+
+    def allowed(self, move: Move) -> set[int]:
+        """The pitch classes MRT2 may play now, for the movement it follows."""
+        tones = set(self.harmony[1])
+        if move.activity < REST:
+            root = self.harmony[1][0]
+            return {root, (root + 7) % 12}
+        if move.spread < 0.35:
+            return tones
+        return tones | (A_MINOR_PENTATONIC if move.spread < 0.65 else A_MINOR)
+
+    def notes(self, move):
+        if self.held is None or (self.frame + self.lead) % self.bar_frames == 0:
+            self.held = move
+        tokens = np.full(128, SILENT, dtype=np.int32)
+        classes = self.allowed(self.held)
+        for pitch in range(36, 97):
+            if pitch % 12 in classes:
+                tokens[pitch] = FREE
+        return tokens
+
+    def render(self, move: Move) -> np.ndarray:
+        audio = super().render(move)
+        self.frame += 1
+        return audio
+
+    def snapshot(self) -> dict:
+        return {**super().snapshot(), "frame": self.frame, "held": self.held}
+
+    def restore(self, snapshot: dict, seed: int):
+        super().restore(snapshot, seed)
+        self.frame = snapshot["frame"]
+        self.held = snapshot["held"]
 
 
 # theremin-controls.js's pitch steps.
@@ -593,9 +710,87 @@ def listening_page(out: Path, variants, seeds, tests=TESTS, questions=QUESTIONS)
                 )
     order = rng.permutation(len(trials))
     trials = [dict(trials[i], id=n) for n, i in enumerate(order)]
+    write_page(out, trials, start=3)
+
+
+def write_page(out: Path, trials, *, start=None, preference=False):
+    """The listening page for `trials`, with the movement's mark at `start` seconds.
+
+    A preference test has no right answer: each trial's `answer` is the clip whose
+    choices it counts, and the page does not say right or wrong.
+    """
     template = (Path(__file__).with_name("listening_test.html")).read_text()
-    page = template.replace("__TRIALS__", json.dumps(trials)).replace("__START__", "3")
+    page = (
+        template.replace("__TRIALS__", json.dumps(trials))
+        .replace("__START__", json.dumps(start))
+        .replace("__PREFERENCE__", json.dumps(preference))
+    )
     (out / "listening-test.html").write_text(page)
+
+
+# A 40-second performance that steers, rests, and starts again: what made the steered
+# page sound like "random music pieces joined together".
+PERFORMANCE = (
+    (8.0, Move(height=0.25, activity=0.35, spread=0.1)),
+    (8.0, Move(height=0.8, activity=0.9, spread=0.9)),
+    (4.0, Move(height=0.5, activity=0.0, spread=0.5)),
+    (8.0, Move(height=0.5, activity=0.55, spread=0.5)),
+    (4.0, Move(height=0.5, activity=0.0, spread=0.5)),
+    (8.0, Move(height=0.2, activity=0.8, spread=0.2)),
+)
+
+
+def perform(variant, seed: int, *, warmup=4.0, script=PERFORMANCE) -> np.ndarray:
+    """`script` played from a fresh stream, after `warmup` seconds that are not kept."""
+    variant.start(seed)
+    for move in glide(NEUTRAL, NEUTRAL, warmup):
+        variant.render(move)
+    moves, previous = [], NEUTRAL
+    for seconds, move in script:
+        moves += glide(previous, move, seconds)
+        previous = move
+    return np.concatenate([variant.render(move) for move in moves])
+
+
+def silence(audio: np.ndarray) -> float:
+    """The share of 250 ms windows quieter than `SILENCE`."""
+    window = round(WINDOW * SAMPLE_RATE)
+    mono = audio.mean(axis=1)
+    count = len(mono) // window
+    rms = np.sqrt(np.mean(mono[: count * window].reshape(count, window) ** 2, axis=1))
+    return float(np.mean(20 * np.log10(np.maximum(rms, 1e-12)) < SILENCE))
+
+
+def continuity(out: Path, engine, seeds):
+    """Clips of the performance with and without the spine, and a page to compare them.
+
+    The page asks which clip of each pair sounds more like one continuous piece, and
+    counts how often the spine's is chosen.
+    """
+    rng = np.random.default_rng(0)
+    trials, quiet = [], {"free": [], "spine": []}
+    for seed in seeds:
+        for kind in (Live, Spine):
+            audio = perform(kind(engine), seed)
+            quiet[kind.name].append(silence(audio))
+            write_wav(out / f"{kind.name}-seed{seed}.wav", audio)
+        clips = [f"spine-seed{seed}.wav", f"free-seed{seed}.wav"]
+        flip = bool(rng.integers(2))
+        x, y = clips[::-1] if flip else clips
+        trials.append(
+            {
+                "variant": "spine",
+                "test": "continuity",
+                "seed": seed,
+                "question": "Which clip sounds more like one continuous piece of music?",
+                "x": x,
+                "y": y,
+                "answer": "y" if flip else "x",
+            }
+        )
+    order = rng.permutation(len(trials))
+    write_page(out, [dict(trials[i], id=n) for n, i in enumerate(order)], preference=True)
+    return {name: float(np.mean(values)) for name, values in quiet.items()}
 
 
 def summary(results: dict) -> str:
@@ -633,6 +828,11 @@ def main():
     parser.add_argument("--keep-audio", type=int, default=2, help="Seeds whose audio is saved")
     parser.add_argument("--tests", default=",".join(test.name for test in TESTS))
     parser.add_argument(
+        "--continuity",
+        action="store_true",
+        help="Compare the performance with and without the spine, instead of measuring",
+    )
+    parser.add_argument(
         "--ask",
         choices=("movement", "sound"),
         default="movement",
@@ -644,11 +844,18 @@ def main():
     from .music import MusicEngine
 
     engine = MusicEngine()
+    if args.continuity:
+        seeds = list(range(100, 100 + args.seeds))
+        quiet = continuity(out, engine, seeds)
+        print(f"Silent share of each clip: {quiet}")
+        (out / "silence.json").write_text(json.dumps(quiet, indent=2) + "\n")
+        return
     makers = {
         "theremin": lambda: Theremin(engine),
         "window": lambda: Window(engine),
         "steered": lambda: Steered(engine),
         "quick": lambda: Quick(engine),
+        "spine": lambda: Spine(engine),
     }
     seeds = list(range(100, 100 + args.seeds))
     tests = [next(t for t in TESTS if t.name == name) for name in args.tests.split(",")]

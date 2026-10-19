@@ -157,7 +157,7 @@
   <body>
     <main>
       <h1>Which clip is it?</h1>
-      <p class="muted">
+      <p class="muted" id="intro">
         Each pair starts from the same moment of music with the same random
         choices. Only the movement differs, and it begins at the blue mark.
         Listen to both, then pick the clip that answers the question. Guessing
@@ -183,7 +183,7 @@
       <div id="done" hidden>
         <p class="progress muted">Done.</p>
         <table id="scores"></table>
-        <p class="muted">
+        <p class="muted" id="done-note">
           Across a variant's trials, half right is chance. Copy the results to
           send them back.
         </p>
@@ -196,6 +196,9 @@
     <script>
       const TRIALS = __TRIALS__;
       const START = __START__;
+      // A preference test asks for a judgement, so no answer is right: the page counts
+      // how often each trial's `answer` clip was chosen, without saying right or wrong.
+      const PREFERENCE = __PREFERENCE__;
       const KEY = "sway-listening-" + location.pathname;
       const load = () => {
         try {
@@ -211,6 +214,12 @@
       };
       let answers = load();
       const $ = (id) => document.getElementById(id);
+      if (PREFERENCE) {
+        $("intro").textContent =
+          "Both clips in a pair play the same scripted movement with the same random choices; only the instrument differs. Listen to both, then pick the clip that answers the question. There is no right answer.";
+        $("done-note").textContent =
+          "The table counts how often you chose the clip with the spine. Copy the results to send them back.";
+      }
       const audio = { x: new Audio(), y: new Audio() };
       const heard = { x: false, y: false };
 
@@ -224,6 +233,7 @@
         audio[side].addEventListener("loadedmetadata", () => {
           bar.querySelector(".mark")?.remove();
           bar.querySelector(".mark-label")?.remove();
+          if (START === null) return;
           const at = (100 * START) / audio[side].duration + "%";
           bar.insertAdjacentHTML(
             "beforeend",
@@ -281,9 +291,11 @@
         answers.push({ id: trial.id, chose: side, right });
         save();
         $("answer-x").disabled = $("answer-y").disabled = true;
-        $("verdict").innerHTML = right
-          ? '<span class="good">Right.</span>'
-          : `<span class="bad">Not this time: it was ${trial.answer.toUpperCase()}.</span>`;
+        $("verdict").innerHTML = PREFERENCE
+          ? "Noted."
+          : right
+            ? '<span class="good">Right.</span>'
+            : `<span class="bad">Not this time: it was ${trial.answer.toUpperCase()}.</span>`;
         setTimeout(show, 1400);
       }
 

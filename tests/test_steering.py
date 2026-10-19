@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from sway import steering
-from sway.steering import FREE, NEUTRAL, SILENT, Move, Quick, Steered, ThereminHand, Window
+from sway.steering import FREE, NEUTRAL, SILENT, Move, Quick, Spine, Steered, ThereminHand, Window
 
 SR = steering.SAMPLE_RATE
 FRAME_SAMPLES = round(steering.FRAME * SR)
@@ -36,6 +36,7 @@ class FakeEngine:
         self.target = embedding
 
     def generate(self, notes, drumless=False, note_guidance=1.0):
+        self.last = notes.copy()
         allowed = np.flatnonzero(notes == FREE)
         self.frame += 1
         if not len(allowed):
@@ -245,3 +246,83 @@ def test_a_copied_moment_keeps_the_fade():
     quick.render(NEUTRAL)
     quick.restore(moment, 2)
     assert quick.gain == gain
+
+
+def test_the_spine_tells_mrt2_each_chord_ahead_of_its_bar_line():
+    spine = Spine(FakeEngine())
+    spine.start(1)
+    told, heard = [], []
+    for _ in range(4 * spine.bar_frames):
+        name, tones = spine.harmony
+        if not told or told[-1][0] != name:
+            told.append((name, spine.frame))
+        if spine.frame % spine.bar_frames == 0:
+            heard.append(spine.chord[0])
+        spine.render(Move(activity=0.6, spread=0.1))
+        assert free_classes(spine.engine.last) == set(tones)
+    assert spine.bar_frames == 60  # 2.4 s at 100 beats a minute.
+    assert heard == ["Am", "F", "C", "G"]
+    # Each chord after the first is told 30 frames, 1.2 s, before its bar line.
+    assert told == [("Am", 0), ("F", 30), ("C", 90), ("G", 150), ("Am", 210)]
+
+
+def test_the_hands_change_the_spine_s_harmony_only_with_the_next_chord():
+    spine = Spine(FakeEngine())
+    spine.start(1)
+    for _ in range(10):
+        spine.render(Move(activity=0.6, spread=0.1))
+        assert free_classes(spine.engine.last) == {9, 0, 4}  # The first frame is taken.
+    for _ in range(spine.lead - 10):
+        spine.render(Move(activity=0.6, spread=0.9))
+        assert free_classes(spine.engine.last) == {9, 0, 4}  # Still Am's tones.
+    spine.render(Move(activity=0.6, spread=0.9))
+    assert free_classes(spine.engine.last) == steering.A_MINOR  # F, wide open.
+
+
+def test_stillness_thins_the_spine_instead_of_stopping_it():
+    spine = Spine(FakeEngine())
+    spine.start(1)
+    still = Move(activity=0.0)
+    for _ in range(spine.lead + 1):
+        spine.render(still)
+    assert free_classes(spine.engine.last) == {5, 0}  # F's root and fifth.
+    assert abs(spine.gain - spine.rest_level) < 0.02
+    for _ in range(10):
+        spine.render(NEUTRAL)
+    assert spine.gain > 0.95
+
+
+def test_a_copied_moment_keeps_the_spine_s_place():
+    spine = Spine(FakeEngine())
+    spine.start(1)
+    for _ in range(70):
+        spine.render(Move(activity=0.6, spread=0.9))
+    moment = spine.snapshot()
+    for _ in range(20):
+        spine.render(Move(activity=0.0))
+    spine.restore(moment, 2)
+    assert spine.frame == 70 and spine.held.spread == 0.9 and spine.chord[0] == "F"
+
+
+def test_the_performance_rests_and_the_spine_keeps_sounding_through_it():
+    engine = FakeEngine()
+    free = steering.perform(steering.Live(engine), 3, warmup=0.4)
+    spine = steering.perform(Spine(engine), 3, warmup=0.4)
+    assert len(free) == len(spine) == round(40 * SR)
+    # The fake plays a note in every frame it may, so only resting can make it silent.
+    assert steering.silence(free) > 0.15
+    assert steering.silence(spine) == 0
+
+
+def test_the_continuity_page_counts_the_spine_without_a_right_answer(tmp_path):
+    import json
+
+    quiet = steering.continuity(tmp_path, FakeEngine(), [100, 101])
+    assert set(quiet) == {"free", "spine"}
+    page = (tmp_path / "listening-test.html").read_text()
+    assert "const PREFERENCE = true;" in page and "const START = null;" in page
+    trials = json.loads(page.split("const TRIALS = ")[1].split(";\n")[0])
+    assert len(trials) == 2
+    for trial in trials:
+        assert trial[trial["answer"]] == f"spine-seed{trial['seed']}.wav"
+        assert (tmp_path / trial["x"]).is_file() and (tmp_path / trial["y"]).is_file()

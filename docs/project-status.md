@@ -1,6 +1,7 @@
 # Project status
 
-Updated: October 19, 2026, Asia/Singapore.
+Updated: October 19, 2026, Seattle time.
+Dates are in Seattle time; the V1 plan and the motion-to-music note were dated in Singapore time.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
 
@@ -94,7 +95,10 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
    Still open: his play tests, and a new player for lesson 1.
 2. **V2:** on October 15 Everett called V1 OK and started V2's design.
    On October 19 he approved the [V2 design](v2-design.md): one continuous piece that anyone leads in five minutes, without playing a note.
-   Its first milestone is continuity: the steered page with a spine of bars and chords.
+   Its first milestone, continuity, was built on October 19: the steered page now plays on a spine of bars and chords ([guide](steered-page.md#the-spine)).
+   On October 19 Everett chose it as more continuous in six of six blind pairs, but playing it he still heard piano fragments.
+   The cause was solo piano itself, so the spine now plays an ensemble whose instruments follow the hands.
+   Later that day he played it and said: "this is GREAT!!!"
 
 ## Working rules
 
@@ -133,6 +137,10 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 | October 15      | Everett listened to the 20-minute recording: only the planned cuts and fallback bars.                                                        |
 | October 15      | V1 called OK; the V2 design draft started.                                                                                                   |
 | October 19      | The V2 design approved.                                                                                                                      |
+| October 19      | V2 milestone 1: the steered page plays on a spine; each chord is told 1.2 s early.                                                           |
+| October 19      | Blind comparison: the spine chosen as more continuous in six of six pairs.                                                                   |
+| October 19      | Still fragments when played; the spine changes from solo piano to an ensemble.                                                               |
+| October 19      | Everett played the ensemble spine: "this is GREAT!!!"                                                                                        |
 
 ## Where things are
 

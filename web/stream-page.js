@@ -4,8 +4,10 @@ import { HandVisuals } from "./instrument/hand-visual.js";
 import { ThereminAudio } from "./theremin-audio.js";
 
 // A page on which the hands steer a live MRT2 stream from the local server.
-// The page gives its stream's name, its controller, its audio options, its words, and
-// `show(state, $)`, which updates its readouts in each animation frame. `glow(state)`
+// The page gives its stream's name, an optional query for the stream's address, its
+// controller, its audio options, its words, and `show(state, $, model)`, which updates
+// its readouts in each animation frame from the controls and the model's latest
+// stats. `glow(state)`
 // returns how strongly the hands' marks glow, from 0 to 1, and `swing(state)` how far
 // the waveform at each hand swings, from 0 to 1.
 export function startStreamPage(page) {
@@ -96,7 +98,7 @@ export function startStreamPage(page) {
       if (mode === "camera") await camera.start();
       if (turn !== epoch) return;
       const ws = new WebSocket(
-        `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/${page.stream}/stream`,
+        `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/${page.stream}/stream${page.query ?? ""}`,
       );
       socket = ws;
       ws.binaryType = "arraybuffer";
@@ -300,7 +302,7 @@ export function startStreamPage(page) {
     }
     if (phase === "playing") {
       audio.control(state);
-      page.show(state, $);
+      page.show(state, $, model);
       $("status").textContent =
         source === "camera" && !controls.seen ? text.handsGone : text.playing;
       if (now - lastLog > 0.2) {
