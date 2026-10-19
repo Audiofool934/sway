@@ -259,6 +259,24 @@ h1 {
   color: #a8b5ae;
   margin: 0;
 }
+.chords {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin: 0 0 14px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #7f8f86;
+}
+.chords:empty {
+  display: none;
+}
+.chords .now {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 6px;
+}
 .qualities {
   display: flex;
   justify-content: center;

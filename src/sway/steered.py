@@ -1,9 +1,11 @@
 """The steered instrument: the hands steer the direction, and MRT2 writes every note.
 
 docs/motion-to-music.md measured this design as "steered". Height moves the style from a
-low register to a high one, activity from calm to lively, spread opens the harmony from
-the A minor triad to the whole scale, and stillness silences every pitch and fades the
-output.
+low register to a high one, activity from calm to lively, and spread opens the harmony.
+It plays on V2's spine by default (`steering.Spine`): a bar grid and chords, harmony that
+changes on bar lines, and stillness that thins the music. The free variant, without the
+spine, opens the harmony from the A minor triad to the whole scale, and its stillness
+silences every pitch and fades the output.
 """
 
 import time
@@ -13,7 +15,7 @@ from fastapi import APIRouter, WebSocket
 from pydantic import BaseModel, ConfigDict, Field
 
 from .harmony import assets_ready
-from .steering import REST, Move, Quick, Steered
+from .steering import REST, Live, Move, Spine, Steered
 from .stream import StreamService, promote_thread
 
 router = APIRouter()
@@ -28,11 +30,7 @@ class Control(BaseModel):
     spread: float = Field(default=0.5, ge=0, le=1)
 
 
-class Instrument(Steered):
-    """Steered as measured, with `Quick`'s fade on stillness."""
-
-    name = "steered"
-    fade = Quick.fade
+VARIANTS = {"spine": Spine, "free": Live}
 
 
 class SteeredRenderer:
@@ -42,7 +40,7 @@ class SteeredRenderer:
         self.factory = factory
         self.engine = None
 
-    def start(self, seed):
+    def start(self, seed, variant="spine"):
         if self.engine is None:
             self.interactive = promote_thread()
             if self.factory is None:
@@ -50,27 +48,43 @@ class SteeredRenderer:
 
                 self.factory = MusicEngine
             self.engine = self.factory()
-            self.instrument = Instrument(self.engine)
+            self.instruments = {name: kind(self.engine) for name, kind in VARIANTS.items()}
             # Compile before the browser starts its performance clock.
             self.engine.generate(np.zeros(128, dtype=np.int32), drumless=True)
+        self.instrument = self.instruments[variant]
         self.instrument.start(seed)
         self.frames = 0
-        return {"interactive": self.interactive}
+        return {"interactive": self.interactive, "variant": variant}
 
     def render(self, control):
         started = time.perf_counter()
         move = Move(height=control.height, activity=control.activity, spread=control.spread)
         audio = self.instrument.render(move)
         self.frames += 1
-        still = control.activity < REST
-        return audio.astype("<f4").tobytes(), {
+        stats = {
             "seq": control.seq,
             "frame": self.frames,
             "modelMs": round((time.perf_counter() - started) * 1000, 1),
             "weights": self.instrument.weights.round(3).tolist(),
-            "pitchClasses": [] if still else sorted(Steered.pitch_classes(control.spread)),
             "gain": round(self.instrument.gain, 3),
         }
+        instrument = self.instrument
+        if isinstance(instrument, Spine):
+            stats["pitchClasses"] = sorted(instrument.allowed(instrument.held))
+            stats["chord"] = instrument.chord[0]
+            stats["chords"] = [name for name, _ in instrument.progression]
+            stats["bar"] = instrument.bar
+            stats["beat"] = round(
+                instrument.frame
+                % instrument.bar_frames
+                / instrument.bar_frames
+                * instrument.beats_per_bar,
+                2,
+            )
+        else:
+            still = control.activity < REST
+            stats["pitchClasses"] = [] if still else sorted(Steered.pitch_classes(control.spread))
+        return audio.astype("<f4").tobytes(), stats
 
     def idle(self, until):
         self.engine.keep_busy(until)
@@ -89,6 +103,11 @@ class SteeredService(StreamService):
 
     def release(self, control):
         return control.model_copy(update={"activity": 0})
+
+    def options(self, websocket):
+        """`?variant=free` plays the steered design without the spine, for comparison."""
+        variant = websocket.query_params.get("variant", "spine")
+        return {"variant": variant if variant in VARIANTS else "spine"}
 
 
 SERVICE = SteeredService()

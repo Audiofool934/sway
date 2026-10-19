@@ -16,7 +16,7 @@ The sound is generated on this Mac, and the camera image stays on this Mac.
 | Raise or lower the hands                       | It moves to a higher or a lower register.                                                |
 | Move more, or less                             | Quick, wide movement makes it lively; slow movement keeps it calm.                       |
 | Spread the hands apart                         | Close hands keep the melody on the A minor triad; wide hands open it to the whole scale. |
-| Hold still, close the hands, or leave the view | It rests after about 0.65 seconds, and fades out. Moving again continues it.             |
+| Hold still, close the hands, or leave the view | After about 0.65 seconds it thins to a quiet chord. Moving again grows it back.          |
 
 With one hand, its left-to-right position sets the spread.
 With the mouse, hold the stage and move: height sets the register, left to right sets the spread, and speed sets the energy.
@@ -29,9 +29,40 @@ Escape also ends it, and a take stops after five minutes.
 
 - `web/steered-controls.js` turns the hands into height, activity, and spread, each from 0 to 1.
   Activity below 0.05 is stillness.
-- `src/sway/steered.py` plays `steering.Steered` with the fade on stillness from the speed run, one 40 ms frame for each control.
+- `src/sway/steered.py` plays V2's spine (`steering.Spine`), one 40 ms frame for each control.
+  `?variant=free` plays the page as it was on October 14, without the spine, for comparison (`steering.Live`).
 - `src/sway/stream.py` and `web/stream-page.js` are shared with the theremin page: one window at a time, the camera, streamed audio, and recording.
 - The page plays the model's output without its own gain or filter, so what is heard is what the model wrote.
+
+## The spine
+
+On October 15, Everett said the page "feels like some random music pieces joined together".
+The [V2 design](v2-design.md) answers with a spine, its first milestone, added on October 19:
+
+- **Bars and chords:** a bar grid at Night Drive's 100 beats a minute, and its chords, Am, F, C, and G, one a bar.
+  The page shows the chords, with the one being heard underlined.
+- **The hands open the harmony around each chord:** close hands keep the melody on the chord's tones, the middle adds the A minor pentatonic scale, and wide hands the whole scale.
+- **Harmony changes with the chord, not on any frame.**
+  The style still follows the hands continuously, as it changes gradually anyway.
+- **Stillness thins the music:** the output falls to about a third at once, and from the next chord only its root and fifth may sound.
+- **Each chord is told 1.2 seconds early,** so that MRT2's delay lands it on its bar line.
+
+The last point came from measuring.
+With chords told on their bar lines, MRT2 had not settled on one chord before the next began: early in each bar, the melody had 26% of its energy on the bar's chord, and late in it 55%.
+Six seeds were tried with the harmony 0.8, 1.2, and 1.6 seconds ahead:
+
+| Harmony ahead of the bar line | Melody on the bar's chord, early in the bar | Late in the bar |
+| ----------------------------- | ------------------------------------------- | --------------- |
+| None                          | 26%                                         | 55%             |
+| 0.8 s                         | 48%                                         | 74%             |
+| 1.2 s                         | 60%                                         | 98%             |
+| 1.6 s                         | 82%                                         | 48%             |
+
+At 1.6 seconds, the next chord already arrives late in the bar.
+Striking the chord's root in the bass on each bar line also put the melody on the chord at once, but the melody then faded, to 18% of the energy late in the bar.
+
+`uv run --locked python -m sway.steering --out <new folder> --continuity` renders a 40-second scripted performance, which steers, rests twice, and starts again, with and without the spine, and writes a blind listening page that asks which of each pair sounds more like one continuous piece.
+On October 19, over six seeds, the clips without the spine were silent 18% of the time, and those with it 1%.
 
 ## The model thread
 
