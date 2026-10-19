@@ -1,6 +1,7 @@
 # Project status
 
-Updated: October 20, 2026, Asia/Singapore.
+Updated: October 19, 2026, Seattle time.
+Dates are in Seattle time; the V1 plan and the motion-to-music note were dated in Singapore time.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
 
@@ -97,7 +98,7 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
    Its first milestone, continuity, was built on October 19: the steered page now plays on a spine of bars and chords ([guide](steered-page.md#the-spine)).
    On October 19 Everett chose it as more continuous in six of six blind pairs, but playing it he still heard piano fragments.
    The cause was solo piano itself, so the spine now plays an ensemble whose instruments follow the hands.
-   On October 20 he played it and said: "this is GREAT!!!"
+   Later that day he played it and said: "this is GREAT!!!"
 
 ## Working rules
 
@@ -139,7 +140,7 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 | October 19      | V2 milestone 1: the steered page plays on a spine; each chord is told 1.2 s early.                                                           |
 | October 19      | Blind comparison: the spine chosen as more continuous in six of six pairs.                                                                   |
 | October 19      | Still fragments when played; the spine changes from solo piano to an ensemble.                                                               |
-| October 20      | Everett played the ensemble spine: "this is GREAT!!!"                                                                                        |
+| October 19      | Everett played the ensemble spine: "this is GREAT!!!"                                                                                        |
 
 ## Where things are
 

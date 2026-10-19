@@ -1,6 +1,6 @@
 # Sway V2: design
 
-Started: October 15, 2026, Asia/Singapore.
+Started: October 15, 2026, Seattle time.
 Status: Everett approved this direction on October 19, 2026.
 The gestures, the open questions, and the milestones after the first will change as play tests answer them.
 Nothing here is built yet, except where it says so.
@@ -151,7 +151,7 @@ Each is one piece of work on its own branch and pull request, and Everett plays 
    It tests the answer to "random pieces joined together" first, because it is the most uncertain.
    Built on October 19; the [steered page guide](steered-page.md#the-spine) describes it.
    On October 19 Everett chose it as more continuous in six of six blind pairs, but still heard piano fragments when he played it; solo piano itself was the cause, so the spine became an ensemble whose instruments follow the hands.
-   On October 20 he played the ensemble and said: "this is GREAT!!!"
+   Later that day he played the ensemble and said: "this is GREAT!!!"
 2. **A world and the arranger:** one preset world, with the arranger planning chords and sections, and the first cue.
 3. **Catch:** looping a caught phrase, and the arranger bringing it back, varied.
 4. **Custom worlds from text.**

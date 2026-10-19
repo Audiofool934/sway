@@ -1,6 +1,6 @@
 # Steered page
 
-Started: October 13, 2026, Asia/Singapore.
+Started: October 13, 2026, Seattle time.
 This page plays the steered design from the [motion-to-music note](motion-to-music.md) with the hands.
 The hands steer the direction of the music, and MRT2 writes every note.
 On October 14, after playing it with his hands and the camera, Everett said it does feel like leading the music.
@@ -96,7 +96,7 @@ Naming instruments fixed both controls: low is cellos, double bass, and low pian
 
 The last is the spine's texture now.
 Its note rate varied 21% to 32% from second to second across its corners and middle, so this measure alone does not settle continuity; Everett's ears do.
-On October 20, Everett played the ensemble with his hands and said: "this is GREAT!!!"
+On October 19, Everett played the ensemble with his hands and said: "this is GREAT!!!"
 The clips are in `outputs/fragments-2026-10-19/`.
 
 ## The model thread
