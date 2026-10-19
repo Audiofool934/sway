@@ -1,6 +1,6 @@
 # Project status
 
-Updated: October 15, 2026, Asia/Singapore.
+Updated: October 19, 2026, Asia/Singapore.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
 
@@ -93,7 +93,8 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
    On October 15 Everett listened to it and heard only the scripted cuts and the fallback bars, so the gap test is met.
    Still open: his play tests, and a new player for lesson 1.
 2. **V2:** on October 15 Everett called V1 OK and started V2's design.
-   The [V2 design draft](v2-design.md) is under review: one continuous piece that anyone leads in five minutes, without playing a note.
+   On October 19 he approved the [V2 design](v2-design.md): one continuous piece that anyone leads in five minutes, without playing a note.
+   Its first milestone is continuity: the steered page with a spine of bars and chords.
 
 ## Working rules
 
@@ -131,6 +132,7 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 | October 14      | 20-minute V1 run on `main`: 3 fallback bars instead of 78, no quiet interval of 300 ms or longer outside the cuts, one late moment at 17:27. |
 | October 15      | Everett listened to the 20-minute recording: only the planned cuts and fallback bars.                                                        |
 | October 15      | V1 called OK; the V2 design draft started.                                                                                                   |
+| October 19      | The V2 design approved.                                                                                                                      |
 
 ## Where things are
 

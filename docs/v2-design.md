@@ -1,7 +1,8 @@
-# Sway V2: design draft
+# Sway V2: design
 
 Started: October 15, 2026, Asia/Singapore.
-Status: draft for Everett's review.
+Status: Everett approved this direction on October 19, 2026.
+The gestures, the open questions, and the milestones after the first will change as play tests answer them.
 Nothing here is built yet, except where it says so.
 It replaces the October 1 proposal in [#3](https://github.com/Audiofool934/sway/pull/3), which gave the AI more decisions; this draft gives them to the player.
 
