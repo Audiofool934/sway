@@ -284,6 +284,22 @@ class Spine(Steered):
     """
 
     name = "spine"
+    # A continuous ensemble instead of solo piano. With the hands held still, solo piano
+    # played in fragments: its note rate varied 34% from second to second, against 18%
+    # for an ensemble and 25% for flowing arpeggios, which Everett heard as far more
+    # continuous. Instruments, not register words, move the register: over six seeds on
+    # October 20, height moved it in all six (effect 3.7) and activity the density in all
+    # six (effect 3.8).
+    corners = (
+        "Calm cinematic ensemble: slow sustained cellos and double bass with soft low "
+        "piano chords, warm and continuous, instrumental",
+        "Calm cinematic ensemble: slow sustained high violins and soft high piano, airy, "
+        "bright and continuous, instrumental",
+        "Energetic cinematic ensemble: fast rhythmic low piano arpeggios and pulsing "
+        "staccato cellos over a driving double bass, continuous, instrumental",
+        "Energetic cinematic ensemble: fast rhythmic high piano arpeggios and pulsing "
+        "staccato violins, bright and continuous, instrumental",
+    )
     tempo = 100
     beats_per_bar = 4
     progression = PROGRESSION

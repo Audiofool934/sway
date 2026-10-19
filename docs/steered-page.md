@@ -67,6 +67,37 @@ On October 20, Everett chose the clip with the spine as the more continuous one 
 The clips without the spine fall silent when the hands rest, which is an obvious cue, so this shows that the largest seam is gone, not yet that the music feels like one piece while it plays.
 The answers are in `outputs/continuity-2026-10-19/listening-results-2026-10-20.json`.
 
+### Texture
+
+On October 20, Everett played the spine and still heard "individual piano fragments", with transitions that are not blank, even with a steady motion; the note rate sped up and slowed down.
+The controller was not the cause: a simulated steady sway moved activity only between 0.49 and 0.58.
+The model was: with the hands held constant and no chord changes at all, solo piano's note rate still varied 27% from second to second, and narrow chords made it more hesitant.
+
+So the spine's four style corners changed from solo piano to an ensemble.
+With the hands held constant and the chords on, measured over three seeds:
+
+| Prompt                               | Note rate's variation, second to second | Time in dips |
+| ------------------------------------ | --------------------------------------- | ------------ |
+| Solo piano, the corners before       | 34%                                     | 1.8%         |
+| Piano over strings and bass          | 21%                                     | 2.5%         |
+| Flowing piano arpeggios              | 25%                                     | 0%           |
+| Ensemble of piano, strings, and bass | 18%                                     | 0.1%         |
+
+Everett ranked them: ensemble about equal to arpeggios, both far more continuous than solo piano.
+The plain ensemble lost the energy control, though: over six seeds, activity moved the density the expected way in only half.
+Naming instruments fixed both controls: low is cellos, double bass, and low piano; high is violins and high piano; calm is slow and sustained; lively is fast arpeggios and pulsing staccato strings.
+
+| Corners                                   | Height moves the register | Activity moves the density |
+| ----------------------------------------- | ------------------------- | -------------------------- |
+| Solo piano, October 7                     | 83% of seeds, effect 1.4  | 100%, effect 1.9           |
+| Ensemble                                  | 100%, effect 4.2          | 50%, effect -0.5           |
+| Rhythmic ensemble, with register words    | 67%, effect 0.6           | 100%, effect 1.7           |
+| Rhythmic ensemble, naming the instruments | 100%, effect 3.7          | 100%, effect 3.8           |
+
+The last is the spine's texture now.
+Its note rate varied 21% to 32% from second to second across its corners and middle, so this measure alone does not settle continuity; Everett's ears do.
+The clips are in `outputs/fragments-2026-10-20/`.
+
 ## The model thread
 
 With mlx 0.31.2, once one thread has run MRT2, another thread fails with "There is no Stream(gpu, 1) in current thread".
