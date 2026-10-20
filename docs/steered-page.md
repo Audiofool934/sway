@@ -29,6 +29,7 @@ The Gestures button, or G, shows [each gesture drawn](#the-gesture-guide) over t
 The music follows a gesture within a second or two, except the volume and the swell, which answer at once; Everett accepted this latency on October 13.
 
 `?variant=spine` and `?variant=free` play the earlier, steered designs: height sets the register, movement the energy, spread the harmony, and stillness thins the music.
+`?variant=theme` plays the spine with a theme that returns every twelve bars ([The theme, played](#the-theme-played)).
 
 End the take to save it as a WAV file.
 Escape also ends it, and a take stops after five minutes.
@@ -287,7 +288,21 @@ The clips with the theme are 3 to 6 dB quieter before matching, because only one
 The theme can be heard, so the test is not blind to which clip has it: it asks for a judgment.
 The page asks of each pair which clip sounds more like one piece with its own identity, and then which one Everett would rather keep listening to, so that a theme that makes the music worse to hear shows.
 The clips and the page are in `outputs/theme-2026-10-20/`.
-The answers are not in yet.
+On October 20 Everett found the pairs tiring to compare and asked to go on with the design without the answers, so the test has no listening result.
+The theme became playable instead.
+
+### The theme, played
+
+`?variant=theme` (`theme.ThemeLoop`) plays the theme on the steered page, and the hands steer as on the spine.
+
+- **The theme returns:** after four bars away at the start, it plays for four bars every twelve, 28.8 s.
+  The page shows "The theme" while it plays, and otherwise how many bars until it returns.
+- **Height still moves the register:** at each of the theme's bar lines, height below 0.3 moves the theme an octave down, and above 0.7 an octave up.
+  The pitches that only the theme may play move with it.
+- **Stillness rests the theme,** and the spine thins as before; moving again strikes the theme's note at once, even mid-note.
+- **The page says what this variant does:** its first screen, header, and footer describe steering, not the film score; the spine and free variants get the same steered words, which they had before the film score replaced them.
+
+Checked on October 20 in headless Chrome with the real model, with 40 seconds of scripted mouse motion: the theme played in bars 4 to 7 and 16 to 19, the count ran from 8 bars down to 1 between them, stillness showed "The theme · resting", and the audio had no underrun.
 
 ## The model thread
 

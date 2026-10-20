@@ -232,13 +232,77 @@ if (guide) {
   guideButton.hidden = true;
   document.getElementById("show-gestures").hidden = true;
 }
-if (earlier)
+if (earlier) {
   for (const [id, text] of [
     ["first-label", "Height"],
     ["second-label", "Energy"],
     ["third-label", "Spread"],
   ])
     document.getElementById(id).textContent = text;
+  showSteeredIntro();
+}
+
+// The page's markup describes the film score; the steered variants say what they do.
+function showSteeredIntro() {
+  const $ = (id) => document.getElementById(id);
+  const name = themed ? "theme" : "steered";
+  document.title = `Sway · ${name[0].toUpperCase()}${name.slice(1)}`;
+  document.querySelector(".brand span").textContent = name;
+  $("status").textContent = themed ? "Theme · ready" : "Steered · ready";
+  document.querySelector("#intro .eyebrow").textContent =
+    "YOUR HANDS STEER · THE MODEL WRITES";
+  $("title").textContent = themed
+    ? "Lead the music, and hear its theme return."
+    : "Lead the music where it goes.";
+  document.querySelector("#intro .description").textContent = themed
+    ? "The model, generated on this Mac, plays a theme and writes everything around it. Your hands set the direction, and the music follows within a second or two."
+    : "Every note comes from the model, generated on this Mac. Your hands set the direction, and the music follows within a second or two.";
+  const steps = [
+    [
+      "Raise or lower your hands",
+      `The music moves to a higher or a lower register${themed ? ", and the theme with it" : ""}.`,
+    ],
+    [
+      "Move more, or less",
+      "Quick, wide movement makes it lively. Slow movement keeps it calm.",
+    ],
+    [
+      "Spread your hands apart",
+      "Close hands keep the melody on the chord. Wide hands open it to the whole scale, with more tension.",
+    ],
+    [
+      "Hold still",
+      free
+        ? "The music rests. Move again to bring it back."
+        : "The music thins to a quiet chord. Move again to grow it back.",
+    ],
+  ];
+  if (themed)
+    steps.unshift([
+      "Listen for the theme",
+      "Every twelve bars the music plays its theme for four bars. The page shows when it returns.",
+    ]);
+  document.querySelector("#intro .guide").replaceChildren(
+    ...steps.map(([title, text], index) => {
+      const item = document.createElement("li");
+      const number = document.createElement("span");
+      number.className = "number";
+      number.textContent = String(index + 1).padStart(2, "0");
+      const body = document.createElement("div");
+      const heading = document.createElement("b");
+      heading.textContent = title;
+      const words = document.createElement("p");
+      words.textContent = text;
+      body.append(heading, words);
+      item.append(number, body);
+      return item;
+    }),
+  );
+  $("message").textContent =
+    "The sound is generated on this Mac. The camera image stays here too.";
+  $("footer-note").textContent =
+    "One hand works too: left to right opens the harmony.";
+}
 
 startStreamPage({
   stream: "steered",

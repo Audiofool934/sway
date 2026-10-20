@@ -113,7 +113,8 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 4. **The theme test,** on its own branch: whether a theme that MRT2 is given as notes, and that leaves and returns, makes the spine sound like one piece with its own identity.
    The [V2 design](v2-design.md#what-we-have-learned) gives the reasons.
    It runs offline, as a blind listening test, before any more is built on the conductor.
-   Built on October 20 ([guide](steered-page.md#the-theme-test)): MRT2 plays the theme's notes, 81% to 90% of the melody early in each note against 12% to 27% without it; Everett's listening test is next.
+   Built on October 20 ([guide](steered-page.md#the-theme-test)): MRT2 plays the theme's notes, 81% to 90% of the melody early in each note against 12% to 27% without it.
+   Everett found the blind pairs tiring and asked to go on without the answers, so the theme is now playable at `steered.html?variant=theme` ([guide](steered-page.md#the-theme-played)); his play test is next.
 
 ## Working rules
 
