@@ -64,6 +64,13 @@ export class ThereminAudio {
     compressor.ratio.value = 5;
     this.master = ctx.createGain();
     this.master.gain.value = 0.7;
+    // A limiter keeps the loudest peaks below full scale at any volume.
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -2;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.1;
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 256;
     this.recorder = new AudioWorkletNode(ctx, "sway-recorder", {
@@ -83,6 +90,7 @@ export class ThereminAudio {
     this.expression.connect(room).connect(wet).connect(compressor);
     compressor
       .connect(this.master)
+      .connect(limiter)
       .connect(this.analyser)
       .connect(this.recorder)
       .connect(ctx.destination);

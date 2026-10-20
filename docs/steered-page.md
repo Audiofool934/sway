@@ -25,6 +25,7 @@ The sound is generated on this Mac, and the camera image stays on this Mac.
 One hand conducts as the right hand, and the voices keep their balance.
 A left-handed player can open `steered.html?hand=left`.
 With the mouse, hold the stage and move: the motion's size and speed conduct, and a double-click moves on.
+The Gestures button, or G, shows [each gesture drawn](#the-gesture-guide) over the stage at any time, while the music keeps playing.
 The music follows a gesture within a second or two, except the volume and the swell, which answer at once; Everett accepted this latency on October 13.
 
 `?variant=spine` and `?variant=free` play the earlier, steered designs: height sets the register, movement the energy, spread the harmony, and stillness thins the music.
@@ -126,7 +127,7 @@ So the milestone continued with the conductor: the player conducts, a composer w
   Both hands above the top 30% of the view for a quarter of a second prepare, and both below the middle within 0.6 seconds of leaving the top move on.
   The left hand's balance holds while it is out of view, and while both hands are up.
 - **The piece** (`src/sway/piece.py`) blends the 16 descriptions by the gestures; the dynamics is 40% of the calm-to-driving texture, and the section's words 20% of the style.
-  It applies the section's level as a gain, moving to a new section's level with a 1-second time constant.
+  It brings MRT2's output to a [steady loudness](#loudness), then applies the section's level as a gain, moving to a new section's level with a 1-second time constant.
   The harmony is the composer's: each chord's tones and the pentatonic scale.
 - **The composer** (`src/sway/arranger.py`) is Qwen.
   For each phrase it writes the next section, its chords, and a caption that names no instrument, and a second plan in case the player moves on.
@@ -156,6 +157,47 @@ A scripted 62-second take in the browser, with the real model and Qwen, went as 
 Frames took a median of 22.5 ms, 95% under 24.4 ms, with no underrun and no console error.
 At 1280 by 800, the voices sit across the top of the view and the readouts at the bottom; in a 400 by 300 pane they overlap.
 The clips are in `outputs/conducted-2026-10-19/`.
+
+### The gesture guide
+
+On October 20 Everett played the conductor and said that it starts to come together, and that "the instrument itself is a generative result".
+But the written guide did not show exactly how to point or move.
+So the page draws each gesture as a short looping animation: louder or softer, calm or driving, bringing a voice forward, long or short notes, the hush, and moving on.
+The hands are drawn from behind, as the player sees their own hands held up to the screen.
+The voice card names the world's voices, and meters and notes show what each gesture changes.
+The Gestures button in the header, "See the gestures" on the first screen, or G opens the guide; Close, Escape, or G closes it.
+The music keeps playing while it is open, and Escape closes the guide before it would end the take.
+With reduced motion, each card holds the pose that shows its gesture.
+`web/gesture-guide.js` draws the animations.
+
+### Loudness
+
+The same day Everett found the sound too quiet: he had to turn the Mac's volume all the way up.
+MRT2's output level depends on the texture: with the same world it ranged from -59 to -30 dBFS RMS, 15 to 40 dB below recorded music.
+
+- **The piece** measures its output over 2 seconds and brings it to -13 dBFS RMS, by -12 to +48 dB, before the section's level.
+  While the measure catches up with a sudden loud passage, no frame is boosted more than 6 dB above that level.
+  A hush is not measured, so it stays quiet.
+  The measure starts from MRT2's quietest textures, so that a quiet opening is heard at once.
+- **The page's** volume starts at full instead of 70%, and a limiter after it keeps the peaks below full scale.
+
+Measured in the browser with the real model, conducting with the mouse, at the page's output:
+
+| Playing         | Before, dBFS RMS | After, dBFS RMS |
+| --------------- | ---------------- | --------------- |
+| Moderate motion | -24              | -15.5 to -18.5  |
+| Big motion      | -27              | -11.4 to -14.7  |
+| Small motion    | -32 to -42       | -19.8 to -21.8  |
+| A hush          | -43 to -47       | -32             |
+
+"Before" is the first version of this change, which aimed at -16 dBFS with at most +36 dB and a volume of 70%; the version Everett played had no leveling.
+The quiet intro now reaches its level within 3 seconds.
+The loudest peak was -0.5 dBFS.
+Recorded music is usually played at about -14 LUFS, so big motion is about as loud as a song, and moderate motion a little softer.
+
+In one take, MRT2's own output fell silent for about 11 seconds during small motion in the peak, and it played again when the motion grew.
+The leveling lowers a frame by at most 12 dB, or to the ceiling, and it holds its gain through a silence, so the silence came from the model.
+It has not been traced yet.
 
 ## The model thread
 

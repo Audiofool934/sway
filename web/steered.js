@@ -5,6 +5,7 @@ import {
   VOICE_PLACES,
   voiceWeights,
 } from "./conductor-controls.js";
+import { GestureGuide } from "./gesture-guide.js";
 
 // By default the player conducts a film score (docs/v2-design.md). `?variant=spine`
 // plays V2's first milestone, Night Drive's chords on repeat, and `?variant=free` the
@@ -132,6 +133,7 @@ const conducting = {
   show(state, $, model, audio) {
     showChords($, model);
     showVoices($, state, model);
+    guide?.setVoices(model.voices);
     showMove(state, $, model, audio);
     showSection($, model);
     // The volume answers the motion's size at once: from -12 dB to full.
@@ -181,6 +183,41 @@ const steering = {
 };
 
 const mode = earlier ? steering : conducting;
+
+// The gestures, drawn: open at any time with the button or G; Escape closes the guide
+// before it would end the take.
+const guideButton = document.getElementById("gestures");
+const guide = earlier
+  ? null
+  : new GestureGuide(document.getElementById("gesture-guide"), {
+      onToggle: (open) => guideButton.setAttribute("aria-expanded", open),
+    });
+if (guide) {
+  guideButton.onclick = () => guide.toggle();
+  document.getElementById("show-gestures").onclick = () => guide.show();
+  window.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.key === "Escape" && guide.open) {
+        guide.hide();
+        event.stopPropagation();
+        event.preventDefault();
+      } else if (
+        event.key.toLowerCase() === "g" &&
+        !event.repeat &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.target.closest?.("textarea, select, input:not([type=range])")
+      )
+        guide.toggle();
+    },
+    true,
+  );
+} else {
+  guideButton.hidden = true;
+  document.getElementById("show-gestures").hidden = true;
+}
 if (earlier)
   for (const [id, text] of [
     ["first-label", "Height"],

@@ -20,7 +20,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .arranger import Plan, Summary, opening, own_plans
-from .steering import SAMPLE_RATE, Spine
+from .steering import FRAME, SAMPLE_RATE, Spine
 from .world import FILM_SCORE, World
 
 HISTORY = 6  # Earlier sections the composer is told about.
@@ -75,6 +75,16 @@ class Piece(Spine):
     direction_smoothing = 0.1  # Per frame, so a new section's sound takes about 0.4 s.
     dynamics_share = 0.4  # Of the calm-to-driving texture: the rest is the energy.
     level_time = 1.0  # Seconds for the gain to move most of the way to a new section's.
+    # MRT2's output level depends on the texture: on October 20 it ranged from -59 to
+    # -30 dBFS RMS with the same world, 15 to 40 dB below recorded music. So its level is
+    # measured over `loudness_time` and brought to `loudness`, before the score's level
+    # and the conductor's dynamics apply. A hush is not measured, so it stays quiet.
+    loudness = -13.0  # dBFS RMS.
+    loudness_time = 2.0  # Seconds.
+    boosts = (-12.0, 48.0)  # dB: the least and the most the output is changed.
+    # dB above `loudness`: while the measure catches up with a sudden loud passage, no
+    # frame is boosted past this.
+    ceiling = 6.0
 
     def __init__(self, engine, world: World = FILM_SCORE):
         self.world = world
@@ -103,6 +113,10 @@ class Piece(Spine):
         self.wants_plan = True
         self.direction_now = self.directions[first.plan.direction].copy()
         self.level = self._gain(first.plan.section)
+        # The output's mean square, until it is measured: MRT2's quietest textures, so
+        # that a quiet opening is heard at once and a loud one meets the ceiling.
+        self.heard = 10 ** (-55 / 10)
+        self.boost = self._boost()
         super().start(seed)
 
     def blend(self, gesture: Gesture) -> np.ndarray:
@@ -147,7 +161,7 @@ class Piece(Spine):
         self._schedule()
         self._listen(gesture)
         heard = self.phrase.plan.section
-        audio = self._leveled(super().render(gesture), heard)
+        audio = self._leveled(super().render(gesture), heard, gesture.hush)
         if self.landing is not None and self.frame >= self.landing:
             self.landing = None
         return audio
@@ -155,13 +169,30 @@ class Piece(Spine):
     def _gain(self, section: str) -> float:
         return 10 ** (self.world.section(section).level / 20)
 
-    def _leveled(self, audio: np.ndarray, section: str) -> np.ndarray:
-        """`audio` at the score's level for `section`, moving there over `level_time`."""
-        target = self._gain(section)
+    def _boost(self) -> float:
+        """The gain that brings the measured output to `loudness`."""
+        db = self.loudness - 10 * np.log10(self.heard)
+        least, most = self.boosts
+        return 10 ** (min(most, max(least, db)) / 20)
+
+    def _leveled(self, audio: np.ndarray, section: str, hushed: bool) -> np.ndarray:
+        """`audio` brought to `loudness`, then to the score's level for `section`.
+
+        Both gains move to their new values with a `level_time` time constant, but the
+        boost falls at once if this frame would be louder than the `ceiling`.
+        """
+        square = float(np.mean(audio**2))
+        if not hushed and self.gain > 0.9 and square > 1e-7:  # Not a hush, nor silence.
+            self.heard += (square - self.heard) * min(1.0, FRAME / self.loudness_time)
         decay = np.exp(-np.arange(1, len(audio) + 1) / (self.level_time * SAMPLE_RATE))
-        gains = target + (self.level - target) * decay
-        self.level = float(gains[-1])
-        return audio * gains[:, None].astype(audio.dtype)
+        level, boost = self._gain(section), self._boost()
+        levels = level + (self.level - level) * decay
+        boosts = boost + (self.boost - boost) * decay
+        if square > 1e-7:
+            most = 10 ** ((self.loudness + self.ceiling) / 20) / np.sqrt(square)
+            boosts = np.minimum(boosts, most)
+        self.level, self.boost = float(levels[-1]), float(boosts[-1])
+        return audio * (levels * boosts)[:, None].astype(audio.dtype)
 
     def _schedule(self):
         """Choose the next phrase when the told clock reaches the current one's end."""
@@ -321,6 +352,8 @@ class Piece(Spine):
             ),
             "direction_now": self.direction_now.copy(),
             "level": self.level,
+            "heard": self.heard,
+            "boost": self.boost,
         }
 
     def restore(self, snapshot: dict, seed: int):
@@ -337,4 +370,6 @@ class Piece(Spine):
         self.leading = leading.copy()
         self.direction_now = snapshot["direction_now"].copy()
         self.level = snapshot["level"]
+        self.heard = snapshot["heard"]
+        self.boost = snapshot["boost"]
         super().restore(snapshot, seed)

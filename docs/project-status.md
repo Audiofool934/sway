@@ -1,6 +1,6 @@
 # Project status
 
-Updated: October 19, 2026, Seattle time.
+Updated: October 20, 2026, Seattle time.
 Dates are in Seattle time; the V1 plan and the motion-to-music note were dated in Singapore time.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
@@ -36,7 +36,7 @@ Numbers such as #3 are pull requests on GitHub.
 | ---------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | `/`              | V1: the lead hand plays a pitch ladder, and the band hand sets energy, cuts, and loops. | Current. MRT2 plays the harmony, and Qwen can compose the band. |
 | `/theremin.html` | The hands shape MRT2's live sound directly.                                             | Experiment. Its interface is in Chinese.                        |
-| `/steered.html`  | A film score that the hands lead, an arranger plans, and a clap moves on.               | V2. Milestone 1 merged October 19; milestone 2 in review.       |
+| `/steered.html`  | A film score that the player conducts and Qwen composes.                                | V2. Milestone 1 merged October 19; milestone 2 in review.       |
 
 The Qwen gesture ensemble and Flow pages from September 26 and 27, their pipeline, and their documents were removed on October 7.
 The [documentation index](README.md) says how to find them in Git.
@@ -103,7 +103,11 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
    Playing it, Everett found that it has the film-score sound but is not controllable: "I don't know what my hands are actually controlling."
    So the V2 design now makes the player [the conductor](v2-design.md#the-conductor) of an AI orchestra, with fixed gestures whose meaning each world sets, and a [world designer](v2-design.md#worlds-and-the-world-designer) that writes worlds from the player's words.
 3. **The conductor,** milestone 2's continuation on #17's branch, was built the same day: the conductor's gestures, the film score written as a world, and the composer kept to the score ([guide](steered-page.md#the-conductor)).
-   Everett plays it next.
+   On October 20 Everett played it: it starts to come together, and "the instrument itself is a generative result".
+   He asked for drawings of the gestures that open on screen at any time, and found the sound too quiet.
+   Both are now on #17: a [gesture guide](steered-page.md#the-gesture-guide), and a [steady, louder level](steered-page.md#loudness).
+   He also asked when a player can choose or describe the theme in words: that is milestone 3, the [world designer](v2-design.md#worlds-and-the-world-designer).
+   In one test take MRT2 fell silent for about 11 seconds; it has not been traced yet.
 
 ## Working rules
 
@@ -149,6 +153,7 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 | October 19      | V2 milestone 2: the film score world, Qwen as the arranger, and the clap.                                                                    |
 | October 19      | The product pictured as an orchestra you conduct; the conductor model and the world designer added to the V2 design.                         |
 | October 19      | The conductor built: fixed gestures, the film score as a world, and the composer kept to the score.                                          |
+| October 20      | Everett played the conductor; a gesture guide and a steady, louder level added.                                                              |
 
 ## Where things are
 
@@ -156,5 +161,5 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 - Recordings and test evidence are in `outputs/` and `work/`, which Git ignores.
   The [data map](development.md#data-and-evidence) lists the current ones.
 - The Qwen credential is in `~/.config/sway/qwen.json`, outside the repository.
-- On `steered-page` on October 13, 92 Python tests and 133 JavaScript tests passed.
+- On `world-arranger` on October 20, 135 Python tests and 141 JavaScript tests passed.
 - At this update, Everett's own `sway serve` was running in his terminal; no agent-started Sway process was.

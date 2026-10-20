@@ -28,10 +28,12 @@ class FakeEngine:
     def apply_style(self, embedding):
         self.target = embedding
 
+    amplitude = 0.1
+
     def generate(self, notes, drumless=False, note_guidance=1.0):
         self.last = notes.copy()
         self.frame += 1
-        return np.full((1920, 2), 0.1, dtype=np.float32)
+        return np.full((1920, 2), self.amplitude, dtype=np.float32)
 
     def snapshot(self):
         return {"frame": self.frame}
@@ -184,10 +186,46 @@ def test_a_copied_moment_keeps_the_piece_s_place():
 
 def test_each_section_plays_at_the_score_s_level():
     instrument = piece()
-    audio = instrument.render(PLAYING)
+    instrument.render(PLAYING)
     assert np.isclose(instrument.level, 10 ** (-6 / 20))  # The intro, from its start.
-    assert np.allclose(np.abs(audio).max(), 0.1 * 10 ** (-6 / 20), rtol=1e-3)
     instrument.offer(instrument.request()[0], plans(section="peak"))
     play(instrument, FILM_SCORE.phrase_frames + 75)  # 3 s into the peak, near full level.
     assert instrument.phrase.plan.section == "peak"
     assert instrument.level > 0.95
+
+
+def rms_db(audio):
+    return 20 * np.log10(np.sqrt(np.mean(audio**2)))
+
+
+def test_the_model_s_output_is_brought_to_a_steady_loudness_and_a_hush_stays_quiet():
+    instrument = piece()
+    instrument.engine.amplitude = 0.01  # -40 dBFS: as quiet as MRT2's intro can be.
+    play(instrument, 300)  # 12 s.
+    audio = instrument.render(PLAYING)
+    # Brought to -16 dBFS, then the intro's -6 dB.
+    assert abs(rms_db(audio) - (instrument.loudness - 6)) < 0.5
+    heard, boost = instrument.heard, instrument.boost
+    play(instrument, 100, HUSHED)  # A hush is not measured: the boost holds.
+    assert instrument.heard == heard and np.isclose(instrument.boost, boost, rtol=0.01)
+    instrument.engine.amplitude = 0.3  # A loud texture is brought down to the same level,
+    play(instrument, 300)
+    audio = instrument.render(PLAYING)
+    level = FILM_SCORE.section(instrument.phrase.plan.section).level  # by now the build's.
+    assert abs(rms_db(audio) - (instrument.loudness + level)) < 0.5
+
+
+def test_a_sudden_loud_passage_is_not_boosted_past_the_ceiling():
+    instrument = piece()
+    instrument.engine.amplitude = 0.001  # -60 dBFS: MRT2's quietest intro.
+    play(instrument, 500)  # 20 s.
+
+    def above():  # dB above `loudness` at the score's level.
+        audio = instrument.render(PLAYING)
+        return rms_db(audio) - instrument.loudness - 20 * np.log10(instrument.level)
+
+    assert abs(above()) < 0.5
+    instrument.engine.amplitude = 0.1  # 40 dB louder at once.
+    assert max(above() for _ in range(50)) < instrument.ceiling + 0.1
+    play(instrument, 100)
+    assert abs(above()) < 1  # Level again 6 s on.
