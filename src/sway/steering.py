@@ -29,6 +29,7 @@ SAMPLE_RATE = 48_000
 FRAME = 0.04  # One model frame.
 A_MINOR = {9, 11, 0, 2, 4, 5, 7}
 FREE, SILENT = -1, 0  # Note conditioning: the model may choose, or must not play.
+STRUCK = 2  # Or must play now.
 
 
 # Movements.
@@ -281,6 +282,7 @@ class Spine(Steered):
       the next frame. The style still follows them continuously, as it changes gradually.
     - Stillness thins the music instead of stopping it: the output falls to about a third
       at once, and from the next chord only its root and fifth may sound.
+    - When MRT2 falls silent by itself, it is told to strike the chord being heard.
     """
 
     name = "spine"
@@ -308,17 +310,26 @@ class Spine(Steered):
     fade = 0.3
     rest_level = 0.35  # About -9 dB.
     lead = 30  # Frames: 1.2 s.
+    # MRT2 sometimes stops playing under a calm style, whichever notes it may choose, and
+    # then stays silent. On October 20, in six scripted takes of the conducted film score,
+    # it fell silent five times in 12 minutes, for up to 8.8 s, mostly under small motion
+    # or a hush and never under big motion. Struck once, the chord being heard brought the
+    # sound back in 0.1 to 1.0 s in eight of eight tries, and MRT2 played on by itself.
+    silent = 10 ** (-65 / 10)  # The mean square of a silent frame: -65 dBFS RMS.
+    wake_after = 20  # Silent frames before the strike: 0.8 s, longer than a short rest.
 
     def __init__(self, engine):
         super().__init__(engine)
         self.bar_frames = round(self.beats_per_bar * 60 / self.tempo / FRAME)
         self.frame = 0
         self.held = None  # The movement that the current chord's harmony follows.
+        self.quiet = 0  # Silent frames in a row.
 
     def start(self, seed: int):
         super().start(seed)
         self.frame = 0
         self.held = None
+        self.quiet = 0
 
     @property
     def bar(self) -> int:
@@ -354,20 +365,41 @@ class Spine(Steered):
         for pitch in range(36, 97):
             if pitch % 12 in classes:
                 tokens[pitch] = FREE
+        if self.quiet >= self.wake_after:
+            # The chord being heard, not the one told ahead: a strike sounds sooner.
+            for pitch in self.voicing(self.chord[1]):
+                tokens[pitch] = STRUCK
+            self.quiet = 0
         return tokens
+
+    @staticmethod
+    def voicing(tones: tuple[int, ...]) -> tuple[int, ...]:
+        """A chord's root from G2 up, its fifth, the root an octave up, and its third."""
+        root, third = tones[:2]
+        low = 43 + (root - 43) % 12
+        return low, low + 7, low + 12, low + 12 + (third - root) % 12
 
     def render(self, move: Move) -> np.ndarray:
         audio = super().render(move)
+        # Whether MRT2 itself fell silent: the stillness fade's gain is taken out.
+        silent = np.mean(audio**2) < self.silent * self.gain**2
+        self.quiet = self.quiet + 1 if silent else 0
         self.frame += 1
         return audio
 
     def snapshot(self) -> dict:
-        return {**super().snapshot(), "frame": self.frame, "held": self.held}
+        return {
+            **super().snapshot(),
+            "frame": self.frame,
+            "held": self.held,
+            "quiet": self.quiet,
+        }
 
     def restore(self, snapshot: dict, seed: int):
         super().restore(snapshot, seed)
         self.frame = snapshot["frame"]
         self.held = snapshot["held"]
+        self.quiet = snapshot["quiet"]
 
 
 # theremin-controls.js's pitch steps.

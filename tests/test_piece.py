@@ -2,7 +2,7 @@ import numpy as np
 
 from sway.arranger import world_plan
 from sway.piece import Gesture, Piece, voice_weights
-from sway.steering import FREE
+from sway.steering import FREE, STRUCK
 from sway.world import FILM_SCORE
 
 PLAYING = Gesture(dynamics=0.6, energy=0.6, voice=0.0, forward=0.8, articulation=0.2)
@@ -170,6 +170,18 @@ def test_a_hush_thins_the_music_and_the_composer_hears_it():
     play(instrument, NEXT - 150)
     _, summary = instrument.request()
     assert 0.5 < summary.still < 0.6 and summary.energy_change > 0.4
+
+
+def test_a_silent_piece_strikes_the_world_s_chord_but_a_quiet_hush_is_not_silence():
+    instrument = piece()
+    instrument.engine.amplitude = 0.001  # -60 dBFS: quiet, and quieter still in a hush.
+    play(instrument, 100, HUSHED)
+    assert not (instrument.engine.last == STRUCK).any()
+    instrument.engine.amplitude = 0.0
+    play(instrument, instrument.wake_after + 1, HUSHED)
+    struck = set(np.flatnonzero(instrument.engine.last == STRUCK))
+    assert struck == set(instrument.voicing(FILM_SCORE.chords[instrument.chord[0]]))
+    assert struck == {46, 53, 58, 62}  # Bb2, F3, Bb3, and D4: the intro's second bar.
 
 
 def test_a_copied_moment_keeps_the_piece_s_place():

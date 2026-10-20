@@ -54,6 +54,7 @@ The [V2 design](v2-design.md) answers with a spine, its first milestone, added o
   The style still follows the hands continuously, as it changes gradually anyway.
 - **Stillness thins the music:** the output falls to about a third at once, and from the next chord only its root and fifth may sound.
 - **Each chord is told 1.2 seconds early,** so that MRT2's delay lands it on its bar line.
+- **When MRT2 falls silent by itself,** it is told to strike the chord being heard ([Silence](#silence)).
 
 The last point came from measuring.
 With chords told on their bar lines, MRT2 had not settled on one chord before the next began: early in each bar, the melody had 26% of its energy on the bar's chord, and late in it 55%.
@@ -106,6 +107,34 @@ The last is the spine's texture now.
 Its note rate varied 21% to 32% from second to second across its corners and middle, so this measure alone does not settle continuity; Everett's ears do.
 On October 19, Everett played the ensemble with his hands and said: "this is GREAT!!!"
 The clips are in `outputs/fragments-2026-10-19/`.
+
+### Silence
+
+On October 20, in a browser take of the conducted film score, MRT2's own output fell silent for about 11 seconds during small motion in the peak.
+The music came back only when the motion grew.
+Six scripted takes without the browser, 12 minutes in all, found it again: MRT2 fell silent five times.
+Four lasted 1.0 to 8.8 s, under small motion or a hush, and one lasted 0.6 s, under moderate motion; none came under big motion.
+
+The notes that MRT2 may play were not the cause.
+From the moment before one hush, each condition had eight random continuations of 12 seconds:
+
+| Condition                                              | Silent for 1 s or more | Longest |
+| ------------------------------------------------------ | ---------------------- | ------- |
+| The hush: the chord's root and fifth                   | 0 of 8                 | 0 s     |
+| A hush with the chord's tones and the pentatonic scale | 2 of 8                 | 6.2 s   |
+| A hush with the chord's three notes                    | 2 of 8                 | 8.4 s   |
+| Small motion, no hush                                  | 1 of 8                 | 2.1 s   |
+
+Once silent, MRT2 stays silent: from inside one silence, all eight continuations were still silent 4 seconds later.
+Struck once, the chord being heard brought the sound back in all eight, in 0.1 to 1.0 s, and MRT2 played on by itself.
+Holding the chord for a second, or stronger note guidance, did no better.
+
+So the spine now listens for silence.
+When MRT2's output has stayed below -65 dBFS for 0.8 seconds, the spine tells MRT2 to strike the chord being heard: its root at or above G2, the fifth, the root an octave up, and the third.
+A shorter rest stays a rest.
+In the same six takes with this guard, no silence lasted 1 second: the longest was 0.88 s.
+MRT2 was struck six times in 12 minutes, and the sound came back 0.1 to 0.6 s after each strike.
+The traces are in `outputs/silence-2026-10-20/`.
 
 ## The conductor
 
@@ -195,9 +224,8 @@ The quiet intro now reaches its level within 3 seconds.
 The loudest peak was -0.5 dBFS.
 Recorded music is usually played at about -14 LUFS, so big motion is about as loud as a song, and moderate motion a little softer.
 
-In one take, MRT2's own output fell silent for about 11 seconds during small motion in the peak, and it played again when the motion grew.
-The leveling lowers a frame by at most 12 dB, or to the ceiling, and it holds its gain through a silence, so the silence came from the model.
-It has not been traced yet.
+In one take, MRT2's own output fell silent for about 11 seconds.
+The leveling lowers a frame by at most 12 dB, or to the ceiling, and it holds its gain through a silence, so the silence came from the model; [Silence](#silence) traces it.
 
 ## The model thread
 

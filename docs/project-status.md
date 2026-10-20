@@ -107,7 +107,8 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
    He asked for drawings of the gestures that open on screen at any time, and found the sound too quiet.
    Both are now on #17: a [gesture guide](steered-page.md#the-gesture-guide), and a [steady, louder level](steered-page.md#loudness).
    He also asked when a player can choose or describe the theme in words: that is milestone 3, the [world designer](v2-design.md#worlds-and-the-world-designer).
-   In one test take MRT2 fell silent for about 11 seconds; it has not been traced yet.
+   In one test take MRT2 fell silent for about 11 seconds.
+   Traced the same day: under a calm style MRT2 can stop playing by itself and stay silent, whatever notes it may play, and striking the chord brings it back; the spine now does that after 0.8 s of silence ([guide](steered-page.md#silence)).
 
 ## Working rules
 
@@ -154,6 +155,7 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 | October 19      | The product pictured as an orchestra you conduct; the conductor model and the world designer added to the V2 design.                         |
 | October 19      | The conductor built: fixed gestures, the film score as a world, and the composer kept to the score.                                          |
 | October 20      | Everett played the conductor; a gesture guide and a steady, louder level added.                                                              |
+| October 20      | MRT2's silences traced to calm styles; the spine strikes the chord after 0.8 s of silence.                                                   |
 
 ## Where things are
 
@@ -161,5 +163,5 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 - Recordings and test evidence are in `outputs/` and `work/`, which Git ignores.
   The [data map](development.md#data-and-evidence) lists the current ones.
 - The Qwen credential is in `~/.config/sway/qwen.json`, outside the repository.
-- On `world-arranger` on October 20, 135 Python tests and 141 JavaScript tests passed.
+- On `world-arranger` on October 20, 138 Python tests and 141 JavaScript tests passed.
 - At this update, Everett's own `sway serve` was running in his terminal; no agent-started Sway process was.
