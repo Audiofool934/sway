@@ -1,21 +1,23 @@
 import { startStreamPage } from "./stream-page.js";
 import { REST, SteeredControls } from "./steered-controls.js";
+import {
+  ConductorControls,
+  VOICE_PLACES,
+  voiceWeights,
+} from "./conductor-controls.js";
 
-// By default the page plays a film score: the spine, with an arranger's phrases and a
-// clap that moves on. `?variant=spine` plays V2's first milestone, Night Drive's chords
-// on repeat, and `?variant=free` the page as it was on October 14, without the spine.
-const variant = new URLSearchParams(location.search).get("variant");
+// By default the player conducts a film score (docs/v2-design.md). `?variant=spine`
+// plays V2's first milestone, Night Drive's chords on repeat, and `?variant=free` the
+// page as it was on October 14, without the spine; both are steered, not conducted.
+// `?hand=left` lets a left-handed player conduct with the left hand.
+const params = new URLSearchParams(location.search);
+const variant = params.get("variant");
 const earlier = variant === "spine" || variant === "free";
 const free = variant === "free";
+const leftHanded = params.get("hand") === "left";
 const LEAD = 1.2; // Seconds by which the server tells the model ahead (steering.Spine).
 
-// Words for where the hands are taking the music. The harmony thresholds are
-// steering.Steered.pitch_classes's, and the spine opens the harmony the same way
-// around each bar's chord.
-const energy = (a) => (a < 0.4 ? "Calm" : a < 0.7 ? "Flowing" : "Lively");
-const register = (h) => (h < 0.33 ? "Low" : h < 0.67 ? "Middle" : "High");
-const harmony = (s) =>
-  s < 0.35 ? "On the chord" : s < 0.65 ? "Pentatonic" : "Whole scale";
+const level = (x, words) => words[x < 0.35 ? 0 : x < 0.65 ? 1 : 2];
 
 // The phrase's chords, with the one heard now marked. The server reports them every
 // five model frames; the strip changes only when the chord does.
@@ -36,8 +38,31 @@ function showChords($, model) {
   );
 }
 
-// When the clap's new section will be heard, in the audio's time: from the server's
-// count of frames once it has one, else from the beat, as the server will choose it.
+// The world's voices, placed across the view where the left hand reaches them, each
+// as bright as the conductor brings it forward.
+let voices = null;
+function showVoices($, state, model) {
+  if (!model.voices) return;
+  if (voices !== model.voices.join("|")) {
+    voices = model.voices.join("|");
+    $("voices").replaceChildren(
+      ...model.voices.map((name, index) => {
+        const label = document.createElement("span");
+        label.textContent = name;
+        label.style.left = `${VOICE_PLACES[index] * 100}%`;
+        return label;
+      }),
+    );
+  }
+  const weights = voiceWeights(state.voice, state.forward).slice(1);
+  [...$("voices").children].forEach((label, index) => {
+    label.style.opacity = 0.3 + 0.7 * weights[index];
+    label.classList.toggle("lead", weights[index] > 0.5);
+  });
+}
+
+// When the new section will be heard, in the audio's time: from the server's count of
+// frames once it has one, else from the beat, as the server will choose it.
 function landing(model, audio) {
   const now = audio.context.currentTime;
   const queued = (audio.stats.queuedMs ?? 160) / 1000;
@@ -47,46 +72,136 @@ function landing(model, audio) {
   return now + Math.ceil((into + LEAD) / bar) * bar - into + queued;
 }
 
-let claps = 0,
+// Raising both hands starts a swell; bringing them down lands it, with the new section,
+// on the bar; letting them down slowly lets it fade.
+let cues = 0,
+  preparing = false,
   movingOn = null;
-function showClap(state, $, model, audio) {
-  if (state.cue < claps) [claps, movingOn] = [0, null]; // A new take.
-  if (state.cue > claps && model.tempo && audio) {
-    claps = state.cue;
+function showMove(state, $, model, audio) {
+  if (state.cue < cues) [cues, preparing, movingOn] = [0, false, null]; // A new take.
+  if (!audio || !model.tempo) return;
+  if (state.prepared && !preparing) {
+    preparing = true;
+    audio.cue(audio.context.currentTime + 6);
+  }
+  if (state.cue > cues) {
+    cues = state.cue;
+    preparing = false;
     movingOn = { section: model.section, confirmed: false };
     audio.cue(landing(model, audio));
+  } else if (preparing && !state.prepared) {
+    preparing = false;
+    audio.cancelCue();
   }
   if (movingOn && !movingOn.confirmed && model.landing != null) {
     movingOn.confirmed = true;
-    audio?.cue(landing(model, audio)); // Land the swell where the server will.
+    audio.cue(landing(model, audio)); // Land the swell where the server will.
   }
   if (movingOn && model.section !== movingOn.section) movingOn = null;
+}
+
+function showSection($, model) {
   const section = model.section
     ? `${model.section[0].toUpperCase()}${model.section.slice(1)}`
     : "";
-  $("section").textContent = movingOn
-    ? "Moving on…"
-    : section && model.caption && model.caption !== section
-      ? `${section} · ${model.caption}`
-      : section;
+  $("section").textContent = preparing
+    ? "Ready…"
+    : movingOn
+      ? "Moving on…"
+      : section && model.caption && model.caption !== section
+        ? `${section} · ${model.caption}`
+        : section;
 }
+
+const conducting = {
+  Controls: leftHanded
+    ? class extends ConductorControls {
+        constructor() {
+          super({ leftHanded: true });
+        }
+      }
+    : ConductorControls,
+  hint: {
+    camera:
+      "Bigger motion plays louder · Faster motion drives harder · The other hand brings a voice forward · Pinch for short notes · A fist hushes · Both hands up, then down, to move on",
+    pointer:
+      "Hold and move · Bigger motion plays louder · Faster motion drives harder · Release to hush · Double-click to move on",
+  },
+  glow: (state) => state.dynamics,
+  swing: (state) => state.energy,
+  show(state, $, model, audio) {
+    showChords($, model);
+    showVoices($, state, model);
+    showMove(state, $, model, audio);
+    showSection($, model);
+    // The volume answers the motion's size at once: from -12 dB to full.
+    audio?.level(10 ** ((-12 + 12 * state.dynamics) / 20));
+    $("gesture-name").textContent = state.hush
+      ? "Hushed"
+      : [
+          level(state.dynamics, ["Soft", "Moderate", "Loud"]),
+          level(state.energy, ["Calm", "Flowing", "Driving"]),
+          level(state.articulation, [
+            "Long notes",
+            "Mixed notes",
+            "Short notes",
+          ]),
+        ].join(" · ");
+    $("first-meter").style.width = `${state.dynamics * 100}%`;
+    $("second-meter").style.width = `${state.energy * 100}%`;
+    $("third-meter").style.width = `${state.articulation * 100}%`;
+  },
+};
+
+// The earlier, steered variants' words for where the hands are taking the music.
+const steering = {
+  Controls: SteeredControls,
+  hint: {
+    camera: `Height sets the register · Movement sets the energy · Hands apart open the harmony · Stillness ${free ? "rests" : "thins the music"}`,
+    pointer: `Hold and move · Height sets the register · Left to right opens the harmony · Speed sets the energy · Release to ${free ? "rest" : "thin the music"}`,
+  },
+  glow: (state) => state.activity,
+  swing: (state) => state.spread,
+  show(state, $, model) {
+    showChords($, model);
+    $("gesture-name").textContent =
+      state.activity < REST
+        ? free
+          ? "Resting"
+          : "Resting · the music thins"
+        : [
+            level(state.activity, ["Calm", "Flowing", "Lively"]),
+            level(state.height, ["Low", "Middle", "High"]),
+            level(state.spread, ["On the chord", "Pentatonic", "Whole scale"]),
+          ].join(" · ");
+    $("first-meter").style.width = `${state.height * 100}%`;
+    $("second-meter").style.width = `${state.activity * 100}%`;
+    $("third-meter").style.width = `${state.spread * 100}%`;
+  },
+};
+
+const mode = earlier ? steering : conducting;
+if (earlier)
+  for (const [id, text] of [
+    ["first-label", "Height"],
+    ["second-label", "Energy"],
+    ["third-label", "Spread"],
+  ])
+    document.getElementById(id).textContent = text;
 
 startStreamPage({
   stream: "steered",
   query: earlier ? `?variant=${variant}` : "",
-  Controls: SteeredControls,
+  Controls: mode.Controls,
   audio: { expression: false },
   text: {
     cameraEnded: "The camera disconnected. Start again, or try with the mouse.",
     preparing: "Preparing the orchestra",
-    hint: {
-      camera: `Height sets the register · Movement sets the energy · Hands apart open the harmony · Stillness ${free ? "rests" : "thins the music"}${earlier ? "" : " · Clap to move on"}`,
-      pointer: `Hold and move · Height sets the register · Left to right opens the harmony · Speed sets the energy · Release to ${free ? "rest" : "thin the music"}${earlier ? "" : " · Double-click to move on"}`,
-    },
+    hint: mode.hint,
     loadTimeout: "The sound took too long to prepare. Please try again.",
     ready: {
-      camera: "Bring your hands into view to play",
-      pointer: "Hold the stage and move to play",
+      camera: "Bring your hands into view to conduct",
+      pointer: "Hold the stage and move to conduct",
     },
     busy: "This page needs MRT2 on this Mac, and only one performance window can play at a time. Close the other window and try again.",
     stopped: "The sound stopped. Please start again.",
@@ -103,26 +218,10 @@ startStreamPage({
     idle: earlier ? "Steered · ready" : "Film score · ready",
     hidden: "The performance stopped when you left the page. You can save it.",
     handsGone: "Bring your hands back into view",
-    playing: earlier ? "Steered · generating" : "Film score · generating",
+    playing: earlier ? "Steered · generating" : "Film score · conducting",
     timeLimit: "Five minutes are saved. Download them, or start a new take.",
   },
-  glow: (state) => state.activity,
-  swing: (state) => state.spread,
-  show(state, $, model, audio) {
-    showChords($, model);
-    showClap(state, $, model, audio);
-    $("gesture-name").textContent =
-      state.activity < REST
-        ? free
-          ? "Resting"
-          : "Resting · the music thins"
-        : [
-            energy(state.activity),
-            register(state.height),
-            harmony(state.spread),
-          ].join(" · ");
-    $("height-meter").style.width = `${state.height * 100}%`;
-    $("energy-meter").style.width = `${state.activity * 100}%`;
-    $("spread-meter").style.width = `${state.spread * 100}%`;
-  },
+  glow: mode.glow,
+  swing: mode.swing,
+  show: mode.show,
 });

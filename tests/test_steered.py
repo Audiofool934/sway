@@ -185,19 +185,34 @@ def test_every_model_user_runs_on_the_one_model_thread():
     assert harmony.EXECUTOR is MODEL_THREAD
 
 
-def test_a_clap_in_the_controls_moves_the_film_score_on():
+def test_the_conductor_s_controls_reach_the_film_score():
     engine = FakeEngine()
     renderer = steered.SteeredRenderer(lambda: engine)
     assert renderer.start(17)["variant"] == "film"
-    playing = steered.Control(seq=1, activity=0.6)
+    conducting = steered.Control(
+        seq=1, dynamics=1, energy=1, voice=1, forward=1, articulation=1, hush=False
+    )
     for _ in range(40):
-        renderer.render(playing)
-    _, stats = renderer.render(playing.model_copy(update={"cue": 1}))
+        _, stats = renderer.render(conducting)
+    assert renderer.instrument.weights[15] > 0.99  # Cellos and basses, driving, short.
+    assert stats["voices"] == ["Violins", "Brass", "Cellos and basses"]
+    assert stats["gain"] == 1
+    _, stats = renderer.render(conducting.model_copy(update={"cue": 1}))
     assert stats["landing"] == 34 and stats["section"] == "intro"  # Lands on frame 75.
     assert stats["world"] == "Film score" and stats["chords"] == ["Dm", "Bb", "F", "C"]
     for _ in range(34):
-        _, stats = renderer.render(playing.model_copy(update={"cue": 1}))
+        _, stats = renderer.render(conducting.model_copy(update={"cue": 1}))
     assert stats["section"] == "build" and stats["landing"] is None
+    for _ in range(10):  # A hush thins the music at once.
+        _, stats = renderer.render(conducting.model_copy(update={"cue": 1, "hush": True}))
+    assert stats["gain"] < 0.6
+
+
+def test_a_silent_conductor_is_released_into_a_hush():
+    service = steered.SteeredService(steered.SteeredRenderer(FakeEngine), arranger=False)
+    conducting = steered.Control(seq=3, dynamics=0.8, energy=0.7, hush=False)
+    released = service.release(conducting)
+    assert released.hush and released.dynamics == 0.8
 
 
 class FakeArranger:
@@ -213,12 +228,13 @@ class FakeArranger:
         pass
 
 
-def test_the_arranger_s_plans_reach_the_piece():
-    from sway.arranger import Plan
+def test_the_composer_s_plans_reach_the_piece():
+    from sway.arranger import world_plan
+    from sway.world import FILM_SCORE
 
     plans = (
-        Plan("build", ("Dm", "Gm", "Bb", "C"), "Gathering strings", "Rising", "qwen"),
-        Plan("peak", ("Bb", "F", "C", "Dm"), "Full orchestra", "All in", "qwen"),
+        world_plan(FILM_SCORE, "build", ("Dm", "Gm", "Bb", "C"), "Rising", "qwen"),
+        world_plan(FILM_SCORE, "peak", ("Bb", "F", "C", "Dm"), "All in", "qwen"),
     )
     fake = FakeArranger(plans)
     service = steered.SteeredService(steered.SteeredRenderer(FakeEngine), arranger=fake)
@@ -233,6 +249,3 @@ def test_the_arranger_s_plans_reach_the_piece():
     piece = service.renderer.instrument
     assert len(fake.summaries) == 1 and fake.summaries[0].section == "intro"
     assert piece.pending == (0, *plans)
-    # Embedded for the style, off the model thread: it takes about 170 ms.
-    assert "Gathering strings" in piece.directions
-    assert not piece.engine.style.threads["Gathering strings"].startswith("sway-model")

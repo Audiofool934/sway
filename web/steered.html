@@ -23,56 +23,51 @@
         </div>
       </header>
       <section id="intro" aria-labelledby="title">
-        <p class="eyebrow">YOU LEAD · AN ORCHESTRA PLAYS</p>
-        <h1 id="title">Score the scene with your hands.</h1>
+        <p class="eyebrow">YOU CONDUCT · AN ORCHESTRA PLAYS</p>
+        <h1 id="title">Conduct the orchestra with your hands.</h1>
         <p class="description">
-          An orchestra, generated on this Mac, plays a film score that grows as
-          you play. Your hands lead it, and an arranger plans what comes next.
+          An orchestra, generated on this Mac, plays a film score that a
+          composer writes as you go. You decide how it is played.
         </p>
         <ol class="guide">
           <li>
             <span class="number">01</span>
             <div>
-              <b>Raise or lower your hands</b>
+              <b>Conduct with your right hand</b>
               <p>
-                Low hands bring cellos and basses; high hands bring violins.
+                Bigger motion plays louder, and faster motion drives harder.
               </p>
             </div>
           </li>
           <li>
             <span class="number">02</span>
             <div>
-              <b>Move more, or less</b>
+              <b>Bring a voice forward with your left</b>
               <p>
-                Quick, wide movement makes it lively. Slow movement keeps it
-                calm.
+                Point toward the violins, the brass, or the cellos and basses,
+                and raise your hand to bring them forward.
               </p>
             </div>
           </li>
           <li>
             <span class="number">03</span>
             <div>
-              <b>Spread your hands apart</b>
-              <p>
-                Close hands keep the melody on the chord. Wide hands open it to
-                the whole scale.
-              </p>
+              <b>Open your palm, or pinch</b>
+              <p>An open palm plays long lines; a pinch plays short notes.</p>
             </div>
           </li>
           <li>
             <span class="number">04</span>
             <div>
-              <b>Hold still</b>
-              <p>
-                The music thins to a quiet chord. Move again to grow it back.
-              </p>
+              <b>Make a fist, or hold still</b>
+              <p>The music hushes to a quiet chord.</p>
             </div>
           </li>
           <li>
             <span class="number">05</span>
             <div>
-              <b>Clap</b>
-              <p>The music moves on to its next section, on the next bar.</p>
+              <b>Raise both hands, then bring them down</b>
+              <p>The orchestra moves on to its next section, on the beat.</p>
             </div>
           </li>
         </ol>
@@ -86,7 +81,7 @@
         </div>
         <p id="message" class="note">
           The music is generated on this Mac, and the camera image stays here.
-          To plan what comes next, the arranger may describe the music to Qwen,
+          To write what comes next, the composer may describe the music to Qwen,
           in the cloud: in words and numbers, never an image.
         </p>
       </section>
@@ -95,30 +90,31 @@
         <p>Preparing the orchestra…</p>
         <small>The first time takes a moment.</small>
       </div>
+      <div id="voices" class="voices" aria-label="The orchestra's voices"></div>
       <div id="playing" hidden>
         <p id="section" class="section" aria-live="polite"></p>
         <p id="chords" class="chords" aria-label="The chords, one a bar"></p>
         <p id="gesture-name">Resting</p>
         <p id="hint"></p>
-        <div
-          class="qualities"
-          aria-label="Where the hands are taking the music"
-        >
+        <div class="qualities" aria-label="How the music is played">
           <span
-            >Height<i><b id="height-meter"></b></i
+            ><span id="first-label">Dynamics</span
+            ><i><b id="first-meter"></b></i
           ></span>
           <span
-            >Energy<i><b id="energy-meter"></b></i
+            ><span id="second-label">Energy</span
+            ><i><b id="second-meter"></b></i
           ></span>
           <span
-            >Spread<i><b id="spread-meter"></b></i
+            ><span id="third-label">Short notes</span
+            ><i><b id="third-meter"></b></i
           ></span>
         </div>
       </div>
       <footer>
         <a id="save" hidden download="sway-steered.wav">Save this take ↓</a>
         <span id="footer-note"
-          >One hand works too: left to right opens the harmony.</span
+          >One hand conducts on its own; the voices hold their balance.</span
         >
         <label
           >Volume

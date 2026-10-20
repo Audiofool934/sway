@@ -58,7 +58,7 @@ export class ThereminAudio {
     room.buffer = impulse;
     const wet = ctx.createGain();
     wet.gain.value = 0.17;
-    const compressor = ctx.createDynamicsCompressor();
+    const compressor = (this.compressor = ctx.createDynamicsCompressor());
     compressor.threshold.value = -10;
     compressor.knee.value = 8;
     compressor.ratio.value = 5;
@@ -121,7 +121,8 @@ export class ThereminAudio {
       band.frequency.value = 300;
       const level = ctx.createGain();
       level.gain.value = 0;
-      noise.connect(band).connect(level).connect(this.expression);
+      // Past the expression stage, so that the volume the player sets does not dim it.
+      noise.connect(band).connect(level).connect(this.compressor);
       noise.start(now);
       const swell = { noise, band, level };
       noise.onended = () => {
@@ -146,10 +147,29 @@ export class ThereminAudio {
     thump.gain.setValueAtTime(0, at);
     thump.gain.linearRampToValueAtTime(0.45, at + 0.01);
     thump.gain.setTargetAtTime(0, at + 0.01, 0.15);
-    boom.connect(thump).connect(this.expression);
+    boom.connect(thump).connect(this.compressor);
     boom.start(at);
     boom.stop(at + 0.9);
     this.swell.impact = boom;
+  }
+
+  // Fade a swell that will not land, such as a preparation that was let go.
+  cancelCue() {
+    if (!this.swell) return;
+    const now = this.context.currentTime;
+    const { noise, level, impact } = this.swell;
+    level.gain.cancelScheduledValues(now);
+    level.gain.setValueAtTime(level.gain.value, now);
+    level.gain.setTargetAtTime(0, now, 0.06);
+    noise.stop(now + 0.4);
+    impact?.stop();
+    this.swell.impact = null;
+  }
+
+  // The conductor's dynamics, at once: a gain on the model's output, from 0 to 1.
+  level(value) {
+    if (this.expressive) return;
+    this.expression.gain.setTargetAtTime(value, this.context.currentTime, 0.05);
   }
 
   volume(value) {

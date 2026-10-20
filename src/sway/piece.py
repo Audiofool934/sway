@@ -1,16 +1,18 @@
-"""A piece in a world, V2's second milestone (docs/v2-design.md).
+"""A piece in a world, conducted: V2's second milestone (docs/v2-design.md).
 
-The spine's chords and part of its sound come from plans, one a phrase: the arranger's,
-or the world's own whenever the arranger has not answered. The hands still steer the
-rest of the sound, as on the spine.
+The player is the conductor. Their gestures blend the world's 16 style descriptions:
+which voice leads and how far, calm or driving playing, and long or short notes. The
+composer writes the score, one plan a phrase: the section and the chords, or the world's
+own whenever the composer has not answered. A section's sound is the world's, and it is
+a fifth of the style, so that how the music is played stays the conductor's.
 
 Time runs on two clocks. A frame is heard when it is rendered, but MRT2 is told each
 chord and sound `lead` frames earlier, so that its delay lands them on their bar lines.
 So the next phrase is chosen when the told clock reaches its first bar line, and the
-arranger is then asked for the phrase after it: about one phrase ahead.
+composer is then asked for the phrase after it: about one phrase ahead.
 
-A clap moves on at once: the clap plan begins on the first bar line that MRT2 can still
-be told in time, between 1.2 and 4.2 seconds after the clap at 80 beats a minute.
+Moving on happens at once: the move-on plan begins on the first bar line that MRT2 can
+still be told in time, between 1.2 and 4.2 seconds after the gesture at 80 beats a minute.
 """
 
 from dataclasses import dataclass
@@ -18,11 +20,44 @@ from dataclasses import dataclass
 import numpy as np
 
 from .arranger import Plan, Summary, opening, own_plans
-from .steering import REST, Move, Spine
+from .steering import SAMPLE_RATE, Spine
 from .world import FILM_SCORE, World
 
-HISTORY = 6  # Earlier sections the arranger is told about.
-DIRECTIONS = 64  # Embedded directions kept for reuse.
+HISTORY = 6  # Earlier sections the composer is told about.
+
+
+@dataclass(frozen=True)
+class Gesture:
+    """The conductor's controls, each from 0 to 1."""
+
+    dynamics: float = 0.5  # The size of the right hand's motion.
+    energy: float = 0.5  # Its speed.
+    voice: float = 0.5  # Where the left hand points: 0 the left voice, 1 the right.
+    forward: float = 0.0  # How far that voice comes forward: the left hand's height.
+    articulation: float = 0.0  # 0 for an open palm's long notes, 1 for a pinch's short ones.
+    hush: bool = False  # A fist, or stillness.
+
+    # The spine reads these: a hush rests the music, and the harmony stays open to the
+    # pentatonic scale around each chord, because the harmony is the composer's.
+    @property
+    def activity(self) -> float:
+        return 0.0 if self.hush else 1.0
+
+    @property
+    def spread(self) -> float:
+        return 0.5
+
+
+def voice_weights(voice: float, forward: float) -> np.ndarray:
+    """Weights of the balanced orchestra and the three voices, left to right."""
+    position = min(1.0, max(0.0, voice)) * 2
+    lower = min(1, int(position))
+    share = position - lower
+    voices = np.zeros(3)
+    voices[lower] = 1 - share
+    voices[lower + 1] += share
+    forward = min(1.0, max(0.0, forward))
+    return np.concatenate([[1 - forward], forward * voices])
 
 
 @dataclass(frozen=True)
@@ -33,11 +68,13 @@ class Phrase:
 
 
 class Piece(Spine):
-    """The spine, playing a world's phrases as the arranger plans them."""
+    """The spine, playing a world's phrases as the composer plans them, conducted."""
 
     name = "film"
-    direction_weight = 0.4  # The phrase's direction's share of the style.
-    direction_smoothing = 0.1  # Per frame, so a new direction takes about 0.4 s.
+    direction_weight = 0.2  # The section's share of the style.
+    direction_smoothing = 0.1  # Per frame, so a new section's sound takes about 0.4 s.
+    dynamics_share = 0.4  # Of the calm-to-driving texture: the rest is the energy.
+    level_time = 1.0  # Seconds for the gain to move most of the way to a new section's.
 
     def __init__(self, engine, world: World = FILM_SCORE):
         self.world = world
@@ -50,35 +87,35 @@ class Piece(Spine):
         if self.bar_frames != world.bar_frames:
             raise ValueError("The world's bars must match the spine's")
         self.phrase_frames = world.phrase_frames
-        self.defaults = {section.direction for section in world.sections}
-        self.directions = {}
-        for direction in self.defaults:
-            self.prepare(direction)
+        self.directions = {
+            section.direction: engine.style.embed(section.direction) for section in world.sections
+        }
         self.direction_now = None
-
-    def prepare(self, direction: str, embedding: np.ndarray | None = None) -> np.ndarray:
-        """`direction` embedded for the style, once, unless its embedding is given."""
-        if direction not in self.directions:
-            if len(self.directions) >= DIRECTIONS:
-                used = self.defaults | {p.plan.direction for p in self.phrases}
-                for old in [d for d in self.directions if d not in used]:
-                    del self.directions[old]
-            if embedding is None:
-                embedding = self.engine.style.embed(direction)
-            self.directions[direction] = embedding
-        return self.directions[direction]
 
     def start(self, seed: int):
         first = Phrase(0, opening(self.world), 0)
         self.phrases = [first]
-        self.pending = None  # (ticket, next plan, clap plan) from the arranger.
+        self.pending = None  # (ticket, next plan, move-on plan) from the composer.
         self.ticket = 0  # The request that the pending plans must answer.
-        self.landing = None  # The frame where a clap's phrase begins, until it is heard.
+        self.landing = None  # The frame where a move-on's phrase begins, until it is heard.
         self._listen_reset()
         self.summary = self._summary(first, played=None)
         self.wants_plan = True
         self.direction_now = self.directions[first.plan.direction].copy()
+        self.level = self._gain(first.plan.section)
         super().start(seed)
+
+    def blend(self, gesture: Gesture) -> np.ndarray:
+        """The 16 corners' weights, in the order of `World.corners`."""
+        if not isinstance(gesture, Gesture):  # The spine's start blends a neutral movement.
+            gesture = Gesture()
+        texture = (1 - self.dynamics_share) * gesture.energy
+        texture += self.dynamics_share * gesture.dynamics
+        texture = min(1.0, max(0.0, texture))
+        notes = min(1.0, max(0.0, gesture.articulation))
+        lead = voice_weights(gesture.voice, gesture.forward)
+        weights = np.einsum("i,j,k->ijk", lead, [1 - texture, texture], [1 - notes, notes])
+        return weights.reshape(-1).astype(np.float32)
 
     # Where the music is.
 
@@ -106,38 +143,50 @@ class Piece(Spine):
 
     # Playing.
 
-    def render(self, move: Move) -> np.ndarray:
+    def render(self, gesture: Gesture) -> np.ndarray:
         self._schedule()
-        self._listen(move)
-        audio = super().render(move)
+        self._listen(gesture)
+        heard = self.phrase.plan.section
+        audio = self._leveled(super().render(gesture), heard)
         if self.landing is not None and self.frame >= self.landing:
             self.landing = None
         return audio
+
+    def _gain(self, section: str) -> float:
+        return 10 ** (self.world.section(section).level / 20)
+
+    def _leveled(self, audio: np.ndarray, section: str) -> np.ndarray:
+        """`audio` at the score's level for `section`, moving there over `level_time`."""
+        target = self._gain(section)
+        decay = np.exp(-np.arange(1, len(audio) + 1) / (self.level_time * SAMPLE_RATE))
+        gains = target + (self.level - target) * decay
+        self.level = float(gains[-1])
+        return audio * gains[:, None].astype(audio.dtype)
 
     def _schedule(self):
         """Choose the next phrase when the told clock reaches the current one's end."""
         told = self.frame + self.lead
         current = self._phrase_at(told)
         if told - current.start == self.phrase_frames:
-            self._begin(told, self._take(clap=False), current)
+            self._begin(told, self._take(move_on=False), current)
 
     def cue(self):
-        """A clap: move on, on the first bar line MRT2 can still be told in time."""
+        """Move on, on the first bar line MRT2 can still be told in time."""
         if self.landing is not None:
             return  # One move at a time.
-        self.claps += 1
+        self.cues += 1
         told = self.frame + self.lead
         landing = -(-told // self.bar_frames) * self.bar_frames
-        # A phrase that would begin there anyway gives way to the clap's.
+        # A phrase that would begin there anyway gives way to the move-on's.
         self.phrases = [p for p in self.phrases if p.start < landing]
-        self._begin(landing, self._take(clap=True), self.phrases[-1])
+        self._begin(landing, self._take(move_on=True), self.phrases[-1])
         self.landing = landing
 
-    def _take(self, clap: bool) -> Plan:
+    def _take(self, move_on: bool) -> Plan:
         if self.pending is not None and self.pending[0] == self.ticket:
-            return self.pending[2] if clap else self.pending[1]
-        following, on_clap = own_plans(self.world, self.summary)
-        return on_clap if clap else following
+            return self.pending[2] if move_on else self.pending[1]
+        following, moving = own_plans(self.world, self.summary)
+        return moving if move_on else following
 
     def _begin(self, start: int, plan: Plan, before: Phrase):
         phrase = Phrase(start, plan, before.index + 1)
@@ -150,10 +199,7 @@ class Piece(Spine):
 
     def _style(self):
         direction = self._phrase_at(self.frame + self.lead).plan.direction
-        target = self.directions.get(direction)
-        if target is None:  # Unprepared: the section's own direction stands in.
-            section = self._phrase_at(self.frame + self.lead).plan.section
-            target = self.directions[self.world.section(section).direction]
+        target = self.directions[direction]
         self.direction_now += self.direction_smoothing * (target - self.direction_now)
         hands = self.weights @ self.styles
         embedding = (1 - self.direction_weight) * hands + self.direction_weight * (
@@ -162,31 +208,39 @@ class Piece(Spine):
         self.engine.apply_style(embedding)
         self.engine.current = embedding.copy()
 
-    # What the player did in the phrase being heard.
+    # How the player conducted the phrase being heard.
 
     def _listen_reset(self):
-        self.activity = []
-        self.heights = 0.0
-        self.spreads = 0.0
-        self.claps = 0
+        self.energies = []
+        self.dynamics = 0.0
+        self.leading = np.zeros(3)
+        self.articulation = 0.0
+        self.hushed = 0
+        self.cues = 0
 
-    def _listen(self, move: Move):
-        self.activity.append(move.activity)
-        self.heights += move.height
-        self.spreads += move.spread
+    def _listen(self, gesture: Gesture):
+        self.energies.append(gesture.energy)
+        self.dynamics += gesture.dynamics
+        self.leading += voice_weights(gesture.voice, gesture.forward)[1:]
+        self.articulation += gesture.articulation
+        self.hushed += gesture.hush
 
     def _listened(self) -> dict:
-        count = max(1, len(self.activity))
-        values = np.array(self.activity or [0.0])
+        count = max(1, len(self.energies))
+        values = np.array(self.energies or [0.0])
         half = len(values) // 2
         change = float(values[half:].mean() - values[:half].mean()) if half else 0.0
+        leading = self.leading / count
+        strongest = int(np.argmax(leading))
         return {
-            "activity": float(values.mean()),
-            "activity_change": change,
-            "height": self.heights / count,
-            "spread": self.spreads / count,
-            "still": float(np.mean(values < REST)),
-            "claps": self.claps,
+            "energy": float(values.mean()),
+            "energy_change": change,
+            "dynamics": self.dynamics / count,
+            # A voice counts as brought forward when it led a quarter of the phrase.
+            "voice": self.world.voices[strongest].name.lower() if leading.max() > 0.25 else "",
+            "articulation": self.articulation / count,
+            "still": self.hushed / count,
+            "cues": self.cues,
         }
 
     def _summary(self, phrase: Phrase, played: dict | None) -> Summary:
@@ -198,43 +252,37 @@ class Piece(Spine):
             run += 1
         listened = played is not None
         played = played or {
-            "activity": 0.0,
-            "activity_change": 0.0,
-            "height": 0.5,
-            "spread": 0.5,
+            "energy": 0.0,
+            "energy_change": 0.0,
+            "dynamics": 0.0,
+            "voice": "",
+            "articulation": 0.0,
             "still": 1.0,
-            "claps": 0,
+            "cues": 0,
         }
         return Summary(
             phrase=phrase.index,
             section=phrase.plan.section,
             phrases_in_section=run,
             chords=phrase.plan.chords,
-            direction=phrase.plan.direction,
             history=tuple(p.plan.section for p in earlier[-HISTORY:]),
             played=listened,
             **played,
         )
 
-    # The arranger's side, from the stream's event loop.
+    # The composer's side, from the stream's event loop.
 
     def request(self) -> tuple[int, Summary] | None:
-        """The plans the arranger should write now, once: their ticket and the summary."""
+        """The plans the composer should write now, once: their ticket and the summary."""
         if not self.wants_plan:
             return None
         self.wants_plan = False
         return self.ticket, self.summary
 
-    def offer(self, ticket: int, plans: tuple[Plan, Plan], embedded: dict) -> bool:
-        """Keep the arranger's plans if they still answer the current request.
-
-        `embedded` maps each plan's direction to its embedding, made off the model
-        thread; call this on the model thread.
-        """
+    def offer(self, ticket: int, plans: tuple[Plan, Plan]) -> bool:
+        """Keep the composer's plans if they still answer the current request."""
         if ticket != self.ticket:
             return False
-        for plan in plans:
-            self.prepare(plan.direction, embedded[plan.direction])
         self.pending = (ticket, *plans)
         return True
 
@@ -243,6 +291,7 @@ class Piece(Spine):
         phrase = self.phrase
         return {
             "world": self.world.name,
+            "voices": [voice.name for voice in self.world.voices],
             "section": phrase.plan.section,
             "caption": phrase.plan.caption,
             "source": phrase.plan.source,
@@ -262,8 +311,16 @@ class Piece(Spine):
             "landing": self.landing,
             "summary": self.summary,
             "wants_plan": self.wants_plan,
-            "listening": (list(self.activity), self.heights, self.spreads, self.claps),
+            "listening": (
+                list(self.energies),
+                self.dynamics,
+                self.leading.copy(),
+                self.articulation,
+                self.hushed,
+                self.cues,
+            ),
             "direction_now": self.direction_now.copy(),
+            "level": self.level,
         }
 
     def restore(self, snapshot: dict, seed: int):
@@ -273,7 +330,11 @@ class Piece(Spine):
         self.landing = snapshot["landing"]
         self.summary = snapshot["summary"]
         self.wants_plan = snapshot["wants_plan"]
-        activity, self.heights, self.spreads, self.claps = snapshot["listening"]
-        self.activity = list(activity)
+        energies, self.dynamics, leading, self.articulation, self.hushed, self.cues = snapshot[
+            "listening"
+        ]
+        self.energies = list(energies)
+        self.leading = leading.copy()
         self.direction_now = snapshot["direction_now"].copy()
+        self.level = snapshot["level"]
         super().restore(snapshot, seed)

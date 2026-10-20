@@ -11,18 +11,8 @@ from sway.world import FILM_SCORE
 
 WORLD = FILM_SCORE
 PLANS = {
-    "next": {
-        "section": "build",
-        "chords": ["Dm", "Gm", "Bb", "C"],
-        "direction": "Ostinato cellos gather under a rising horn line",
-        "caption": "The strings start to climb",
-    },
-    "clap": {
-        "section": "peak",
-        "chords": ["Bb", "F", "C", "Dm"],
-        "direction": "Full orchestra, soaring violins and timpani",
-        "caption": "All in!",
-    },
+    "next": {"section": "build", "chords": ["Dm", "Gm", "Bb", "C"], "caption": "Strings climb"},
+    "move_on": {"section": "peak", "chords": ["Bb", "F", "C", "Dm"], "caption": "All in!"},
 }
 
 
@@ -32,13 +22,13 @@ def summary(**changes):
         "section": "build",
         "phrases_in_section": 2,
         "chords": ("Dm", "Gm", "Bb", "C"),
-        "direction": "Building tension",
-        "activity": 0.72,
-        "activity_change": 0.2,
-        "height": 0.8,
-        "spread": 0.9,
+        "energy": 0.72,
+        "energy_change": 0.2,
+        "dynamics": 0.8,
+        "voice": "violins",
+        "articulation": 0.1,
         "still": 0.1,
-        "claps": 1,
+        "cues": 1,
         "history": ("intro", "build"),
     }
     return Summary(**{**values, **changes})
@@ -53,48 +43,58 @@ def test_the_film_score_world_is_consistent():
         assert len(section.chords) == WORLD.phrase_bars
         assert all(name in WORLD.chords for name in section.chords)
     for tones in WORLD.chords.values():
-        assert set(tones) <= WORLD.scale  # The hands can open any chord to the scale.
-    assert WORLD.pentatonic <= WORLD.scale and len(WORLD.corners) == 4
+        assert set(tones) <= WORLD.scale  # The melody's scale never clashes with a chord.
+    assert WORLD.pentatonic <= WORLD.scale and len(WORLD.voices) == 3
 
 
-def test_the_prompt_describes_the_phrase_and_the_player():
+def test_the_world_s_corners_combine_every_voice_energy_and_articulation():
+    corners = WORLD.corners
+    assert len(corners) == 16 and len(set(corners)) == 16
+    assert corners[0] == (
+        "Calm, slow, and sustained cinematic orchestra, the whole orchestra balanced, "
+        "long smooth legato lines, instrumental"
+    )
+    # Voices outermost, then energy, then articulation.
+    assert "violins in front" in corners[4] and "Calm" in corners[4]
+    assert "Energetic" in corners[6] and "staccato" in corners[7]
+    assert "cellos and double basses in front" in corners[15]
+
+
+def test_the_prompt_describes_the_phrase_and_the_conductor():
     text = arranger.prompt(WORLD, summary())
     assert "Film score, D minor, 80 BPM" in text
     assert "4 bars of 3 seconds" in text and "Dm, Gm, Am, Bb, F, C" in text
+    assert "(violins, brass, cellos and basses)" in text
     assert "phrase 3, the 2nd phrase of build" in text
     assert "Chords: Dm Gm Bb C." in text and "lead on from C" in text
     assert "Sections before it: intro build." in text
-    assert "last phrase: energy 0.72 of 1 (rising), register high, hands wide apart" in text
-    assert "still 10% of the time, clapped 1 times" in text
+    assert "energy 0.72 of 1 (rising), dynamics loud, brought the violins forward" in text
+    assert "asked for long notes, hushed the music 10% of the time, and moved on 1 times" in text
     assert "different section from build" in text
+    assert "Do not name instruments" in text  # The player chooses which voice leads.
+    assert "direction" not in text.lower()  # The sound is the world's and the conductor's.
     for section in WORLD.sections:
         assert f"- {section.name}: {section.meaning}" in text
-    calm = arranger.prompt(WORLD, summary(activity_change=-0.3, history=()))
-    assert "(falling)" in calm and "none before it" in calm
+    balanced = arranger.prompt(WORLD, summary(voice="", energy_change=-0.3, history=()))
+    assert "kept the voices balanced" in balanced and "(falling)" in balanced
+    assert "none before it" in balanced
     opening = arranger.prompt(WORLD, summary(played=False))
-    assert "has not started playing yet" in opening
+    assert "has not started conducting yet" in opening
     assert "The player in the last phrase" not in opening
 
 
-def test_a_good_reply_becomes_two_plans():
-    following, clap = arranger.parse(json.dumps(PLANS), WORLD, "build")
+def test_a_good_reply_becomes_two_plans_with_the_world_s_sound():
+    following, move_on = arranger.parse(json.dumps(PLANS), WORLD, "build")
     assert following.section == "build" and following.chords == ("Dm", "Gm", "Bb", "C")
-    assert clap.section == "peak" and clap.caption == "All in!"
-    assert following.source == clap.source == "qwen"
+    assert move_on.section == "peak" and move_on.caption == "All in!"
+    assert following.direction == WORLD.section("build").direction
+    assert following.source == move_on.source == "qwen"
 
 
-def test_words_are_cleaned_and_bounded():
-    messy = {
-        **PLANS,
-        "next": {
-            **PLANS["next"],
-            "direction": "Strings\n\tswell " + "x" * 400,
-            "caption": "y" * 90,
-        },
-    }
+def test_captions_are_cleaned_and_bounded():
+    messy = {**PLANS, "next": {**PLANS["next"], "caption": "Strings\n\tclimb " + "y" * 90}}
     following, _ = arranger.parse(json.dumps(messy), WORLD, "build")
-    assert following.direction.startswith("Strings swell x")
-    assert len(following.direction) == arranger.DIRECTION_CHARACTERS
+    assert following.caption.startswith("Strings climb y")
     assert len(following.caption) == arranger.CAPTION_CHARACTERS
 
 
@@ -104,9 +104,9 @@ def test_words_are_cleaned_and_bounded():
         {"next": {**PLANS["next"], "section": "outro"}},
         {"next": {**PLANS["next"], "chords": ["Dm", "Gm"]}},
         {"next": {**PLANS["next"], "chords": ["Dm", "Gm", "Bb", "E"]}},
-        {"next": {**PLANS["next"], "direction": " "}},
-        {"clap": {**PLANS["clap"], "section": "build"}},  # A clap must move on.
-        {"clap": "peak"},
+        {"next": {**PLANS["next"], "caption": " "}},
+        {"move_on": {**PLANS["move_on"], "section": "build"}},  # Moving on must move on.
+        {"move_on": "peak"},
     ],
 )
 def test_unplayable_replies_are_refused(change):
@@ -118,10 +118,10 @@ def test_unplayable_replies_are_refused(change):
 
 def test_the_world_s_own_plans_stay_two_phrases_then_move_on():
     first = summary(section="intro", phrases_in_section=1)
-    following, clap = arranger.own_plans(WORLD, first)
-    assert following.section == "intro" and clap.section == "build"
-    following, clap = arranger.own_plans(WORLD, summary(section="intro", phrases_in_section=2))
-    assert following.section == "build" and clap.section == "build"
+    following, move_on = arranger.own_plans(WORLD, first)
+    assert following.section == "intro" and move_on.section == "build"
+    following, move_on = arranger.own_plans(WORLD, summary(section="intro", phrases_in_section=2))
+    assert following.section == "build" and move_on.section == "build"
     assert following.chords == WORLD.section("build").chords and following.source == "world"
 
 
@@ -155,8 +155,8 @@ def test_qwen_is_asked_in_words_only_and_its_plans_are_kept():
         sent.append(json.loads(request.content))
         return reply(json.dumps(PLANS))
 
-    following, clap = plan(handler)
-    assert (following.section, clap.section) == ("build", "peak")
+    following, move_on = plan(handler)
+    assert (following.section, move_on.section) == ("build", "peak")
     [message] = sent[0]["messages"]
     assert isinstance(message["content"], str)  # Text only: no camera images.
     assert sent[0]["response_format"] == {"type": "json_object"}

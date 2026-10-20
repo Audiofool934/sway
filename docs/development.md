@@ -91,14 +91,15 @@ The motion-to-music measurements ([design note](motion-to-music.md)):
 
 The steered page ([guide](steered-page.md)):
 
-| Path                                                      | Responsibility                                                            |
-| --------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `web/steered.html`, `steered.js`                          | The page, its words, and its readouts; it uses `theremin.css`.            |
-| `web/steered-controls.js`                                 | Hand features to height, activity, and spread.                            |
-| `src/sway/steered.py`, `/api/steered/stream`              | Plays the film score, or an earlier variant, 40 ms at a time.             |
-| `src/sway/world.py`, `arranger.py`, `piece.py`            | The film score world, Qwen's phrase plans, and the piece that plays them. |
-| `tests/steered-controls.test.js`, `tests/test_steered.py` | Controls, claps, validation, stream ownership, and the one model thread.  |
-| `tests/test_arranger.py`, `tests/test_piece.py`           | The world, the arranger's prompt and checks, phrases, and claps.          |
+| Path                                                                          | Responsibility                                                                               |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `web/steered.html`, `steered.js`                                              | The page, its words, and its readouts; it uses `theremin.css`.                               |
+| `web/steered-controls.js`                                                     | Hand features to height, activity, and spread, for the steered variants.                     |
+| `web/conductor-controls.js`                                                   | Hand features to the conductor's dynamics, energy, voice, articulation, hush, and moving on. |
+| `src/sway/steered.py`, `/api/steered/stream`                                  | Plays the film score, or an earlier variant, 40 ms at a time.                                |
+| `src/sway/world.py`, `arranger.py`, `piece.py`                                | The film score world, the composer's phrase plans, and the conducted piece.                  |
+| `tests/steered-controls.test.js`, `tests/test_steered.py`                     | Controls, claps, validation, stream ownership, and the one model thread.                     |
+| `tests/test_arranger.py`, `tests/test_piece.py`, `conductor-controls.test.js` | The world, the composer's prompt and checks, phrases, gestures, and moving on.               |
 
 Shared by the theremin and steered pages:
 

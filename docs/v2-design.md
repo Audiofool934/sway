@@ -251,6 +251,7 @@ Each is one piece of work on its own branch and pull request, and Everett plays 
 2. **The conductor,** with the world as data.
    [#17](https://github.com/Audiofool934/sway/pull/17) built a film score world, Qwen as the arranger, and a clap on October 19, but its play test lost the sense of control.
    So milestone 2 continues: the gestures in the table above, the film score written by hand as a world in the form the world designer will use, and the composer kept to the score.
+   Built the same day; the [steered page guide](steered-page.md#the-conductor) describes it and its measurements.
 3. **The world designer:** worlds from the player's words, in the same form, checked before play.
 4. **Keeping a phrase:** looping a kept phrase, and the composer bringing it back, varied.
 5. **New players:** the five-minute test with people who have never played Sway.

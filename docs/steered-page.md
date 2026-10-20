@@ -4,7 +4,7 @@ Started: October 13, 2026, Seattle time.
 This page plays the steered design from the [motion-to-music note](motion-to-music.md) with the hands.
 The hands steer the direction of the music, and MRT2 writes every note.
 On October 14, after playing it with his hands and the camera, Everett said it does feel like leading the music.
-Since V2's second milestone it plays a [film score](#the-film-score): an arranger plans its phrases, and a clap moves it on.
+Since V2's second milestone the player [conducts a film score](#the-conductor): a composer writes its phrases, and the player decides how they are played.
 
 ## Play
 
@@ -12,17 +12,22 @@ Run `uv run --locked sway serve` and open `http://127.0.0.1:8765/steered.html` i
 Choose the camera or the mouse on the page.
 The sound is generated on this Mac, and the camera image stays on this Mac.
 
-| Movement                                       | What the music does                                                                      |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Raise or lower the hands                       | It moves to a higher or a lower register.                                                |
-| Move more, or less                             | Quick, wide movement makes it lively; slow movement keeps it calm.                       |
-| Spread the hands apart                         | Close hands keep the melody on the chord's tones; wide hands open it to the whole scale. |
-| Hold still, close the hands, or leave the view | After about 0.65 seconds it thins to a quiet chord. Moving again grows it back.          |
-| Clap                                           | The music moves on to its next section, on the next bar line it can reach.               |
+| Gesture                                     | What the music does                                                                    |
+| ------------------------------------------- | -------------------------------------------------------------------------------------- |
+| The right hand's motion: bigger, or smaller | Louder or softer, at once; the playing grows fuller or thinner within a second or two. |
+| The right hand's motion: faster, or slower  | Driving and rhythmic, or calm and sustained.                                           |
+| The left hand's place, left to right        | The violins, the brass, or the cellos and basses lead.                                 |
+| The left hand's height                      | How far that voice comes forward; a low hand keeps the orchestra balanced.             |
+| An open palm, or a pinch                    | Long lines, or short notes.                                                            |
+| A fist, or holding still                    | After about 0.65 seconds it hushes to a quiet chord. Moving again grows it back.       |
+| Both hands up, then down                    | A swell rises while they are up; the next section lands on the beat after the drop.    |
 
-With one hand, its left-to-right position sets the spread.
-With the mouse, hold the stage and move: height sets the register, left to right sets the spread, and speed sets the energy; a double-click claps.
-The music follows a movement within a second or two; Everett accepted this latency on October 13.
+One hand conducts as the right hand, and the voices keep their balance.
+A left-handed player can open `steered.html?hand=left`.
+With the mouse, hold the stage and move: the motion's size and speed conduct, and a double-click moves on.
+The music follows a gesture within a second or two, except the volume and the swell, which answer at once; Everett accepted this latency on October 13.
+
+`?variant=spine` and `?variant=free` play the earlier, steered designs: height sets the register, movement the energy, spread the harmony, and stillness thins the music.
 
 End the take to save it as a WAV file.
 Escape also ends it, and a take stops after five minutes.
@@ -101,37 +106,56 @@ Its note rate varied 21% to 32% from second to second across its corners and mid
 On October 19, Everett played the ensemble with his hands and said: "this is GREAT!!!"
 The clips are in `outputs/fragments-2026-10-19/`.
 
-## The film score
+## The conductor
 
-V2's second milestone, built on October 19 after Everett chose a film score world, the clap, and an arranger that moves on by itself ([design](v2-design.md)).
+V2's second milestone ([design](v2-design.md)).
+Its first version, on October 19, played a film score that an arranger planned and a clap moved on.
+Everett found that it "has that film-score sound" but "doesn't seem very controllable": "I don't know what my hands are actually controlling".
+The clap was hard to recognize, because the tracker lost a hand when the hands overlapped.
+So the milestone continued with the conductor: the player conducts, a composer writes the score, and MRT2 is the orchestra.
 
-- **The world** (`src/sway/world.py`) is D minor at 80 beats a minute: a bar is 3 seconds, and a phrase is four bars, 12 seconds.
-  Its chords are Dm, Gm, Am, Bb, F, and C, all from the scale, so that wide hands never clash with the chord.
-  It keeps the ensemble corners, and its four sections, intro, build, peak, and release, each have a default direction for the sound and default chords.
-- **The arranger** (`src/sway/arranger.py`) is Qwen.
-  When a phrase is told to MRT2, the piece asks for two plans for the phrase after it: the one to play next, and the one to play if the player claps.
-  A plan is a section, a chord for each bar, a direction for the sound in words, and a caption for the player.
-  The request describes the last phrase in words and numbers: the player's energy and its trend, register, spread, stillness, and claps, and the sections so far; no image is sent.
-  Every answer is checked, and the world's own plan plays when an answer is missing, invalid, or late: each section for two phrases, then the next.
-- **The piece** (`src/sway/piece.py`) plays the plans on the spine.
-  A phrase's direction is 40% of MRT2's style, and the hands blend the ensemble corners in the rest.
-  A clap lands the clap plan on the first bar line that MRT2 can still be told in time: 1.2 to 4.2 seconds later.
-- **On the page,** a clap is two hands meeting quickly, or a double-click with the mouse.
-  At once, filtered noise swells, and it lands with a soft low impact on the bar line where the new section begins.
-  The page shows the section, the arranger's caption, and the phrase's chords.
-- `?variant=spine` plays the first milestone's spine, and `?variant=free` the page as it was on October 14.
+- **The world** (`src/sway/world.py`) is D minor at 80 beats a minute: a bar is 3 seconds, and a phrase of four bars is 12 seconds.
+  Its chords are Dm, Gm, Am, Bb, F, and C, all from the scale.
+  It places three voices, the violins, the brass, and the cellos and basses, from left to right, and it gives the words for calm and driving playing and for long and short notes.
+  Its 16 style descriptions combine each voice, or the balanced orchestra, with calm or driving playing and long or short notes, so that every gesture at its extreme reaches a whole description.
+  Its four sections, intro, build, peak, and release, have default chords and the score's dynamics: a level of -6, -3, 0, and -6 dB, and words for it in the style.
+- **The gestures** (`web/conductor-controls.js`) are those in the table above.
+  The size of the conducting hand's motion over the last 0.8 seconds sets the dynamics, and its speed the energy.
+  Its thumb-to-index distance sets the articulation, and a fist or 0.65 seconds without motion hushes.
+  The left hand's place across the view, from 8% to 72% of its width so that it need not cross the right hand, chooses the voice, and its height how far that voice comes forward.
+  Both hands above the top 30% of the view for a quarter of a second prepare, and both below the middle within 0.6 seconds of leaving the top move on.
+  The left hand's balance holds while it is out of view, and while both hands are up.
+- **The piece** (`src/sway/piece.py`) blends the 16 descriptions by the gestures; the dynamics is 40% of the calm-to-driving texture, and the section's words 20% of the style.
+  It applies the section's level as a gain, moving to a new section's level with a 1-second time constant.
+  The harmony is the composer's: each chord's tones and the pentatonic scale.
+- **The composer** (`src/sway/arranger.py`) is Qwen.
+  For each phrase it writes the next section, its chords, and a caption that names no instrument, and a second plan in case the player moves on.
+  It hears how the player conducted the last phrase, in words and numbers only, and the world's own plan plays whenever its answer is missing, invalid, or late.
+- **The page** turns the volume with the motion's size at once, from -12 dB to full.
+  It shows the voices' names across the view where the left hand reaches them, each as bright as it is brought forward.
+  Raising both hands starts a swell, which lands with the new section on the beat after they come down, or fades if they come down slowly.
+  It shows the section and the composer's caption above the phrase's chords.
 
-Measured on October 19, before Everett played it:
+Measured on October 19 with the real model, the conductor's gestures over six seeds:
 
-| Check                                         | Result                                                                                                                                     |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Hands with a section's direction in the style | Over six seeds in build, height moved the register in all six (effect 5.6), and activity the density (4.4).                                |
-| Sections with the same hands                  | The peak's note rate was 6.1 seed spreads above the intro's; register and loudness differed too.                                           |
-| Embedding a direction for the style           | 173 ms, too long for the model thread, so it runs on another thread; MusicCoCa's text encoder is not MLX.                                  |
-| A scripted 80-second take, with Qwen          | Qwen planned every phrase after the first; both claps landed on bar lines, 3.8 s later; frames took a median of 21.3 ms, with no underrun. |
+| Gesture                                                     | Result                                                                                                  |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| The left hand between the violins and the cellos and basses | The register moved in five of six seeds (effect 1.3); half the change took 2.7 s.                       |
+| The left hand raised, bringing the violins forward          | Brighter in all six (effect 2.9), higher and louder in five.                                            |
+| Big and fast, against small and slow                        | Denser in all six (effect 1.5); half the change took 2.5 s.                                             |
+| A pinch, against an open palm                               | A consistent change in all six (effect 4.2): short notes came out sparser and quieter, not denser.      |
+| The peak, against the intro                                 | Louder in all six (effect 3.4) and denser in five (1.7), once the sections' words named their dynamics. |
+| The build, against the intro                                | Louder in five of six (effect 1.0) and denser in five (1.9).                                            |
+| The release, against the build                              | Louder than the build in all six (effect 2.1), in two wordings: "piano" and "softly and tenderly".      |
 
-The sections' loudness also differed more than the music implies: with the same hands, release was about 19 dB louder than build.
-A slow level control for each section can follow if it sounds like a jump.
+The sections' first words, such as "the full orchestra together, powerful and grand", had made the peak quieter, darker, and sparser than the intro; words for dynamics fixed the peak but not the release.
+As a fifth of the style, a section's words often leave MRT2's six coarse style tokens unchanged: two wordings of the release gave identical results.
+So the piece also applies each section's level as a gain, which is exact; the words only color the sound.
+
+A scripted 62-second take in the browser, with the real model and Qwen, went as designed: the strongest style followed each gesture, both moves landed on bar lines, Qwen planned every phrase after the first, and its captions followed the playing, such as "Tension gathers. The orchestra wakes.".
+Frames took a median of 22.5 ms, 95% under 24.4 ms, with no underrun and no console error.
+At 1280 by 800, the voices sit across the top of the view and the readouts at the bottom; in a 400 by 300 pane they overlap.
+The clips are in `outputs/conducted-2026-10-19/`.
 
 ## The model thread
 
