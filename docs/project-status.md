@@ -109,6 +109,10 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
    He also asked when a player can choose or describe the theme in words: that is milestone 3, the [world designer](v2-design.md#worlds-and-the-world-designer).
    In one test take MRT2 fell silent for about 11 seconds.
    Traced the same day: under a calm style MRT2 can stop playing by itself and stay silent, whatever notes it may play, and striking the chord brings it back; the spine now does that after 0.8 s of silence ([guide](steered-page.md#silence)).
+   Later that day Everett played it again and said: "I completely don't get it"; the music went "back to being isolated musical snippets without any real subjectivity or consistency" ([guide](steered-page.md#the-second-play-test)).
+4. **The theme test,** on its own branch: whether a theme that MRT2 is given as notes, and that leaves and returns, makes the spine sound like one piece with its own identity.
+   The [V2 design](v2-design.md#what-we-have-learned) gives the reasons.
+   It runs offline, as a blind listening test, before any more is built on the conductor.
 
 ## Working rules
 

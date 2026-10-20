@@ -227,6 +227,13 @@ Recorded music is usually played at about -14 LUFS, so big motion is about as lo
 In one take, MRT2's own output fell silent for about 11 seconds.
 The leveling lowers a frame by at most 12 dB, or to the ceiling, and it holds its gain through a silence, so the silence came from the model; [Silence](#silence) traces it.
 
+### The second play test
+
+Later on October 20, Everett played the conductor with the gesture guide, the louder level, and the silence guard.
+He said: "I completely don't get it".
+In his account, the left hand has to move near a voice's name, the right hand turns in place, and a sound comes, but "it's not a sound that makes any sense": it goes "back to being isolated musical snippets without any real subjectivity or consistency".
+The [V2 design](v2-design.md#what-we-have-learned) compares the conductor with the spine and traces the cause to what holds the music together, and the next test to a theme.
+
 ## The model thread
 
 With mlx 0.31.2, once one thread has run MRT2, another thread fails with "There is no Stream(gpu, 1) in current thread".
