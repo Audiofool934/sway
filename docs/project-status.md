@@ -99,6 +99,10 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
    On October 19 Everett chose it as more continuous in six of six blind pairs, but playing it he still heard piano fragments.
    The cause was solo piano itself, so the spine now plays an ensemble whose instruments follow the hands.
    Later that day he played it and said: "this is GREAT!!!"
+   The second milestone, a film score world with Qwen as the arranger and a clap, is in draft [#17](https://github.com/Audiofool934/sway/pull/17).
+   Playing it, Everett found that it has the film-score sound but is not controllable: "I don't know what my hands are actually controlling."
+   So the V2 design now makes the player [the conductor](v2-design.md#the-conductor) of an AI orchestra, with fixed gestures whose meaning each world sets, and a [world designer](v2-design.md#worlds-and-the-world-designer) that writes worlds from the player's words.
+3. **Next: the conductor,** milestone 2's continuation on #17's branch: the conductor's gestures, the film score written as a world, and the composer kept to the score.
 
 ## Working rules
 
@@ -141,6 +145,7 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 | October 19      | Blind comparison: the spine chosen as more continuous in six of six pairs.                                                                   |
 | October 19      | Still fragments when played; the spine changes from solo piano to an ensemble.                                                               |
 | October 19      | Everett played the ensemble spine: "this is GREAT!!!"                                                                                        |
+| October 19      | The product pictured as an orchestra you conduct; the conductor model and the world designer added to the V2 design.                         |
 
 ## Where things are
 
