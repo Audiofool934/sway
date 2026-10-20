@@ -29,6 +29,7 @@ SAMPLE_RATE = 48_000
 FRAME = 0.04  # One model frame.
 A_MINOR = {9, 11, 0, 2, 4, 5, 7}
 FREE, SILENT = -1, 0  # Note conditioning: the model may choose, or must not play.
+HELD = 1  # Or must keep sounding.
 STRUCK = 2  # Or must play now.
 
 
@@ -747,17 +748,21 @@ def listening_page(out: Path, variants, seeds, tests=TESTS, questions=QUESTIONS)
     write_page(out, trials, start=3)
 
 
-def write_page(out: Path, trials, *, start=None, preference=False):
+def write_page(out: Path, trials, *, start=None, preference=False, intro=None, chosen=None):
     """The listening page for `trials`, with the movement's mark at `start` seconds.
 
     A preference test has no right answer: each trial's `answer` is the clip whose
-    choices it counts, and the page does not say right or wrong.
+    choices it counts, and the page does not say right or wrong. `intro` and `chosen`
+    describe a preference test's pairs and the clip it counts, if not the spine's.
+    A trial with `again` asks a second question about the pair just heard.
     """
     template = (Path(__file__).with_name("listening_test.html")).read_text()
     page = (
         template.replace("__TRIALS__", json.dumps(trials))
         .replace("__START__", json.dumps(start))
         .replace("__PREFERENCE__", json.dumps(preference))
+        .replace("__INTRO__", json.dumps(intro))
+        .replace("__CHOSEN__", json.dumps(chosen))
     )
     (out / "listening-test.html").write_text(page)
 
