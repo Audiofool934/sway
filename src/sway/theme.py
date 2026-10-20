@@ -71,7 +71,12 @@ class Themed(Spine):
     """
 
     name = "theme"
-    ahead = 5
+    # Calibrated on October 20 over three seeds: MRT2 answers a struck note within about
+    # 0.1 s, so the share of the melody on the theme's note early in each note was 87%
+    # told on time and 35% to 59% told 0.12 to 0.4 s early, against 11% without a theme.
+    # Guidance 6 held the note better than 3, but its sound is not yet heard; 3 is the
+    # theremin's.
+    ahead = 0
     strength = 3.0
 
     def __init__(self, engine, form=(), *, start=WARMUP_BARS, ahead=ahead, strength=strength):
