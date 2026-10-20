@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sway · Steered</title>
+    <title>Sway · Film score</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/theremin.css" />
   </head>
@@ -16,54 +16,66 @@
         aria-label="Hold and move the mouse, or play with your hands through the camera"
       ></canvas>
       <header>
-        <a class="brand" href="/">Sway <span>steered</span></a>
+        <a class="brand" href="/">Sway <span>film score</span></a>
         <div class="actions">
-          <span id="status" role="status">Steered · ready</span>
+          <span id="status" role="status">Film score · ready</span>
+          <button
+            id="gestures"
+            class="quiet"
+            aria-controls="gesture-guide"
+            aria-expanded="false"
+          >
+            Gestures
+          </button>
           <button id="stop" hidden>End the take</button>
         </div>
       </header>
       <section id="intro" aria-labelledby="title">
-        <p class="eyebrow">YOUR HANDS STEER · THE MODEL WRITES</p>
-        <h1 id="title">Lead the music where it goes.</h1>
+        <p class="eyebrow">YOU CONDUCT · AN ORCHESTRA PLAYS</p>
+        <h1 id="title">Conduct the orchestra with your hands.</h1>
         <p class="description">
-          Every note comes from the model, generated on this Mac. Your hands set
-          the direction, and the music follows within a second or two.
+          An orchestra, generated on this Mac, plays a film score that a
+          composer writes as you go. You decide how it is played.
         </p>
         <ol class="guide">
           <li>
             <span class="number">01</span>
             <div>
-              <b>Raise or lower your hands</b>
-              <p>The music moves to a higher or a lower register.</p>
+              <b>Conduct with your right hand</b>
+              <p>
+                Bigger motion plays louder, and faster motion drives harder.
+              </p>
             </div>
           </li>
           <li>
             <span class="number">02</span>
             <div>
-              <b>Move more, or less</b>
+              <b>Bring a voice forward with your left</b>
               <p>
-                Quick, wide movement makes it lively. Slow movement keeps it
-                calm.
+                Point toward the violins, the brass, or the cellos and basses,
+                and raise your hand to bring them forward.
               </p>
             </div>
           </li>
           <li>
             <span class="number">03</span>
             <div>
-              <b>Spread your hands apart</b>
-              <p>
-                Close hands keep the melody on the chord. Wide hands open it to
-                the whole scale, with more tension.
-              </p>
+              <b>Open your palm, or pinch</b>
+              <p>An open palm plays long lines; a pinch plays short notes.</p>
             </div>
           </li>
           <li>
             <span class="number">04</span>
             <div>
-              <b>Hold still</b>
-              <p>
-                The music thins to a quiet chord. Move again to grow it back.
-              </p>
+              <b>Make a fist, or hold still</b>
+              <p>The music hushes to a quiet chord.</p>
+            </div>
+          </li>
+          <li>
+            <span class="number">05</span>
+            <div>
+              <b>Raise both hands, then bring them down</b>
+              <p>The orchestra moves on to its next section, on the beat.</p>
             </div>
           </li>
         </ol>
@@ -74,51 +86,66 @@
           <button id="start-pointer" class="secondary">
             Try with the mouse first
           </button>
+          <button id="show-gestures" class="secondary">See the gestures</button>
         </div>
         <p id="message" class="note">
-          The sound is generated on this Mac. The camera image stays here too.
+          The music is generated on this Mac, and the camera image stays here.
+          To write what comes next, the composer may describe the music to Qwen,
+          in the cloud: in words and numbers, never an image.
         </p>
       </section>
       <div id="preparing" hidden aria-live="polite">
         <i></i>
-        <p>Preparing the sound…</p>
+        <p>Preparing the orchestra…</p>
         <small>The first time takes a moment.</small>
       </div>
+      <div id="voices" class="voices" aria-label="The orchestra's voices"></div>
       <div id="playing" hidden>
+        <p id="section" class="section" aria-live="polite"></p>
         <p id="chords" class="chords" aria-label="The chords, one a bar"></p>
         <p id="gesture-name">Resting</p>
         <p id="hint"></p>
-        <div
-          class="qualities"
-          aria-label="Where the hands are taking the music"
-        >
+        <div class="qualities" aria-label="How the music is played">
           <span
-            >Height<i><b id="height-meter"></b></i
+            ><span id="first-label">Dynamics</span
+            ><i><b id="first-meter"></b></i
           ></span>
           <span
-            >Energy<i><b id="energy-meter"></b></i
+            ><span id="second-label">Energy</span
+            ><i><b id="second-meter"></b></i
           ></span>
           <span
-            >Spread<i><b id="spread-meter"></b></i
+            ><span id="third-label">Short notes</span
+            ><i><b id="third-meter"></b></i
           ></span>
         </div>
       </div>
       <footer>
         <a id="save" hidden download="sway-steered.wav">Save this take ↓</a>
         <span id="footer-note"
-          >One hand works too: left to right opens the harmony.</span
+          >One hand conducts on its own; the voices hold their balance.</span
         >
         <label
           >Volume
-          <input
-            id="volume"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value="0.7"
+          <input id="volume" type="range" min="0" max="1" step="0.01" value="1"
         /></label>
       </footer>
+      <section
+        id="gesture-guide"
+        class="gesture-guide"
+        hidden
+        aria-label="The conductor's gestures"
+      >
+        <div class="gesture-head">
+          <h2>Gestures</h2>
+          <button id="close-gestures">Close</button>
+        </div>
+        <div class="gesture-grid"></div>
+        <p class="gesture-note">
+          Press G to show or hide this guide. The music keeps playing while it
+          is open.
+        </p>
+      </section>
       <pre id="diagnostics" hidden></pre>
     </main>
     <script type="module" src="/steered.js"></script>

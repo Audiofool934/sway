@@ -4,7 +4,18 @@ import numpy as np
 import pytest
 
 from sway import steering
-from sway.steering import FREE, NEUTRAL, SILENT, Move, Quick, Spine, Steered, ThereminHand, Window
+from sway.steering import (
+    FREE,
+    NEUTRAL,
+    SILENT,
+    STRUCK,
+    Move,
+    Quick,
+    Spine,
+    Steered,
+    ThereminHand,
+    Window,
+)
 
 SR = steering.SAMPLE_RATE
 FRAME_SAMPLES = round(steering.FRAME * SR)
@@ -290,6 +301,37 @@ def test_stillness_thins_the_spine_instead_of_stopping_it():
     for _ in range(10):
         spine.render(NEUTRAL)
     assert spine.gain > 0.95
+
+
+class SilentEngine(FakeEngine):
+    """MRT2 fallen silent: it plays nothing, whichever notes it may choose."""
+
+    def generate(self, notes, drumless=False, note_guidance=1.0):
+        self.last = notes.copy()
+        self.frame += 1
+        return np.zeros((FRAME_SAMPLES, 2), dtype=np.float32)
+
+
+def test_a_silent_spine_strikes_the_chord_being_heard():
+    spine = Spine(SilentEngine())
+    spine.start(1)
+    strikes = []
+    for frame in range(2 * spine.wake_after + 3):
+        spine.render(Move(activity=0.6, spread=0.1))
+        struck = np.flatnonzero(spine.engine.last == STRUCK)
+        if len(struck):
+            strikes.append(frame)
+            assert set(struck) == {45, 52, 57, 60}  # A2, E3, A3, and C4: Am, being heard.
+    # After 0.8 s of silence, and again after another 0.8 s if MRT2 stays silent.
+    assert strikes == [spine.wake_after, 2 * spine.wake_after]
+
+
+def test_a_sounding_spine_is_never_struck():
+    spine = Spine(FakeEngine())
+    spine.start(1)
+    for move in [Move(activity=0.6, spread=0.1)] * 100 + [Move(activity=0.0)] * 100:
+        spine.render(move)
+        assert not (spine.engine.last == STRUCK).any()
 
 
 def test_a_copied_moment_keeps_the_spine_s_place():

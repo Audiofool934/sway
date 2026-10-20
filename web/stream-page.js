@@ -5,11 +5,10 @@ import { ThereminAudio } from "./theremin-audio.js";
 
 // A page on which the hands steer a live MRT2 stream from the local server.
 // The page gives its stream's name, an optional query for the stream's address, its
-// controller, its audio options, its words, and `show(state, $, model)`, which updates
-// its readouts in each animation frame from the controls and the model's latest
-// stats. `glow(state)`
-// returns how strongly the hands' marks glow, from 0 to 1, and `swing(state)` how far
-// the waveform at each hand swings, from 0 to 1.
+// controller, its audio options, its words, and `show(state, $, model, audio)`, which
+// updates its readouts in each animation frame from the controls, the model's latest
+// stats, and the audio. `glow(state)` returns how strongly the hands' marks glow, from
+// 0 to 1, and `swing(state)` how far the waveform at each hand swings, from 0 to 1.
 export function startStreamPage(page) {
   const { text } = page;
   const $ = (id) => document.getElementById(id);
@@ -188,6 +187,10 @@ export function startStreamPage(page) {
     canvas.setPointerCapture(event.pointerId);
     pointer = point(event);
   });
+  // With the mouse, a double-click claps, for controllers that listen for claps.
+  canvas.addEventListener("dblclick", () => {
+    if (phase === "playing" && source === "pointer") controls.cue?.();
+  });
   canvas.addEventListener("pointermove", (event) => {
     if (pointer) pointer = point(event);
   });
@@ -302,7 +305,7 @@ export function startStreamPage(page) {
     }
     if (phase === "playing") {
       audio.control(state);
-      page.show(state, $, model);
+      page.show(state, $, model, audio);
       $("status").textContent =
         source === "camera" && !controls.seen ? text.handsGone : text.playing;
       if (now - lastLog > 0.2) {
@@ -351,6 +354,9 @@ export function startStreamPage(page) {
     input(points, time) {
       source = "scripted";
       return input(points, time);
+    },
+    cue() {
+      controls.cue?.();
     },
     end,
   };

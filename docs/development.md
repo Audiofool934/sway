@@ -67,14 +67,14 @@ The V1 instrument:
 
 The theremin experiment:
 
-| Path                                                        | Responsibility                                                              |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `web/theremin.html`, `theremin.css`, `theremin.js`          | The page, its words, and its readouts.                                      |
-| `web/theremin-controls.js`                                  | Hand features to pitch, spread, articulation, and energy.                   |
-| `web/theremin-audio.js`, `theremin-worklet.js`              | Streamed playback with gain, filter, and room, and the recording of a take. |
-| `web/audio-buffer.js`                                       | The stereo buffer the worklet plays from.                                   |
-| `src/sway/theremin.py`, `/api/theremin/stream`              | Turns the newest controls into MRT2's notes and style, 40 ms at a time.     |
-| `tests/theremin-controls.test.js`, `tests/test_theremin.py` | Controls, validation, stream ownership, and cleanup.                        |
+| Path                                                        | Responsibility                                                                       |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `web/theremin.html`, `theremin.css`, `theremin.js`          | The page, its words, and its readouts.                                               |
+| `web/theremin-controls.js`                                  | Hand features to pitch, spread, articulation, and energy.                            |
+| `web/theremin-audio.js`, `theremin-worklet.js`              | Streamed playback with gain, filter, room, and limiter, and the recording of a take. |
+| `web/audio-buffer.js`                                       | The stereo buffer the worklet plays from.                                            |
+| `src/sway/theremin.py`, `/api/theremin/stream`              | Turns the newest controls into MRT2's notes and style, 40 ms at a time.              |
+| `tests/theremin-controls.test.js`, `tests/test_theremin.py` | Controls, validation, stream ownership, and cleanup.                                 |
 
 The motion-to-music measurements ([design note](motion-to-music.md)):
 
@@ -91,12 +91,16 @@ The motion-to-music measurements ([design note](motion-to-music.md)):
 
 The steered page ([guide](steered-page.md)):
 
-| Path                                                      | Responsibility                                                        |
-| --------------------------------------------------------- | --------------------------------------------------------------------- |
-| `web/steered.html`, `steered.js`                          | The page, its words, and its readouts; it uses `theremin.css`.        |
-| `web/steered-controls.js`                                 | Hand features to height, activity, and spread.                        |
-| `src/sway/steered.py`, `/api/steered/stream`              | Plays `steering.Steered` with the fade on stillness, 40 ms at a time. |
-| `tests/steered-controls.test.js`, `tests/test_steered.py` | Controls, validation, stream ownership, and the one model thread.     |
+| Path                                                                          | Responsibility                                                                                    |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `web/steered.html`, `steered.js`                                              | The page, its words, and its readouts; it uses `theremin.css`.                                    |
+| `web/steered-controls.js`                                                     | Hand features to height, activity, and spread, for the steered variants.                          |
+| `web/conductor-controls.js`                                                   | Hand features to the conductor's dynamics, energy, voice, articulation, hush, and moving on.      |
+| `web/gesture-guide.js`                                                        | The conductor's gestures, drawn as looping animations that open over the stage.                   |
+| `src/sway/steered.py`, `/api/steered/stream`                                  | Plays the film score, or an earlier variant, 40 ms at a time.                                     |
+| `src/sway/world.py`, `arranger.py`, `piece.py`                                | The film score world, the composer's phrase plans, and the conducted piece.                       |
+| `tests/steered-controls.test.js`, `tests/test_steered.py`                     | Controls, claps, validation, stream ownership, and the one model thread.                          |
+| `tests/test_arranger.py`, `tests/test_piece.py`, `conductor-controls.test.js` | The world, the composer's prompt and checks, phrases, gestures, moving on, loudness, and silence. |
 
 Shared by the theremin and steered pages:
 
@@ -107,14 +111,14 @@ Shared by the theremin and steered pages:
 
 Shared by both:
 
-| Path                 | Responsibility                                                                           |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| `src/sway/music.py`  | The MRT2 adapter: the exported model, MusicCoCa style embeddings, and note conditioning. |
-| `src/sway/app.py`    | The loopback-only server and its static files.                                           |
-| `src/sway/cli.py`    | `sway setup`, `doctor`, and `serve`.                                                     |
-| `src/sway/config.py` | Data paths and pinned model revisions.                                                   |
-| `src/sway/schema.py` | Validated harmony and composer messages.                                                 |
-| `src/sway/qwen.py`   | The Qwen credential and endpoint.                                                        |
+| Path                 | Responsibility                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------- |
+| `src/sway/music.py`  | The MRT2 adapter: the exported model, MusicCoCa style embeddings, and note conditioning.  |
+| `src/sway/app.py`    | The loopback-only server and its static files.                                            |
+| `src/sway/cli.py`    | `sway setup`, `doctor`, and `serve`.                                                      |
+| `src/sway/config.py` | Data paths and pinned model revisions.                                                    |
+| `src/sway/schema.py` | Validated harmony and composer messages.                                                  |
+| `src/sway/qwen.py`   | The Qwen credential, endpoint, and the client that V1's composer and V2's arranger share. |
 
 In the browser console, `window.sway` exposes the engine, controls, and a scripted `input()` that feeds the same features as a hand.
 Hand features carry 21 mirrored, smoothed image landmarks, centred on the same palm position that drives the controls.

@@ -4,6 +4,7 @@ Started: October 13, 2026, Seattle time.
 This page plays the steered design from the [motion-to-music note](motion-to-music.md) with the hands.
 The hands steer the direction of the music, and MRT2 writes every note.
 On October 14, after playing it with his hands and the camera, Everett said it does feel like leading the music.
+Since V2's second milestone the player [conducts a film score](#the-conductor): a composer writes its phrases, and the player decides how they are played.
 
 ## Play
 
@@ -11,16 +12,23 @@ Run `uv run --locked sway serve` and open `http://127.0.0.1:8765/steered.html` i
 Choose the camera or the mouse on the page.
 The sound is generated on this Mac, and the camera image stays on this Mac.
 
-| Movement                                       | What the music does                                                                      |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Raise or lower the hands                       | It moves to a higher or a lower register.                                                |
-| Move more, or less                             | Quick, wide movement makes it lively; slow movement keeps it calm.                       |
-| Spread the hands apart                         | Close hands keep the melody on the A minor triad; wide hands open it to the whole scale. |
-| Hold still, close the hands, or leave the view | After about 0.65 seconds it thins to a quiet chord. Moving again grows it back.          |
+| Gesture                                     | What the music does                                                                    |
+| ------------------------------------------- | -------------------------------------------------------------------------------------- |
+| The right hand's motion: bigger, or smaller | Louder or softer, at once; the playing grows fuller or thinner within a second or two. |
+| The right hand's motion: faster, or slower  | Driving and rhythmic, or calm and sustained.                                           |
+| The left hand's place, left to right        | The violins, the brass, or the cellos and basses lead.                                 |
+| The left hand's height                      | How far that voice comes forward; a low hand keeps the orchestra balanced.             |
+| An open palm, or a pinch                    | Long lines, or short notes.                                                            |
+| A fist, or holding still                    | After about 0.65 seconds it hushes to a quiet chord. Moving again grows it back.       |
+| Both hands up, then down                    | A swell rises while they are up; the next section lands on the beat after the drop.    |
 
-With one hand, its left-to-right position sets the spread.
-With the mouse, hold the stage and move: height sets the register, left to right sets the spread, and speed sets the energy.
-The music follows a movement within a second or two; Everett accepted this latency on October 13.
+One hand conducts as the right hand, and the voices keep their balance.
+A left-handed player can open `steered.html?hand=left`.
+With the mouse, hold the stage and move: the motion's size and speed conduct, and a double-click moves on.
+The Gestures button, or G, shows [each gesture drawn](#the-gesture-guide) over the stage at any time, while the music keeps playing.
+The music follows a gesture within a second or two, except the volume and the swell, which answer at once; Everett accepted this latency on October 13.
+
+`?variant=spine` and `?variant=free` play the earlier, steered designs: height sets the register, movement the energy, spread the harmony, and stillness thins the music.
 
 End the take to save it as a WAV file.
 Escape also ends it, and a take stops after five minutes.
@@ -46,6 +54,7 @@ The [V2 design](v2-design.md) answers with a spine, its first milestone, added o
   The style still follows the hands continuously, as it changes gradually anyway.
 - **Stillness thins the music:** the output falls to about a third at once, and from the next chord only its root and fifth may sound.
 - **Each chord is told 1.2 seconds early,** so that MRT2's delay lands it on its bar line.
+- **When MRT2 falls silent by itself,** it is told to strike the chord being heard ([Silence](#silence)).
 
 The last point came from measuring.
 With chords told on their bar lines, MRT2 had not settled on one chord before the next began: early in each bar, the melody had 26% of its energy on the bar's chord, and late in it 55%.
@@ -98,6 +107,132 @@ The last is the spine's texture now.
 Its note rate varied 21% to 32% from second to second across its corners and middle, so this measure alone does not settle continuity; Everett's ears do.
 On October 19, Everett played the ensemble with his hands and said: "this is GREAT!!!"
 The clips are in `outputs/fragments-2026-10-19/`.
+
+### Silence
+
+On October 20, in a browser take of the conducted film score, MRT2's own output fell silent for about 11 seconds during small motion in the peak.
+The music came back only when the motion grew.
+Six scripted takes without the browser, 12 minutes in all, found it again: MRT2 fell silent five times.
+Four lasted 1.0 to 8.8 s, under small motion or a hush, and one lasted 0.6 s, under moderate motion; none came under big motion.
+
+The notes that MRT2 may play were not the cause.
+From the moment before one hush, each condition had eight random continuations of 12 seconds:
+
+| Condition                                              | Silent for 1 s or more | Longest |
+| ------------------------------------------------------ | ---------------------- | ------- |
+| The hush: the chord's root and fifth                   | 0 of 8                 | 0 s     |
+| A hush with the chord's tones and the pentatonic scale | 2 of 8                 | 6.2 s   |
+| A hush with the chord's three notes                    | 2 of 8                 | 8.4 s   |
+| Small motion, no hush                                  | 1 of 8                 | 2.1 s   |
+
+Once silent, MRT2 stays silent: from inside one silence, all eight continuations were still silent 4 seconds later.
+Struck once, the chord being heard brought the sound back in all eight, in 0.1 to 1.0 s, and MRT2 played on by itself.
+Holding the chord for a second, or stronger note guidance, did no better.
+
+So the spine now listens for silence.
+When MRT2's output has stayed below -65 dBFS for 0.8 seconds, the spine tells MRT2 to strike the chord being heard: its root at or above G2, the fifth, the root an octave up, and the third.
+A shorter rest stays a rest.
+In the same six takes with this guard, no silence lasted 1 second: the longest was 0.88 s.
+MRT2 was struck six times in 12 minutes, and the sound came back 0.1 to 0.6 s after each strike.
+The traces are in `outputs/silence-2026-10-20/`.
+
+## The conductor
+
+V2's second milestone ([design](v2-design.md)).
+Its first version, on October 19, played a film score that an arranger planned and a clap moved on.
+Everett found that it "has that film-score sound" but "doesn't seem very controllable": "I don't know what my hands are actually controlling".
+The clap was hard to recognize, because the tracker lost a hand when the hands overlapped.
+So the milestone continued with the conductor: the player conducts, a composer writes the score, and MRT2 is the orchestra.
+
+- **The world** (`src/sway/world.py`) is D minor at 80 beats a minute: a bar is 3 seconds, and a phrase of four bars is 12 seconds.
+  Its chords are Dm, Gm, Am, Bb, F, and C, all from the scale.
+  It places three voices, the violins, the brass, and the cellos and basses, from left to right, and it gives the words for calm and driving playing and for long and short notes.
+  Its 16 style descriptions combine each voice, or the balanced orchestra, with calm or driving playing and long or short notes, so that every gesture at its extreme reaches a whole description.
+  Its four sections, intro, build, peak, and release, have default chords and the score's dynamics: a level of -6, -3, 0, and -6 dB, and words for it in the style.
+- **The gestures** (`web/conductor-controls.js`) are those in the table above.
+  The size of the conducting hand's motion over the last 0.8 seconds sets the dynamics, and its speed the energy.
+  Its thumb-to-index distance sets the articulation, and a fist or 0.65 seconds without motion hushes.
+  The left hand's place across the view, from 8% to 72% of its width so that it need not cross the right hand, chooses the voice, and its height how far that voice comes forward.
+  Both hands above the top 30% of the view for a quarter of a second prepare, and both below the middle within 0.6 seconds of leaving the top move on.
+  The left hand's balance holds while it is out of view, and while both hands are up.
+- **The piece** (`src/sway/piece.py`) blends the 16 descriptions by the gestures; the dynamics is 40% of the calm-to-driving texture, and the section's words 20% of the style.
+  It brings MRT2's output to a [steady loudness](#loudness), then applies the section's level as a gain, moving to a new section's level with a 1-second time constant.
+  The harmony is the composer's: each chord's tones and the pentatonic scale.
+- **The composer** (`src/sway/arranger.py`) is Qwen.
+  For each phrase it writes the next section, its chords, and a caption that names no instrument, and a second plan in case the player moves on.
+  It hears how the player conducted the last phrase, in words and numbers only, and the world's own plan plays whenever its answer is missing, invalid, or late.
+- **The page** turns the volume with the motion's size at once, from -12 dB to full.
+  It shows the voices' names across the view where the left hand reaches them, each as bright as it is brought forward.
+  Raising both hands starts a swell, which lands with the new section on the beat after they come down, or fades if they come down slowly.
+  It shows the section and the composer's caption above the phrase's chords.
+
+Measured on October 19 with the real model, the conductor's gestures over six seeds:
+
+| Gesture                                                     | Result                                                                                                  |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| The left hand between the violins and the cellos and basses | The register moved in five of six seeds (effect 1.3); half the change took 2.7 s.                       |
+| The left hand raised, bringing the violins forward          | Brighter in all six (effect 2.9), higher and louder in five.                                            |
+| Big and fast, against small and slow                        | Denser in all six (effect 1.5); half the change took 2.5 s.                                             |
+| A pinch, against an open palm                               | A consistent change in all six (effect 4.2): short notes came out sparser and quieter, not denser.      |
+| The peak, against the intro                                 | Louder in all six (effect 3.4) and denser in five (1.7), once the sections' words named their dynamics. |
+| The build, against the intro                                | Louder in five of six (effect 1.0) and denser in five (1.9).                                            |
+| The release, against the build                              | Louder than the build in all six (effect 2.1), in two wordings: "piano" and "softly and tenderly".      |
+
+The sections' first words, such as "the full orchestra together, powerful and grand", had made the peak quieter, darker, and sparser than the intro; words for dynamics fixed the peak but not the release.
+As a fifth of the style, a section's words often leave MRT2's six coarse style tokens unchanged: two wordings of the release gave identical results.
+So the piece also applies each section's level as a gain, which is exact; the words only color the sound.
+
+A scripted 62-second take in the browser, with the real model and Qwen, went as designed: the strongest style followed each gesture, both moves landed on bar lines, Qwen planned every phrase after the first, and its captions followed the playing, such as "Tension gathers. The orchestra wakes.".
+Frames took a median of 22.5 ms, 95% under 24.4 ms, with no underrun and no console error.
+At 1280 by 800, the voices sit across the top of the view and the readouts at the bottom; in a 400 by 300 pane they overlap.
+The clips are in `outputs/conducted-2026-10-19/`.
+
+### The gesture guide
+
+On October 20 Everett played the conductor and said that it starts to come together, and that "the instrument itself is a generative result".
+But the written guide did not show exactly how to point or move.
+So the page draws each gesture as a short looping animation: louder or softer, calm or driving, bringing a voice forward, long or short notes, the hush, and moving on.
+The hands are drawn from behind, as the player sees their own hands held up to the screen.
+The voice card names the world's voices, and meters and notes show what each gesture changes.
+The Gestures button in the header, "See the gestures" on the first screen, or G opens the guide; Close, Escape, or G closes it.
+The music keeps playing while it is open, and Escape closes the guide before it would end the take.
+With reduced motion, each card holds the pose that shows its gesture.
+`web/gesture-guide.js` draws the animations.
+
+### Loudness
+
+The same day Everett found the sound too quiet: he had to turn the Mac's volume all the way up.
+MRT2's output level depends on the texture: with the same world it ranged from -59 to -30 dBFS RMS, 15 to 40 dB below recorded music.
+
+- **The piece** measures its output over 2 seconds and brings it to -13 dBFS RMS, by -12 to +48 dB, before the section's level.
+  While the measure catches up with a sudden loud passage, no frame is boosted more than 6 dB above that level.
+  A hush is not measured, so it stays quiet.
+  The measure starts from MRT2's quietest textures, so that a quiet opening is heard at once.
+- **The page's** volume starts at full instead of 70%, and a limiter after it keeps the peaks below full scale.
+
+Measured in the browser with the real model, conducting with the mouse, at the page's output:
+
+| Playing         | Before, dBFS RMS | After, dBFS RMS |
+| --------------- | ---------------- | --------------- |
+| Moderate motion | -24              | -15.5 to -18.5  |
+| Big motion      | -27              | -11.4 to -14.7  |
+| Small motion    | -32 to -42       | -19.8 to -21.8  |
+| A hush          | -43 to -47       | -32             |
+
+"Before" is the first version of this change, which aimed at -16 dBFS with at most +36 dB and a volume of 70%; the version Everett played had no leveling.
+The quiet intro now reaches its level within 3 seconds.
+The loudest peak was -0.5 dBFS.
+Recorded music is usually played at about -14 LUFS, so big motion is about as loud as a song, and moderate motion a little softer.
+
+In one take, MRT2's own output fell silent for about 11 seconds.
+The leveling lowers a frame by at most 12 dB, or to the ceiling, and it holds its gain through a silence, so the silence came from the model; [Silence](#silence) traces it.
+
+### The second play test
+
+Later on October 20, Everett played the conductor with the gesture guide, the louder level, and the silence guard.
+He said: "I completely don't get it".
+In his account, the left hand has to move near a voice's name, the right hand turns in place, and a sound comes, but "it's not a sound that makes any sense": it goes "back to being isolated musical snippets without any real subjectivity or consistency".
+The [V2 design](v2-design.md#what-we-have-learned) compares the conductor with the spine and traces the cause to what holds the music together, and the next test to a theme.
 
 ## The model thread
 

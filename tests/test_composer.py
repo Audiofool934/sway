@@ -206,7 +206,7 @@ def test_without_a_key_the_page_is_told_qwen_is_not_configured(client, monkeypat
     def missing():
         raise ValueError("Set Qwen api_key in the credential file or DASHSCOPE_API_KEY")
 
-    monkeypatch.setattr(composer.QwenConfig, "load", staticmethod(missing))
+    monkeypatch.setattr(QwenConfig, "load", staticmethod(missing))
     response = client.post("/api/compose", json=body())
     assert response.status_code == 503
     assert "not configured" in response.json()["detail"]

@@ -75,17 +75,28 @@ The others inform later decisions, but V2 is not designed for them yet.
 
 ## What we have learned
 
-| Version                                                                                                  | What worked                                                                                        | What was missing                                                                                                                |
-| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| V1 (`/`)                                                                                                 | The camera behind the display, real-time MRT2 on an M2 Pro, Qwen planning the band, lessons, form. | Playing felt like adding notes over an accompaniment. Every session was the same Night Drive.                                   |
-| Theremin (`/theremin.html`)                                                                              | Immediate response.                                                                                | The hand chose every note: motion as music, not motion to music.                                                                |
-| Steered (`/steered.html`, [guide](steered-page.md)), October 14                                          | On October 14, Everett said it does feel like leading the music.                                   | It "feels like some random music pieces joined together", not one continuous flow.                                              |
-| Steered on a spine, with an ensemble (milestone 1)                                                       | One continuous piece. Everett: "this is GREAT!!!"                                                  | One world, the same four chords on repeat, nothing that evolves.                                                                |
-| A film score, an arranger, and a clap (milestone 2, [#17](https://github.com/Audiofool934/sway/pull/17)) | "It has that film-score sound."                                                                    | "It doesn't seem very controllable", "I don't know what my hands are actually controlling", and the clap was hard to recognize. |
+| Version                                                                                                  | What worked                                                                                             | What was missing                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| V1 (`/`)                                                                                                 | The camera behind the display, real-time MRT2 on an M2 Pro, Qwen planning the band, lessons, form.      | Playing felt like adding notes over an accompaniment. Every session was the same Night Drive.                                                                                                                 |
+| Theremin (`/theremin.html`)                                                                              | Immediate response.                                                                                     | The hand chose every note: motion as music, not motion to music.                                                                                                                                              |
+| Steered (`/steered.html`, [guide](steered-page.md)), October 14                                          | On October 14, Everett said it does feel like leading the music.                                        | It "feels like some random music pieces joined together", not one continuous flow.                                                                                                                            |
+| Steered on a spine, with an ensemble (milestone 1)                                                       | One continuous piece. Everett: "this is GREAT!!!"                                                       | One world, the same four chords on repeat, nothing that evolves.                                                                                                                                              |
+| A film score, an arranger, and a clap (milestone 2, [#17](https://github.com/Audiofool934/sway/pull/17)) | "It has that film-score sound."                                                                         | "It doesn't seem very controllable", "I don't know what my hands are actually controlling", and the clap was hard to recognize.                                                                               |
+| The conductor (milestone 2, continued), October 20                                                       | In the first play test: it starts to come together, and "the instrument itself is a generative result". | In the second: "I completely don't get it". A voice is chosen by moving the left hand to its name, and the music goes "back to being isolated musical snippets without any real subjectivity or consistency". |
 
 So V1 flows, but the player does not lead it.
 The steered page lets the player lead, and on a spine it flows too.
 Milestone 2 added a world and a composer, but lost the player's sense of control.
+The conductor then lost the spine's flow as well.
+
+Against the spine, the conductor removed what held the music together and weakened the hands:
+
+- The spine repeats four chords at a steady 100 beats a minute in one ensemble; the conductor's composer writes new chords for each phrase, and the player switches between three voices and four sections, each a new start for MRT2.
+- Measured over six seeds, the spine's height moved the register with an effect of 3.7, and the conductor's left hand with 1.3, half of it in 2.7 s; the spine's activity moved the density with 3.8, and the conductor's motion with 1.5.
+
+Underneath both, nothing in Sway holds a theme.
+MRT2's effective receptive field is about 20 s, and nothing it is given names a melody; in the study of Magenta RealTime's first version, users said it could drop a melody with no way to get it back.
+So the next test is offline: the spine with a theme given to MRT2 as notes, which leaves and returns, against the same spine without it.
 
 Milestone 1 traced the steered page's discontinuity to four causes: nothing held the music together, changes landed on any frame, stillness stopped the music, and the style corners were different textures.
 
@@ -251,6 +262,7 @@ Each is one piece of work on its own branch and pull request, and Everett plays 
 2. **The conductor,** with the world as data.
    [#17](https://github.com/Audiofool934/sway/pull/17) built a film score world, Qwen as the arranger, and a clap on October 19, but its play test lost the sense of control.
    So milestone 2 continues: the gestures in the table above, the film score written by hand as a world in the form the world designer will use, and the composer kept to the score.
+   Built the same day; the [steered page guide](steered-page.md#the-conductor) describes it and its measurements.
 3. **The world designer:** worlds from the player's words, in the same form, checked before play.
 4. **Keeping a phrase:** looping a kept phrase, and the composer bringing it back, varied.
 5. **New players:** the five-minute test with people who have never played Sway.

@@ -1,3 +1,6 @@
+import asyncio
+import threading
+
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
@@ -12,7 +15,11 @@ FRAME_SAMPLES = 1920
 
 
 class FakeStyle:
+    def __init__(self):
+        self.threads = {}  # The thread that embedded each text.
+
     def embed(self, text):
+        self.threads[text] = threading.current_thread().name
         return np.random.default_rng(abs(hash(text)) % 2**32).standard_normal(8)
 
     def tokens(self, embedding):
@@ -71,10 +78,10 @@ def test_the_free_variant_follows_the_hands_at_once_and_fades():
     assert renderer.instrument.gain == 1.0
 
 
-def test_the_spine_is_the_default_and_reports_its_chord_and_beat():
+def test_the_spine_reports_its_chord_and_beat():
     engine = FakeEngine()
     renderer = steered.SteeredRenderer(lambda: engine)
-    assert renderer.start(17)["variant"] == "spine"
+    assert renderer.start(17, variant="spine")["variant"] == "spine"
     playing = steered.Control(seq=1, activity=0.6, spread=0.1)
     _, stats = renderer.render(playing)
     assert (stats["chord"], stats["bar"], stats["chords"]) == ("Am", 0, ["Am", "F", "C", "G"])
@@ -101,7 +108,7 @@ def test_unbounded_or_unrelated_controls_are_rejected(change):
 
 
 def test_a_silent_controller_is_released_into_stillness():
-    service = steered.SteeredService(steered.SteeredRenderer(FakeEngine))
+    service = steered.SteeredService(steered.SteeredRenderer(FakeEngine), arranger=False)
     held = steered.Control(seq=3, height=0.8, activity=0.7, spread=0.4)
     released = service.release(held)
     assert released.activity == 0
@@ -110,7 +117,7 @@ def test_a_silent_controller_is_released_into_stillness():
 
 @pytest.fixture
 def client(monkeypatch):
-    service = steered.SteeredService(steered.SteeredRenderer(FakeEngine))
+    service = steered.SteeredService(steered.SteeredRenderer(FakeEngine), arranger=False)
     monkeypatch.setattr(steered, "SERVICE", service)
     monkeypatch.setattr(steered, "assets_ready", lambda: True)
     with TestClient(app) as client:
@@ -136,7 +143,12 @@ def test_browser_stream_has_audio_rejects_second_window_and_releases_on_disconne
 
 def test_the_stream_s_address_chooses_the_variant(client):
     browser, _ = client
-    for query, variant in (("", "spine"), ("?variant=free", "free"), ("?variant=nope", "spine")):
+    for query, variant in (
+        ("", "film"),
+        ("?variant=spine", "spine"),
+        ("?variant=free", "free"),
+        ("?variant=nope", "film"),
+    ):
         with browser.websocket_connect("/api/steered/stream" + query) as ws:
             assert ws.receive_json()["type"] == "loading"
             assert ws.receive_json()["variant"] == variant
@@ -171,3 +183,69 @@ def test_every_model_user_runs_on_the_one_model_thread():
 
     assert len(asyncio.run(run())) == 1
     assert harmony.EXECUTOR is MODEL_THREAD
+
+
+def test_the_conductor_s_controls_reach_the_film_score():
+    engine = FakeEngine()
+    renderer = steered.SteeredRenderer(lambda: engine)
+    assert renderer.start(17)["variant"] == "film"
+    conducting = steered.Control(
+        seq=1, dynamics=1, energy=1, voice=1, forward=1, articulation=1, hush=False
+    )
+    for _ in range(40):
+        _, stats = renderer.render(conducting)
+    assert renderer.instrument.weights[15] > 0.99  # Cellos and basses, driving, short.
+    assert stats["voices"] == ["Violins", "Brass", "Cellos and basses"]
+    assert stats["gain"] == 1
+    _, stats = renderer.render(conducting.model_copy(update={"cue": 1}))
+    assert stats["landing"] == 34 and stats["section"] == "intro"  # Lands on frame 75.
+    assert stats["world"] == "Film score" and stats["chords"] == ["Dm", "Bb", "F", "C"]
+    for _ in range(34):
+        _, stats = renderer.render(conducting.model_copy(update={"cue": 1}))
+    assert stats["section"] == "build" and stats["landing"] is None
+    for _ in range(10):  # A hush thins the music at once.
+        _, stats = renderer.render(conducting.model_copy(update={"cue": 1, "hush": True}))
+    assert stats["gain"] < 0.6
+
+
+def test_a_silent_conductor_is_released_into_a_hush():
+    service = steered.SteeredService(steered.SteeredRenderer(FakeEngine), arranger=False)
+    conducting = steered.Control(seq=3, dynamics=0.8, energy=0.7, hush=False)
+    released = service.release(conducting)
+    assert released.hush and released.dynamics == 0.8
+
+
+class FakeArranger:
+    def __init__(self, plans):
+        self.plans = plans
+        self.summaries = []
+
+    async def plan(self, summary):
+        self.summaries.append(summary)
+        return self.plans
+
+    async def aclose(self):
+        pass
+
+
+def test_the_composer_s_plans_reach_the_piece():
+    from sway.arranger import world_plan
+    from sway.world import FILM_SCORE
+
+    plans = (
+        world_plan(FILM_SCORE, "build", ("Dm", "Gm", "Bb", "C"), "Rising", "qwen"),
+        world_plan(FILM_SCORE, "peak", ("Bb", "F", "C", "Dm"), "All in", "qwen"),
+    )
+    fake = FakeArranger(plans)
+    service = steered.SteeredService(steered.SteeredRenderer(FakeEngine), arranger=fake)
+
+    async def run():
+        service.renderer.start(5)
+        service.frame_done({})
+        await asyncio.gather(*service.tasks)
+        service.frame_done({})  # Asked once a phrase, not once a frame.
+
+    asyncio.run(run())
+    piece = service.renderer.instrument
+    assert len(fake.summaries) == 1 and fake.summaries[0].section == "intro"
+    assert piece.pending == (0, *plans)

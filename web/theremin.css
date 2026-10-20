@@ -259,6 +259,41 @@ h1 {
   color: #a8b5ae;
   margin: 0;
 }
+.voices {
+  position: absolute;
+  top: 18%;
+  left: 0;
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.voices span {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  color: var(--ink);
+  white-space: nowrap;
+  transition:
+    opacity 0.2s,
+    color 0.2s;
+}
+.voices .lead {
+  color: var(--accent);
+}
+#stage:not([data-phase="playing"]) .voices {
+  display: none;
+}
+.section {
+  margin: 0 0 12px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--accent);
+}
+.section:empty {
+  display: none;
+}
 .chords {
   display: flex;
   justify-content: center;
@@ -325,6 +360,88 @@ input[type="range"] {
   background: #07100cbb;
   padding: 14px;
   z-index: 4;
+}
+button.quiet {
+  background: transparent;
+  color: #b6c0ba;
+  padding: 8px 12px;
+}
+.gesture-guide {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow-y: auto;
+  padding: 84px 36px 36px;
+  background: #090e0dde;
+  backdrop-filter: blur(6px);
+}
+.gesture-head,
+.gesture-grid,
+.gesture-note {
+  max-width: 1080px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.gesture-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.gesture-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 450;
+  letter-spacing: -0.3px;
+}
+.gesture-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.gesture-card {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #c8ddca1c;
+  border-radius: 10px;
+  background: #121b1888;
+}
+.gesture-card canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+.gesture-card figcaption {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+.gesture-card b {
+  font-size: 13px;
+  font-weight: 500;
+}
+.gesture-card span {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #9fada4;
+}
+.gesture-note {
+  margin-top: 18px;
+  font-size: 11px;
+  color: var(--muted);
+}
+@media (max-width: 900px) {
+  .gesture-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .gesture-guide {
+    padding: 76px 16px 24px;
+  }
+  .gesture-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 [hidden] {
   display: none !important;
