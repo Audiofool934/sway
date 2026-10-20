@@ -21,6 +21,7 @@ import numpy as np
 from .pitch import note_energy
 from .steering import (
     FRAME,
+    FREE,
     HELD,
     REST,
     SAMPLE_RATE,
@@ -28,6 +29,7 @@ from .steering import (
     STRUCK,
     Move,
     Spine,
+    features,
     glide,
     silence,
     write_page,
@@ -69,6 +71,9 @@ class Themed(Spine):
     is struck on its first frame and held after, so the theme is the top line. Below
     middle C the spine's harmony stays free, and MRT2 accompanies. MRT2 is told each
     note `ahead` frames early, with note guidance `strength`; `calibrate` chooses both.
+    For `ramp` bars before and after each statement, MRT2 is eased into and out of it:
+    from middle C up it may play only the chord's tones, and the note guidance moves
+    between the spine's and `strength`.
     """
 
     name = "theme"
@@ -79,10 +84,13 @@ class Themed(Spine):
     # theremin's.
     ahead = 0
     strength = 3.0
+    ramp = 0
 
-    def __init__(self, engine, form=(), *, start=WARMUP_BARS, ahead=ahead, strength=strength):
+    def __init__(
+        self, engine, form=(), *, start=WARMUP_BARS, ahead=ahead, strength=strength, ramp=ramp
+    ):
         super().__init__(engine)
-        self.ahead, self.strength = ahead, strength
+        self.ahead, self.strength, self.ramp = ahead, strength, ramp
         self.line = []  # One statement of the theme: (pitch, struck) for each frame.
         frames_per_beat = self.bar_frames // self.beats_per_bar
         for bar in THEME:
@@ -109,27 +117,54 @@ class Themed(Spine):
             raise ValueError("The kept bars must start where the progression does")
         self._form = form
 
+    def has_theme(self, bar: int) -> bool:
+        """Whether the theme plays in `bar`, counted from the stream's start."""
+        bar -= self.start_bar
+        return 0 <= bar < len(self.form) and self.form[bar]
+
     def theme_at(self, frame: int) -> tuple[int, bool] | None:
         """The theme's note at `frame`, and whether it is struck there, or None."""
-        bar = frame // self.bar_frames - self.start_bar
-        if not 0 <= bar < len(self.form) or not self.form[bar]:
+        if not self.has_theme(frame // self.bar_frames):
             return None
+        bar = frame // self.bar_frames - self.start_bar
         return self.line[bar % len(THEME) * self.bar_frames + frame % self.bar_frames]
+
+    def nearness(self, frame: int) -> float:
+        """1 in the theme's bars, falling to 0 over `ramp` bars before and after them."""
+        bar = frame // self.bar_frames
+        if self.has_theme(bar):
+            return 1.0
+        span = self.ramp * self.bar_frames
+        near = 0.0
+        for n in range(1, self.ramp + 1):
+            if self.has_theme(bar + n):  # The theme starts `until` frames from now.
+                until = (bar + n) * self.bar_frames - frame
+                near = max(near, 1 - until / (span + 1))
+            if self.has_theme(bar - n):  # It ended `since` frames ago.
+                since = frame - (bar - n + 1) * self.bar_frames + 1
+                near = max(near, 1 - since / (span + 1))
+        return near
 
     melody = MELODY  # The lowest pitch that only the theme may play.
 
     def notes(self, move):
         tokens = super().notes(move)
-        note = self.theme_at(self.frame + self.ahead)
+        frame = self.frame + self.ahead
+        note = self.theme_at(frame)
         if note is not None:
             pitch, struck = note
             tokens[self.melody :] = SILENT
             tokens[pitch] = STRUCK if struck else HELD
+        elif self.nearness(frame) > 0:
+            tones = {tone % 12 for tone in self.harmony[1]}
+            for pitch in range(self.melody, len(tokens)):
+                if tokens[pitch] == FREE and pitch % 12 not in tones:
+                    tokens[pitch] = SILENT
         return tokens
 
     def render(self, move: Move) -> np.ndarray:
-        theme = self.theme_at(self.frame + self.ahead) is not None
-        self.guidance = self.strength if theme else Spine.guidance
+        near = self.nearness(self.frame + self.ahead)
+        self.guidance = Spine.guidance + (self.strength - Spine.guidance) * near
         return super().render(move)
 
 
@@ -161,12 +196,12 @@ class ThemeLoop(Themed):
     def melody(self) -> int:
         return MELODY + self.octave
 
+    def has_theme(self, bar):
+        return self.form[bar % len(self.form)]
+
     def theme_at(self, frame):
-        bar = frame // self.bar_frames
-        if self.still or not self.form[bar % len(self.form)]:
-            return None
-        pitch, struck = self.line[bar % len(THEME) * self.bar_frames + frame % self.bar_frames]
-        return pitch + self.octave, struck
+        note = None if self.still else super().theme_at(frame)
+        return None if note is None else (note[0] + self.octave, note[1])
 
     def notes(self, move):
         tokens = super().notes(move)
@@ -205,6 +240,37 @@ def theme_notes(form, tempo=Spine.tempo, beats_per_bar=Spine.beats_per_bar):
             notes.append((at * beat, beats * beat, pitch))
             at += beats
     return notes
+
+
+SEAM = 1.5  # Seconds of music compared on either side of a seam.
+
+
+def seams(form, tempo=Spine.tempo, beats_per_bar=Spine.beats_per_bar) -> dict:
+    """Where the theme returns and where it leaves inside `form`, in seconds."""
+    bar = beats_per_bar * 60 / tempo
+    pairs = list(zip(form, form[1:], strict=False))
+    return {
+        "returns": [(i + 1) * bar for i, (a, b) in enumerate(pairs) if b and not a],
+        "leaves": [(i + 1) * bar for i, (a, b) in enumerate(pairs) if a and not b],
+    }
+
+
+SEAM_ATTRIBUTES = ("loudness", "density", "brightness", "register")
+
+
+def jumps(audio: np.ndarray, times) -> dict:
+    """The mean size of the change across each seam at `times`, per attribute."""
+    sizes = {attribute: [] for attribute in SEAM_ATTRIBUTES}
+    for at in times:
+        start = max(0.0, at - SEAM - 0.5)  # Room for the density's half-second reach.
+        found = features(audio[round(start * SAMPLE_RATE) : round((at + SEAM + 0.6) * SAMPLE_RATE)])
+        t = found["time"] + start
+        for attribute in SEAM_ATTRIBUTES:
+            before = found[attribute][(t >= at - SEAM) & (t < at)]
+            after = found[attribute][(t >= at + 0.1) & (t < at + 0.1 + SEAM)]
+            if np.isfinite(before).any() and np.isfinite(after).any():
+                sizes[attribute].append(abs(float(np.nanmean(after) - np.nanmean(before))))
+    return {attribute: _mean(values) for attribute, values in sizes.items()}
 
 
 def melody_share(audio: np.ndarray, pitch: int) -> float | None:
@@ -257,7 +323,16 @@ class Takes:
         self.variant = Themed(engine)
         self.moments = {}
 
-    def play(self, seed: int, form, *, ahead=Themed.ahead, strength=Themed.strength, script=SCRIPT):
+    def play(
+        self,
+        seed: int,
+        form,
+        *,
+        ahead=Themed.ahead,
+        strength=Themed.strength,
+        ramp=Themed.ramp,
+        script=SCRIPT,
+    ):
         variant = self.variant
         if seed not in self.moments:
             variant.form = ()
@@ -267,7 +342,7 @@ class Takes:
             self.moments[seed] = variant.snapshot()
         variant.restore(self.moments[seed], seed)
         variant.form = form
-        variant.ahead, variant.strength = ahead, strength
+        variant.ahead, variant.strength, variant.ramp = ahead, strength, ramp
         moves, previous = [], script[0][1]
         for bars, move in script:
             moves += glide(previous, move, bars * variant.bar_frames * FRAME)
@@ -305,17 +380,20 @@ def calibrate(engine, seeds, aheads=(0, 3, 6, 10), strengths=(1.0, 3.0)) -> list
     return rows
 
 
-def run(out: Path, engine, seeds, *, ahead=Themed.ahead, strength=Themed.strength) -> dict:
+def run(
+    out: Path, engine, seeds, *, ahead=Themed.ahead, strength=Themed.strength, ramp=Themed.ramp
+) -> dict:
     """The clips with and without the theme, their measures, and a page to compare them."""
     takes = Takes(engine)
     notes = theme_notes(FORM)
+    where = seams(FORM)
     rng = np.random.default_rng(0)
     (out / "raw").mkdir()
     pairs, measures = [], {}
     for seed in seeds:
         clips = {
-            "theme": takes.play(seed, FORM, ahead=ahead, strength=strength),
-            "free": takes.play(seed, (False,) * len(FORM), ahead=ahead, strength=strength),
+            "theme": takes.play(seed, FORM, ahead=ahead, strength=strength, ramp=ramp),
+            "free": takes.play(seed, (False,) * len(FORM)),
         }
         for name, audio in zip(clips, matched(*clips.values()), strict=True):
             write_wav(out / "raw" / f"{name}-seed{seed}.wav", clips[name])
@@ -324,6 +402,7 @@ def run(out: Path, engine, seeds, *, ahead=Themed.ahead, strength=Themed.strengt
                 **on_theme(clips[name], notes),
                 "silent": silence(clips[name]),
                 "level": rms_db(clips[name]),
+                **{seam: jumps(clips[name], times) for seam, times in where.items()},
             }
         x, y = f"theme-seed{seed}.wav", f"free-seed{seed}.wav"
         flip = bool(rng.integers(2))
@@ -381,6 +460,20 @@ def summary(measures: dict, seeds) -> str:
             f"| {_pct(t['late'])} / {_pct(f['late'])} "
             f"| {t['silent']:.0%} / {f['silent']:.0%} | {t['level']:.1f} / {f['level']:.1f} |"
         )
+    lines += [
+        "",
+        "| Seam | " + " | ".join(SEAM_ATTRIBUTES) + " |",
+        "| --- |" + " --- |" * len(SEAM_ATTRIBUTES),
+    ]
+    for seam in ("returns", "leaves"):
+        cells = []
+        for attribute in SEAM_ATTRIBUTES:
+            sides = [
+                _mean([measures[f"{name}-seed{seed}"][seam][attribute] for seed in seeds])
+                for name in ("theme", "free")
+            ]
+            cells.append(" / ".join("-" if v is None else f"{v:.2f}" for v in sides))
+        lines.append(f"| The theme {seam}: theme / free | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
@@ -401,6 +494,9 @@ def main():
     parser.add_argument(
         "--strength", type=float, default=Themed.strength, help="Note guidance in the theme"
     )
+    parser.add_argument(
+        "--ramp", type=int, default=Themed.ramp, help="Bars eased into and out of the theme"
+    )
     args = parser.parse_args()
     out = Path(args.out).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=False)
@@ -418,7 +514,7 @@ def main():
             strength = "-" if row["strength"] is None else f"{row['strength']:.0f}"
             print(f"| {told} | {strength} | {_pct(row['early'])} | {_pct(row['late'])} |")
         return
-    measures = run(out, engine, seeds, ahead=args.ahead, strength=args.strength)
+    measures = run(out, engine, seeds, ahead=args.ahead, strength=args.strength, ramp=args.ramp)
     (out / "measures.json").write_text(json.dumps(measures, indent=2) + "\n")
     table = summary(measures, seeds)
     (out / "summary.md").write_text(table + "\n")

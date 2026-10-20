@@ -225,3 +225,35 @@ def test_the_live_theme_says_how_many_bars_until_it_returns():
     assert variant.describe() == {"theme": "playing", "themeIn": 0}
     told(variant, Move(activity=0.6), 4)
     assert variant.describe() == {"theme": "away", "themeIn": 8}
+
+
+def test_a_ramp_eases_mrt2_into_and_out_of_the_theme():
+    variant = themed(ahead=0, ramp=1)
+    start = first_theme_frame(variant)
+    end = start + len(THEME) * variant.bar_frames
+    assert variant.nearness(start - variant.bar_frames - 1) == 0
+    assert 0 < variant.nearness(start - variant.bar_frames // 2) < variant.nearness(start - 1) < 1
+    assert variant.nearness(start) == 1
+    assert 0 < variant.nearness(end + variant.bar_frames // 2) < variant.nearness(end) < 1
+    assert variant.nearness(end + variant.bar_frames) == 0
+    assert themed(ahead=0).nearness(start - 1) == 0  # No ramp, no easing.
+
+
+def test_before_the_theme_only_the_chord_s_tones_sound_from_middle_c_up():
+    variant = themed(ahead=0, ramp=1)
+    variant.frame = first_theme_frame(variant) - 10
+    tokens = variant.notes(Move(spread=0.95))  # Wide hands: the whole scale below.
+    tones = {tone % 12 for tone in variant.harmony[1]}
+    upper = {p % 12 for p in np.flatnonzero(tokens[MELODY:] == FREE) + MELODY}
+    lower = {p % 12 for p in np.flatnonzero(tokens[:MELODY] == FREE)}
+    assert upper == tones and lower > tones
+
+
+def test_the_ramp_moves_the_note_guidance_toward_the_theme_s():
+    variant = themed(ahead=0, strength=3.0, ramp=1)
+    engine = variant.engine
+    for _ in range(first_theme_frame(variant) + 1):
+        variant.render(Move())
+    approach = engine.guidance[-variant.bar_frames - 1 : -1]
+    assert approach == sorted(approach) and Spine.guidance < approach[0] < approach[-1] < 3.0
+    assert engine.guidance[-1] == 3.0

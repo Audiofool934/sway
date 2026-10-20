@@ -304,6 +304,9 @@ The theme became playable instead.
 
 Checked on October 20 in headless Chrome with the real model, with 40 seconds of scripted mouse motion: the theme played in bars 4 to 7 and 16 to 19, the count ran from 8 bars down to 1 between them, stillness showed "The theme · resting", and the audio had no underrun.
 
+Everett played it the same day.
+In his words, translated from Chinese: when the theme returns, it clearly switches, but overall it is stronger than before.
+
 ## The model thread
 
 With mlx 0.31.2, once one thread has run MRT2, another thread fails with "There is no Stream(gpu, 1) in current thread".
