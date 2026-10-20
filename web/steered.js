@@ -8,17 +8,30 @@ import {
 import { GestureGuide } from "./gesture-guide.js";
 
 // By default the player conducts a film score (docs/v2-design.md). `?variant=spine`
-// plays V2's first milestone, Night Drive's chords on repeat, and `?variant=free` the
-// page as it was on October 14, without the spine; both are steered, not conducted.
+// plays V2's first milestone, Night Drive's chords on repeat, `?variant=free` the page
+// as it was on October 14, without the spine, and `?variant=theme` the spine with a
+// theme that returns every twelve bars; all three are steered, not conducted.
 // `?hand=left` lets a left-handed player conduct with the left hand.
 const params = new URLSearchParams(location.search);
 const variant = params.get("variant");
-const earlier = variant === "spine" || variant === "free";
+const earlier = ["spine", "free", "theme"].includes(variant);
 const free = variant === "free";
+const themed = variant === "theme";
 const leftHanded = params.get("hand") === "left";
 const LEAD = 1.2; // Seconds by which the server tells the model ahead (steering.Spine).
 
 const level = (x, words) => words[x < 0.35 ? 0 : x < 0.65 ? 1 : 2];
+
+// Where the theme is: playing, resting while the hands are still, or bars away.
+function showTheme($, model) {
+  if (!model.theme) return;
+  $("section").textContent =
+    model.theme === "playing"
+      ? "The theme"
+      : model.theme === "resting"
+        ? "The theme · resting"
+        : `The theme returns in ${model.themeIn} bar${model.themeIn === 1 ? "" : "s"}`;
+}
 
 // The phrase's chords, with the one heard now marked. The server reports them every
 // five model frames; the strip changes only when the chord does.
@@ -159,13 +172,14 @@ const conducting = {
 const steering = {
   Controls: SteeredControls,
   hint: {
-    camera: `Height sets the register · Movement sets the energy · Hands apart open the harmony · Stillness ${free ? "rests" : "thins the music"}`,
-    pointer: `Hold and move · Height sets the register · Left to right opens the harmony · Speed sets the energy · Release to ${free ? "rest" : "thin the music"}`,
+    camera: `Height sets the register${themed ? " and the theme's octave" : ""} · Movement sets the energy · Hands apart open the harmony · Stillness ${free ? "rests" : "thins the music"}`,
+    pointer: `Hold and move · Height sets the register${themed ? " and the theme's octave" : ""} · Left to right opens the harmony · Speed sets the energy · Release to ${free ? "rest" : "thin the music"}`,
   },
   glow: (state) => state.activity,
   swing: (state) => state.spread,
   show(state, $, model) {
     showChords($, model);
+    showTheme($, model);
     $("gesture-name").textContent =
       state.activity < REST
         ? free
@@ -252,10 +266,18 @@ startStreamPage({
     },
     ended: "That take has ended. Save it, or play another.",
     ending: "Letting the last notes ring",
-    idle: earlier ? "Steered · ready" : "Film score · ready",
+    idle: themed
+      ? "Theme · ready"
+      : earlier
+        ? "Steered · ready"
+        : "Film score · ready",
     hidden: "The performance stopped when you left the page. You can save it.",
     handsGone: "Bring your hands back into view",
-    playing: earlier ? "Steered · generating" : "Film score · conducting",
+    playing: themed
+      ? "Theme · playing"
+      : earlier
+        ? "Steered · generating"
+        : "Film score · conducting",
     timeLimit: "Five minutes are saved. Download them, or start a new take.",
   },
   glow: mode.glow,

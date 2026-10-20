@@ -22,6 +22,7 @@ from .pitch import note_energy
 from .steering import (
     FRAME,
     HELD,
+    REST,
     SAMPLE_RATE,
     SILENT,
     STRUCK,
@@ -115,12 +116,14 @@ class Themed(Spine):
             return None
         return self.line[bar % len(THEME) * self.bar_frames + frame % self.bar_frames]
 
+    melody = MELODY  # The lowest pitch that only the theme may play.
+
     def notes(self, move):
         tokens = super().notes(move)
         note = self.theme_at(self.frame + self.ahead)
         if note is not None:
             pitch, struck = note
-            tokens[MELODY:] = SILENT
+            tokens[self.melody :] = SILENT
             tokens[pitch] = STRUCK if struck else HELD
         return tokens
 
@@ -128,6 +131,66 @@ class Themed(Spine):
         theme = self.theme_at(self.frame + self.ahead) is not None
         self.guidance = self.strength if theme else Spine.guidance
         return super().render(move)
+
+
+class ThemeLoop(Themed):
+    """The theme on the steered page, `?variant=theme`: it returns, and the hands steer.
+
+    After four bars away at the start, the theme plays for four bars every twelve, and
+    the hands steer as on the spine. At each of the theme's bar lines, height chooses
+    its octave: one down when low, as written in the middle, and one up when high, so
+    that height still moves the register. Stillness rests the theme, and the spine thins.
+    """
+
+    cycle = (False,) * 4 + (True,) * 4 + (False,) * 4
+    low, high = 0.3, 0.7  # The theme moves an octave below and above these heights.
+
+    def __init__(self, engine):
+        super().__init__(engine, self.cycle, start=0)
+        self.octave = 0
+        self.still = False
+        self.telling = False  # Whether MRT2 was told the theme in the last frame.
+
+    def start(self, seed: int):
+        super().start(seed)
+        self.octave = 0
+        self.still = False
+        self.telling = False
+
+    @property
+    def melody(self) -> int:
+        return MELODY + self.octave
+
+    def theme_at(self, frame):
+        bar = frame // self.bar_frames
+        if self.still or not self.form[bar % len(self.form)]:
+            return None
+        pitch, struck = self.line[bar % len(THEME) * self.bar_frames + frame % self.bar_frames]
+        return pitch + self.octave, struck
+
+    def notes(self, move):
+        tokens = super().notes(move)
+        note = self.theme_at(self.frame + self.ahead)
+        if note is not None and not self.telling:
+            tokens[note[0]] = STRUCK  # The theme comes back mid-note after a rest.
+        self.telling = note is not None
+        return tokens
+
+    def render(self, move: Move) -> np.ndarray:
+        self.still = move.activity < REST
+        if (self.frame + self.ahead) % self.bar_frames == 0:
+            self.octave = -12 if move.height < self.low else 12 if move.height > self.high else 0
+        return super().render(move)
+
+    def describe(self) -> dict:
+        """Whether the bar being heard has the theme, and how many bars until it returns."""
+        place = self.bar % len(self.cycle)
+        if self.cycle[place]:
+            return {"theme": "resting" if self.still else "playing", "themeIn": 0}
+        later = next(
+            n for n in range(1, len(self.cycle)) if self.cycle[(place + n) % len(self.cycle)]
+        )
+        return {"theme": "away", "themeIn": later}
 
 
 def theme_notes(form, tempo=Spine.tempo, beats_per_bar=Spine.beats_per_bar):

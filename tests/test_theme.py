@@ -163,3 +163,65 @@ def test_the_page_asks_two_questions_of_each_pair_and_counts_the_theme(tmp_path)
     assert sorted(measures) == ["free-seed1", "free-seed2", "theme-seed1", "theme-seed2"]
     for name in measures:
         assert (tmp_path / f"{name}.wav").exists() and (tmp_path / "raw" / f"{name}.wav").exists()
+
+
+def looped():
+    variant = theme.ThemeLoop(FakeEngine())
+    variant.start(1)
+    return variant
+
+
+def told(variant, move, bars):
+    """The theme's pitches MRT2 is told, for `bars` bars of `move`."""
+    pitches = []
+    for _ in range(bars * variant.bar_frames):
+        variant.render(move)
+        row = variant.engine.last
+        pitches.append(set(np.flatnonzero(row >= HELD)))
+    return pitches
+
+
+def test_the_live_theme_returns_every_twelve_bars_after_four_away():
+    variant = looped()
+    frames = told(variant, Move(height=0.5, activity=0.6), 20)
+    bars = [any(frames[b * variant.bar_frames : (b + 1) * variant.bar_frames]) for b in range(20)]
+    assert bars == [False] * 4 + [True] * 4 + [False] * 8 + [True] * 4
+    assert frames[4 * variant.bar_frames] == {THEME[0][0][0]}
+
+
+def test_height_chooses_the_live_theme_s_octave_at_each_bar_line():
+    variant = looped()
+    told(variant, Move(height=0.1, activity=0.6), 4)
+    (pitch, _), *_ = THEME[0]
+    variant.render(Move(height=0.1, activity=0.6))
+    row = variant.engine.last
+    assert row[pitch - 12] == STRUCK and variant.melody == MELODY - 12
+    assert set(np.delete(row[MELODY - 12 :], pitch - 12 - (MELODY - 12))) == {SILENT}
+    variant.render(Move(height=0.9, activity=0.6))  # Mid-bar: the octave holds.
+    assert variant.engine.last[pitch - 12] == HELD
+    variant = looped()
+    told(variant, Move(height=0.9, activity=0.6), 4)
+    variant.render(Move(height=0.9, activity=0.6))
+    assert variant.engine.last[pitch + 12] == STRUCK
+
+
+def test_stillness_rests_the_live_theme_and_moving_again_strikes_it():
+    variant = looped()
+    told(variant, Move(activity=0.6), 4)
+    frames = told(variant, Move(activity=0.0), 1)
+    assert not any(frames)
+    assert variant.describe() == {"theme": "resting", "themeIn": 0}
+    variant.render(Move(activity=0.6))
+    held = [p for p in np.flatnonzero(variant.engine.last >= HELD) if p >= MELODY]
+    assert len(held) == 1 and variant.engine.last[held[0]] == STRUCK
+
+
+def test_the_live_theme_says_how_many_bars_until_it_returns():
+    variant = looped()
+    assert variant.describe() == {"theme": "away", "themeIn": 4}
+    told(variant, Move(activity=0.6), 3)
+    assert variant.describe() == {"theme": "away", "themeIn": 1}
+    told(variant, Move(activity=0.6), 1)
+    assert variant.describe() == {"theme": "playing", "themeIn": 0}
+    told(variant, Move(activity=0.6), 4)
+    assert variant.describe() == {"theme": "away", "themeIn": 8}
