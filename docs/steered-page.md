@@ -29,6 +29,7 @@ The Gestures button, or G, shows [each gesture drawn](#the-gesture-guide) over t
 The music follows a gesture within a second or two, except the volume and the swell, which answer at once; Everett accepted this latency on October 13.
 
 `?variant=spine` and `?variant=free` play the earlier, steered designs: height sets the register, movement the energy, spread the harmony, and stillness thins the music.
+`?variant=theme` plays the spine with a theme that returns every twelve bars ([The theme, played](#the-theme-played)).
 
 End the take to save it as a WAV file.
 Escape also ends it, and a take stops after five minutes.
@@ -233,6 +234,75 @@ Later on October 20, Everett played the conductor with the gesture guide, the lo
 He said: "I completely don't get it".
 In his account, the left hand has to move near a voice's name, the right hand turns in place, and a sound comes, but "it's not a sound that makes any sense": it goes "back to being isolated musical snippets without any real subjectivity or consistency".
 The [V2 design](v2-design.md#what-we-have-learned) compares the conductor with the spine and traces the cause to what holds the music together, and the next test to a theme.
+
+### The theme test
+
+Nothing in Sway holds a theme, so this test gives the spine one and asks whether the music then sounds like one piece with its own identity.
+It runs offline: `uv run --locked python -m sway.theme --out <new folder>` (`src/sway/theme.py`).
+
+- **The theme** is four bars over Am, F, C, and G: A C E D, C held for three beats and A, G C E D, and B held for a bar.
+- **MRT2 is given it as notes:** each note is struck on its first frame and held after.
+  From middle C up, every other pitch is silent, so the theme is the top line; below middle C the spine's harmony stays free, and MRT2 accompanies.
+- **The form** is 24 bars, 57.6 s: the theme for four bars, eight bars away, the theme, four away, and the theme.
+- **The movement** is the same in both clips, eight bars each: moderate, livelier, then calmer, with no rest.
+- **Each pair** branches from one moment after four bars of warmup, with the same random choices, so only the notes MRT2 is given differ.
+  The listening copies are brought to -20 dBFS RMS by constant gain, with every peak below -1 dBFS.
+
+A calibration on October 20, over three seeds and one statement of the theme, measured the share of the melody's energy, from middle C up, on the theme note's pitch class, in the note's first 0.3 s and after:
+
+| The theme told early | Note guidance | Early in the note | Later |
+| -------------------- | ------------- | ----------------- | ----- |
+| No theme             | -             | 11%               | 16%   |
+| 0 s                  | 1             | 83%               | 33%   |
+| 0.12 s               | 1             | 57%               | 21%   |
+| 0.24 s               | 1             | 41%               | 5%    |
+| 0.4 s                | 1             | 39%               | 10%   |
+| 0 s                  | 3             | 87%               | 41%   |
+| 0.12 s               | 3             | 47%               | 35%   |
+| 0.24 s               | 3             | 59%               | 10%   |
+| 0.4 s                | 3             | 35%               | 10%   |
+
+In 0.1 s steps after the strike, told on time, the share was:
+
+| Seconds after the strike | 0.0 | 0.1 | 0.2 | 0.3 | 0.4 | 0.5 |
+| ------------------------ | --- | --- | --- | --- | --- | --- |
+| No theme                 | 21% | 17% | 19% | 21% | 24% | 20% |
+| Note guidance 3          | 56% | 77% | 61% | 43% | 44% | 27% |
+| Note guidance 6          | 64% | 89% | 74% | 59% | 58% | 56% |
+
+So MRT2 answers a struck note within about 0.1 s, unlike a chord, which the spine tells 1.2 s ahead, and the note then fades toward the accompaniment.
+The test tells the theme on time with note guidance 3, the theremin's; 6 holds the note better, but nobody has heard yet what it does to the sound.
+
+The six pairs, seeds 100 to 105, measured over all three statements:
+
+| Seed | On the theme early in the note, with / without | Later in the note | Silent  | Level before matching, dBFS RMS |
+| ---- | ---------------------------------------------- | ----------------- | ------- | ------------------------------- |
+| 100  | 90% / 12%                                      | 42% / 15%         | 0% / 0% | -25.8 / -22.3                   |
+| 101  | 89% / 21%                                      | 51% / 14%         | 0% / 9% | -31.1 / -25.9                   |
+| 102  | 88% / 12%                                      | 58% / 15%         | 0% / 0% | -26.9 / -24.3                   |
+| 103  | 82% / 22%                                      | 48% / 18%         | 0% / 2% | -30.0 / -24.3                   |
+| 104  | 86% / 18%                                      | 38% / 17%         | 3% / 0% | -25.7 / -22.7                   |
+| 105  | 81% / 27%                                      | 21% / 19%         | 0% / 0% | -28.0 / -25.9                   |
+
+The clips with the theme are 3 to 6 dB quieter before matching, because only one note may sound from middle C up.
+The theme can be heard, so the test is not blind to which clip has it: it asks for a judgment.
+The page asks of each pair which clip sounds more like one piece with its own identity, and then which one Everett would rather keep listening to, so that a theme that makes the music worse to hear shows.
+The clips and the page are in `outputs/theme-2026-10-20/`.
+On October 20 Everett found the pairs tiring to compare and asked to go on with the design without the answers, so the test has no listening result.
+The theme became playable instead.
+
+### The theme, played
+
+`?variant=theme` (`theme.ThemeLoop`) plays the theme on the steered page, and the hands steer as on the spine.
+
+- **The theme returns:** after four bars away at the start, it plays for four bars every twelve, 28.8 s.
+  The page shows "The theme" while it plays, and otherwise how many bars until it returns.
+- **Height still moves the register:** at each of the theme's bar lines, height below 0.3 moves the theme an octave down, and above 0.7 an octave up.
+  The pitches that only the theme may play move with it.
+- **Stillness rests the theme,** and the spine thins as before; moving again strikes the theme's note at once, even mid-note.
+- **The page says what this variant does:** its first screen, header, and footer describe steering, not the film score; the spine and free variants get the same steered words, which they had before the film score replaced them.
+
+Checked on October 20 in headless Chrome with the real model, with 40 seconds of scripted mouse motion: the theme played in bars 4 to 7 and 16 to 19, the count ran from 8 bars down to 1 between them, stillness showed "The theme · resting", and the audio had no underrun.
 
 ## The model thread
 

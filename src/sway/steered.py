@@ -5,7 +5,8 @@ low register to a high one, activity from calm to lively, and spread opens the h
 By default it plays a film score that the player conducts (`piece.Piece`): V2's spine,
 with phrases that a composer plans, and the conductor's gestures (docs/v2-design.md).
 `?variant=spine` plays the spine of V2's first milestone, Night Drive's four chords on
-repeat, and `?variant=free` the page as it was on October 14, without the spine.
+repeat, `?variant=free` the page as it was on October 14, without the spine, and
+`?variant=theme` the spine with a theme that returns (theme.ThemeLoop).
 """
 
 import asyncio
@@ -22,6 +23,7 @@ from .piece import Gesture, Piece
 from .qwen import QwenClient
 from .steering import REST, Live, Move, Spine, Steered
 from .stream import StreamService, promote_thread
+from .theme import ThemeLoop
 
 log = logging.getLogger(__name__)
 router = APIRouter()
@@ -48,7 +50,7 @@ class Control(BaseModel):
     prepared: bool = False  # Both hands held up: the page's swell. The server ignores it.
 
 
-VARIANTS = {"film": Piece, "spine": Spine, "free": Live}
+VARIANTS = {"film": Piece, "spine": Spine, "free": Live, "theme": ThemeLoop}
 
 
 class SteeredRenderer:
@@ -113,7 +115,7 @@ class SteeredRenderer:
                 * instrument.beats_per_bar,
                 2,
             )
-            if isinstance(instrument, Piece):
+            if isinstance(instrument, (Piece, ThemeLoop)):
                 stats.update(instrument.describe())
         else:
             still = control.activity < REST
@@ -178,7 +180,7 @@ class SteeredService(StreamService):
         return control.model_copy(update={"activity": 0, "hush": True})
 
     def options(self, websocket):
-        """`?variant=spine` or `?variant=free` plays an earlier design, for comparison."""
+        """`?variant=spine`, `?variant=free`, or `?variant=theme` plays a steered design."""
         variant = websocket.query_params.get("variant", "film")
         return {"variant": variant if variant in VARIANTS else "film"}
 

@@ -147,6 +147,7 @@ def test_the_stream_s_address_chooses_the_variant(client):
         ("", "film"),
         ("?variant=spine", "spine"),
         ("?variant=free", "free"),
+        ("?variant=theme", "theme"),
         ("?variant=nope", "film"),
     ):
         with browser.websocket_connect("/api/steered/stream" + query) as ws:
@@ -249,3 +250,11 @@ def test_the_composer_s_plans_reach_the_piece():
     piece = service.renderer.instrument
     assert len(fake.summaries) == 1 and fake.summaries[0].section == "intro"
     assert piece.pending == (0, *plans)
+
+
+def test_the_theme_variant_reports_where_the_theme_is():
+    engine = FakeEngine()
+    renderer = steered.SteeredRenderer(lambda: engine)
+    assert renderer.start(17, variant="theme")["variant"] == "theme"
+    _, stats = renderer.render(steered.Control(seq=1, activity=0.6))
+    assert (stats["theme"], stats["themeIn"], stats["chord"]) == ("away", 4, "Am")
