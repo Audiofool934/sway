@@ -9,6 +9,12 @@ from pathlib import Path
 
 import httpx
 
+_REGIONS = {
+    "beijing": ("cn-beijing", "dashscope.aliyuncs.com"),
+    "singapore": ("ap-southeast-1", "dashscope-intl.aliyuncs.com"),
+    "us-east-1": ("us-east-1", "dashscope-us.aliyuncs.com"),
+}
+
 
 def credential_path() -> Path:
     return Path(os.environ.get("SWAY_QWEN_CONFIG", "~/.config/sway/qwen.json")).expanduser()
@@ -23,15 +29,10 @@ class QwenConfig:
 
     @property
     def endpoint(self):
-        if not self.workspace_id:
-            host = (
-                "dashscope.aliyuncs.com"
-                if self.region == "beijing"
-                else "dashscope-intl.aliyuncs.com"
-            )
-            return f"https://{host}/compatible-mode/v1"
-        region = {"beijing": "cn-beijing", "singapore": "ap-southeast-1"}[self.region]
-        return f"https://{self.workspace_id}.{region}.maas.aliyuncs.com/compatible-mode/v1"
+        region, host = _REGIONS[self.region]
+        if self.workspace_id:
+            host = f"{self.workspace_id}.{region}.maas.aliyuncs.com"
+        return f"https://{host}/compatible-mode/v1"
 
     @classmethod
     def load(cls):
@@ -58,8 +59,8 @@ class QwenConfig:
             if not isinstance(value, str) or (not value.strip() and name != "workspace_id"):
                 raise ValueError(f"Set Qwen {name} in {path} or {env}")
             settings[name] = value.strip()
-        if settings["region"] not in ("beijing", "singapore"):
-            raise ValueError("Qwen region must be beijing or singapore")
+        if settings["region"] not in _REGIONS:
+            raise ValueError("Qwen region must be beijing, singapore, or us-east-1")
         if settings["workspace_id"] and not re.fullmatch(
             r"[a-zA-Z0-9-]{1,63}", settings["workspace_id"]
         ):
