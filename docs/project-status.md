@@ -154,6 +154,6 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 - Recordings and test evidence are in `outputs/` and `work/`, which Git ignores.
   The [data map](development.md#data-and-evidence) lists the current ones.
 - The Qwen credential is in `~/.config/sway/qwen.json`, outside the repository.
-- The [project page](https://audiofool934.github.io/sway/) is published from `site/` whenever a push to `main` changes it.
+- The [project page](https://sway.audiofool.ai) is published from `site/` whenever a push to `main` changes it.
 - On `steered-page` on October 13, 92 Python tests and 133 JavaScript tests passed.
 - At this update, Everett's own `sway serve` was running in his terminal; no agent-started Sway process was.
