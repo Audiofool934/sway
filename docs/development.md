@@ -124,7 +124,7 @@ Hand accents use only the tracked bones and six small markers per hand; no infer
 With real MRT2 assets present, `tests/test_harmony.py` also renders two bars and checks that they stay in key.
 `POST /api/compose` returns Qwen's plan for the next cycle, and `GET /api/compose/status` says whether Qwen is configured without revealing the key; the tests replace Qwen with a mock transport, so they make no billable requests.
 
-The project page ([live](https://audiofool934.github.io/sway/)):
+The project page ([live](https://sway.audiofool.ai)):
 
 | Path                                      | Responsibility                                                                 |
 | ----------------------------------------- | ------------------------------------------------------------------------------ |
