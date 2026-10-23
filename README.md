@@ -75,7 +75,7 @@ uv run --locked pytest -q
 node --test tests/*.test.js
 uv run --locked ruff check src tests
 uv run --locked ruff format --check src tests
-node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,css}'
+node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,css}' 'site/*.{js,css,html}'
 git diff --check
 ```
 

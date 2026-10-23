@@ -28,7 +28,7 @@ uv run --locked pytest -q
 node --test tests/*.test.js
 uv run --locked ruff check src tests
 uv run --locked ruff format --check src tests
-node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,css}'
+node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,css}' 'site/*.{js,css,html}'
 git diff --check
 ```
 
@@ -123,6 +123,26 @@ Hand accents use only the tracked bones and six small markers per hand; no infer
 `POST /api/harmony/start` begins a piece's model stream, and `POST /api/harmony/bar` returns one bar of 16-bit stereo PCM at 48 kHz; bars for a piece that has since been replaced get HTTP 409.
 With real MRT2 assets present, `tests/test_harmony.py` also renders two bars and checks that they stay in key.
 `POST /api/compose` returns Qwen's plan for the next cycle, and `GET /api/compose/status` says whether Qwen is configured without revealing the key; the tests replace Qwen with a mock transport, so they make no billable requests.
+
+The project page ([live once Pages is on](https://audiofool934.github.io/sway/)):
+
+| Path                                      | Responsibility                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------------ |
+| `site/index.html`, `style.css`, `page.js` | The public page: the story, the measurements, the audio clips, and two charts. |
+| `site/media/`                             | Its clips and screenshot, chosen from `outputs/` and encoded small.            |
+| `.github/workflows/pages.yml`             | Publishes `site/` to GitHub Pages when a push to `main` changes it.            |
+
+The page is static; `python3 -m http.server --directory site` serves it locally.
+Its clips are MP3 at 160 kb/s.
+Each comparison shares one gain, so the differences inside a pair survive; the theme pair keeps the test's own leveling, and the texture pair is leveled clip by clip.
+
+| Clips                                  | Source in `outputs/`                                                                        |
+| -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `theremin-*`, `steered-*`              | `motion-to-music-2026-10-07/`: the density test, seeds 100 and 101.                         |
+| `free-100`, `spine-100`                | `continuity-2026-10-19/`, seed 100.                                                         |
+| `solo-piano-100`, `ensemble-100`       | `fragments-2026-10-19/prompts/`, prompts 1 and 4, seed 100.                                 |
+| `no-theme-100`, `theme-100`            | `theme-2026-10-20/pairs/`, seed 100.                                                        |
+| `v1-performance`, `v1-instrument.webp` | `v1-ready-2026-10-03/`: 32 s of `performance.wav` from 121.5 s, and `performance-1280.png`. |
 
 ## Data and evidence
 

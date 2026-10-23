@@ -1,0 +1,1543 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sway: steering generative music with your hands</title>
+    <meta
+      name="description"
+      content="Sway is an instrument played with the hands in front of a camera. The hands steer the direction of the music, and a real-time music model writes the notes. Measurements, listening tests, and play tests."
+    />
+    <meta
+      property="og:title"
+      content="Sway: steering generative music with your hands"
+    />
+    <meta
+      property="og:description"
+      content="The hands steer the direction, and the model writes the content. Measurements, listening tests, and play tests of a generative instrument."
+    />
+    <meta property="og:type" content="website" />
+    <meta
+      name="theme-color"
+      content="#f5f5f2"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#101315"
+      media="(prefers-color-scheme: dark)"
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script>
+      // Apply a saved theme before the first paint.
+      try {
+        const theme = localStorage.getItem("sway-theme");
+        if (theme === "light" || theme === "dark")
+          document.documentElement.dataset.theme = theme;
+      } catch {}
+    </script>
+    <script type="module" src="page.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <span>Sway · project page</span>
+        <nav aria-label="Page">
+          <a class="wide" href="#measure">Measurements</a>
+          <a class="wide" href="#listen">Audio</a>
+          <a href="https://github.com/Audiofool934/sway">Code</a>
+          <button class="theme-toggle" type="button" aria-label="Color theme">
+            Auto
+          </button>
+        </nav>
+      </header>
+
+      <div class="hero">
+        <div>
+          <p class="kicker">An instrument · October 2026 · in progress</p>
+          <h1>Sway</h1>
+          <p class="subtitle">Steering generative music with your hands</p>
+          <p class="byline">
+            <a href="https://github.com/Audiofool934">Everett</a> (Audiofool)
+          </p>
+          <ul class="links">
+            <li><a href="https://github.com/Audiofool934/sway">Code</a></li>
+            <li>
+              <a
+                href="https://github.com/Audiofool934/sway/blob/main/docs/motion-to-music.md"
+                >Research note</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/Audiofool934/sway/blob/main/docs/v2-design.md"
+                >V2 design</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/Audiofool934/sway/blob/main/docs/project-status.md"
+                >Status</a
+              >
+            </li>
+          </ul>
+        </div>
+        <dl class="meta">
+          <div>
+            <dt>Played with</dt>
+            <dd>Two hands in front of a camera, in Chrome</dd>
+          </div>
+          <div>
+            <dt>Music model</dt>
+            <dd>Magenta RealTime 2, on the same Mac, in 40 ms frames</dd>
+          </div>
+          <div>
+            <dt>Composer</dt>
+            <dd>Qwen, a phrase ahead, sent musical data only</dd>
+          </div>
+          <div>
+            <dt>Training</dt>
+            <dd>None: pretrained weights, unchanged</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>V1 playable; V2 in design and play tests</dd>
+          </div>
+        </dl>
+      </div>
+
+      <svg
+        class="staff"
+        viewBox="0 0 1000 80"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path
+          class="line"
+          vector-effect="non-scaling-stroke"
+          d="M0 8H1000M0 24H1000M0 40H1000M0 56H1000M0 72H1000"
+        />
+        <path
+          class="trace"
+          vector-effect="non-scaling-stroke"
+          d="M0 52 C 90 52, 120 20, 210 22 S 330 66, 430 60 S 560 14, 650 18 S 780 58, 860 50 S 960 30, 1000 32"
+        />
+      </svg>
+
+      <div class="lead">
+        <div class="rail"><span>Abstract</span></div>
+        <div class="abstract">
+          <p>
+            Sway is an instrument you play with your hands in front of a camera.
+            A real-time music model, Magenta RealTime 2 (MRT2), runs on the same
+            Mac and writes audio in 40 ms frames. A language model, Qwen,
+            composes ahead of it. Nothing is trained. The hands reach the music
+            only through handles that the models already have: the style text,
+            the notes MRT2 may play, and the notes it is given.
+          </p>
+          <p>
+            The project asks one question: how to split the music between the
+            player and the model. If the hand picks every note, the motion is
+            the music, as in a theremin. If the model picks everything, the
+            player only steers a jukebox. Sway looks for the corner in between,
+            where the hands steer the direction and the model writes the
+            content. This page records what was built, what was measured, and
+            what the play tests said, including the parts that failed.
+          </p>
+          <div class="clips">
+            <div class="clip" data-src="media/theme-100.mp3">
+              <button class="clip-play" type="button"></button>
+              <div class="clip-head">
+                <span class="clip-label"
+                  >Listen first: the spine with a returning theme</span
+                >
+                <span class="clip-time">0:58</span>
+              </div>
+              <input
+                class="clip-seek"
+                type="range"
+                min="0"
+                max="1000"
+                value="0"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <main>
+        <section id="v1">
+          <div class="rail">
+            <div class="sticky"><b>01</b>Where it started</div>
+          </div>
+          <div class="body">
+            <h2>An instrument that keeps you in time</h2>
+            <p>
+              V1 was built for someone with no musical training. One hand plays
+              a melody on a pitch ladder: pinch to play, and a higher hand plays
+              a higher note. Quicker pinches make stronger notes, and leaning
+              toward the camera swells a held note. The other hand sets the
+              band's energy, cuts it, and loops what was played.
+            </p>
+            <p>
+              Every note lands in time and in key. The lead is synthesized in
+              the browser, so no network request and no model sits between a
+              gesture and its sound. Qwen writes the band's next four bars while
+              the current four play, and MRT2 performs the harmony. The engine
+              checks every plan, and a built-in band steps in whenever a model
+              is late.
+            </p>
+            <figure>
+              <img
+                class="shot"
+                src="media/v1-instrument.webp"
+                width="1280"
+                height="800"
+                loading="lazy"
+                alt="The V1 instrument with the camera off. On the left, the band hand's five energy levels from Air to Peak, with Groove selected. On the right, the lead's pitch ladder in A minor, with the melody drawn as a line. At the top, the chord F then G, and the words By Qwen."
+              />
+              <figcaption>
+                <b>Fig. 1</b>V1 in a scripted performance, with the camera off.
+                Left: the band hand's energy. Right: the lead's pitch ladder in
+                A minor. "By Qwen" marks a cycle that Qwen composed. In play,
+                the mirrored camera image sits behind both.
+              </figcaption>
+            </figure>
+            <div class="clips">
+              <div class="clip" data-src="media/v1-performance.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label"
+                    >V1: a scripted performance, with MRT2 strings and a Qwen
+                    band</span
+                  >
+                  <span class="clip-time">0:32</span>
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+            </div>
+            <p style="margin-top: 1.6rem">
+              V1 is stable. In a 20-minute run on October 14, MRT2 played the
+              harmony in all but 3 of 484 bars. But two play tests found two
+              different gaps:
+            </p>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Play test</th>
+                    <th>Finding</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="num">Oct 1</td>
+                    <td>
+                      The AI changed what the band played but not how it
+                      sounded, and the lead was a plain synthesizer.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="num">Oct 4</td>
+                    <td>
+                      Playing feels like adding notes over an accompaniment, not
+                      like leading the music. Every session is the same Night
+                      Drive, and the right hand mostly changes pitch.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>The rest of this page is about the second gap.</p>
+          </div>
+        </section>
+
+        <section id="problem">
+          <div class="rail">
+            <div class="sticky"><b>02</b>The problem</div>
+          </div>
+          <div class="body">
+            <h2>Motion as music, or motion to music</h2>
+            <p>
+              A generative theremin followed on October 5: the hands shaped
+              MRT2's live sound directly, and it answered at once. Playing it
+              made the problem exact. In the theremin, the hand chooses every
+              note, and MRT2 only gives those notes a sound. In V1's band, fixed
+              patterns and planned chords play whatever the hands do.
+            </p>
+            <blockquote>
+              <p>Motion as music instead of motion to music.</p>
+              <footer>Play notes, October 7</footer>
+            </blockquote>
+            <p>Two measures place every prototype:</p>
+            <ul>
+              <li>
+                <strong>Influence:</strong> how much the music changes when only
+                the movement changes.
+              </li>
+              <li>
+                <strong>Freedom:</strong> how much the music changes when only
+                the model's random choices change, with the same movement.
+              </li>
+            </ul>
+            <figure>
+              <div
+                class="axes"
+                role="img"
+                aria-label="A two by two grid. High influence and low freedom: the theremin and V1's lead, motion as music. High influence and high freedom: the goal, motion to music. Low influence and low freedom: V1's band, a backing track. Low influence and high freedom: September's ensemble, a jukebox."
+              >
+                <span class="y">Influence of the hands →</span>
+                <div class="cell">
+                  <small>Motion as music</small>
+                  <strong>Theremin, V1's lead</strong>
+                  <span>The hand plays every note.</span>
+                </div>
+                <div class="cell goal">
+                  <small>Motion to music</small>
+                  <strong>The goal</strong>
+                  <span
+                    >The hands steer the direction; the model writes the
+                    notes.</span
+                  >
+                </div>
+                <div class="cell">
+                  <small>A backing track</small>
+                  <strong>V1's band</strong>
+                  <span>Fixed patterns for five energy levels.</span>
+                </div>
+                <div class="cell">
+                  <small>A jukebox</small>
+                  <strong>September's ensemble</strong>
+                  <span
+                    >It generated freely, but a gesture took 8 to 14 s to change
+                    the sound.</span
+                  >
+                </div>
+                <span class="x">Freedom of the model →</span>
+              </div>
+              <figcaption>
+                <b>Fig. 2</b>Each prototype fixed the last one's problem by
+                giving up the other axis. The ensemble generated freely, but the
+                player could not steer it. V1 restricted the model to get
+                control back, and the theremin restricted it further.
+              </figcaption>
+            </figure>
+            <p>So motion to music splits every musical decision:</p>
+            <div class="split">
+              <div>
+                <h4>Direction belongs to the hand</h4>
+                <p>
+                  Register and contour, how busy the line is, intensity,
+                  harmonic tension, and when to build and when to rest.
+                </p>
+              </div>
+              <div>
+                <h4>Content belongs to the model</h4>
+                <p>
+                  The exact notes and rhythms, the motive, and how it develops.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="measure">
+          <div class="rail">
+            <div class="sticky"><b>03</b>Measurement</div>
+          </div>
+          <div class="body">
+            <h2>Measuring influence and freedom</h2>
+            <p>
+              MRT2's state can be copied, and a continuation with the same seed
+              reproduces the same audio exactly. So two renders can start from
+              one moment of music and differ in only one thing.
+            </p>
+            <figure class="branch">
+              <svg
+                viewBox="0 0 526 200"
+                role="img"
+                aria-label="One line of shared music branches into three: movement a with seed 100, movement b with seed 100, and movement a with seed 101. Comparing the first two measures influence; comparing the first and the third measures freedom."
+              >
+                <text class="tag" x="0" y="94">Shared music</text>
+                <path class="trunk" d="M0 105 H90" />
+                <path class="arm" d="M90 105 C 130 105, 140 35, 180 35 H400" />
+                <path class="arm" d="M90 105 H400" />
+                <path
+                  class="arm seed"
+                  d="M90 105 C 130 105, 140 175, 180 175 H400"
+                />
+                <circle class="dot" cx="90" cy="105" r="7" />
+                <text class="tag" x="84" y="130" text-anchor="end">
+                  Copy state
+                </text>
+                <text x="190" y="25">a · moves a lot · seed 100</text>
+                <text x="190" y="95">b · moves little · seed 100</text>
+                <text x="190" y="165">a · moves a lot · seed 101</text>
+                <path class="brace" d="M410 35 h8 v70 h-8" />
+                <text class="tag" x="424" y="74">Influence</text>
+                <path class="brace" d="M502 35 h8 v140 h-8" />
+                <text
+                  class="tag"
+                  x="518"
+                  y="105"
+                  text-anchor="middle"
+                  transform="rotate(90 518 105)"
+                >
+                  Freedom
+                </text>
+              </svg>
+              <figcaption>
+                <b>Fig. 3</b>Each test branches after six seconds of music and
+                runs two opposite scripted movements for six seconds, over six
+                seeds. The audio is measured in 0.25 s windows: loudness,
+                brightness, register, harmonic tension, and density.
+              </figcaption>
+            </figure>
+
+            <h3 id="listen">Listen: activity, in two designs</h3>
+            <p>
+              Each clip keeps three seconds from before the branch, so the
+              movement starts at 0:03. Compare the first two clips in a row to
+              hear influence, and the first and the third to hear freedom.
+            </p>
+            <div class="grid3">
+              <div class="row-label">Theremin</div>
+              <div class="clip" data-src="media/theremin-a-100.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label"
+                    >a · moves a lot
+                    <span class="clip-meta">seed 100</span></span
+                  >
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+              <div class="clip" data-src="media/theremin-b-100.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label"
+                    >b · moves little
+                    <span class="clip-meta">seed 100</span></span
+                  >
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+              <div class="clip" data-src="media/theremin-a-101.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label"
+                    >a · moves a lot
+                    <span class="clip-meta">seed 101</span></span
+                  >
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+              <div class="row-label">Steered</div>
+              <div class="clip" data-src="media/steered-a-100.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label"
+                    >a · moves a lot
+                    <span class="clip-meta">seed 100</span></span
+                  >
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+              <div class="clip" data-src="media/steered-b-100.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label"
+                    >b · moves little
+                    <span class="clip-meta">seed 100</span></span
+                  >
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+              <div class="clip" data-src="media/steered-a-101.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label"
+                    >a · moves a lot
+                    <span class="clip-meta">seed 101</span></span
+                  >
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+            </div>
+            <p class="note" style="margin-top: 1.2rem">
+              In the theremin, the two seeds play almost the same notes: a note
+              freedom of 0.06, where 0 is the same notes and 1 is none in
+              common. In steered, the two seeds play different notes that move
+              the same way: 0.43. The clips in each row share one level, so
+              loudness differences are part of the result.
+            </p>
+
+            <h3>What MRT2 obeys</h3>
+            <p>
+              A design can steer only through handles that the model follows.
+              Four were tested before the main measurement:
+            </p>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Handle</th>
+                    <th>Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Silencing pitch classes</td>
+                    <td>
+                      <strong>Obeyed.</strong> 94 to 99% of the notes' energy
+                      stays on the allowed scale, pentatonic scale, or triad.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Silencing octaves</td>
+                    <td>
+                      <strong>Not obeyed.</strong> With a 12-semitone window
+                      placed high or low, only 11 to 55% stays inside it.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Register words in the style</td>
+                    <td>
+                      <strong>Obeyed.</strong> "In a high register" places the
+                      music near MIDI 70 to 73, and "in a low register" near 50
+                      to 51, in three of three seeds.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>A calm style</td>
+                    <td>
+                      <strong>Falls silent.</strong> "A slow lyrical melody of
+                      single long notes" fades within two seconds, so every
+                      style asks for an improvisation.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Three designs, measured</h3>
+            <p>
+              <strong>Theremin</strong> lets height pick the note.
+              <strong>Window</strong> lets height centre a window of notes that
+              the model may play. <strong>Steered</strong> uses only handles
+              that MRT2 follows: style words move the register and the energy,
+              the allowed pitch classes open from the triad to the whole scale
+              as the hands spread, and stillness silences the notes.
+            </p>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Movement → attribute</th>
+                    <th>Theremin</th>
+                    <th>Window</th>
+                    <th>Steered</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Height → register</td>
+                    <td class="num">83% · 2.2 · 0.12 s</td>
+                    <td class="num">67% · 0.9 · 0.78 s</td>
+                    <td class="num">83% · 1.4 · 1.23 s</td>
+                  </tr>
+                  <tr>
+                    <td>Activity → density</td>
+                    <td class="num">67% · 0.9 · 0.12 s</td>
+                    <td class="num">67% · 1.4 · 2.83 s</td>
+                    <td class="num">100% · 1.9 · 2.33 s</td>
+                  </tr>
+                  <tr>
+                    <td>Spread → tension</td>
+                    <td class="none">No reliable effect</td>
+                    <td class="none">No reliable effect</td>
+                    <td class="num">100% · 2.6 · 1.68 s</td>
+                  </tr>
+                  <tr>
+                    <td>Stillness → quiet</td>
+                    <td class="none">No reliable effect</td>
+                    <td class="num">83% · 1.9 · 2.93 s</td>
+                    <td class="num">100% · 1.9 · 1.83 s</td>
+                  </tr>
+                  <tr>
+                    <td>Note freedom</td>
+                    <td class="num">0.06 to 0.35</td>
+                    <td class="num">0.46 to 0.55</td>
+                    <td class="num">0.43 to 0.66</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="note">
+              Each cell gives the share of six seeds that moved the expected
+              way, the effect in units of the seeds' spread, and the time to
+              half the change. "No reliable effect" means 50% or less, or an
+              effect under 0.5. Scripted movements, offline renders, October 7.
+            </p>
+            <ul>
+              <li>
+                <strong
+                  >Steered is the first design in the goal's corner.</strong
+                >
+                Every movement moved its attribute the expected way in at least
+                five of six seeds, and the model chose different notes in every
+                seed.
+              </li>
+              <li>
+                <strong>The hand and the model share the music.</strong> In
+                steered, a movement's effect is about as large as the difference
+                between two seeds: the hand's share of the variation is 0.49 to
+                0.58.
+              </li>
+              <li>
+                <strong>Window fails, as the handles predicted.</strong> Height
+                moved the register in only four of six seeds.
+              </li>
+              <li>
+                <strong>Steered is slow.</strong> Half of each change takes 1.2
+                to 2.3 s, against 0.12 s for the theremin. With all smoothing
+                removed, MRT2 still took 1.2 to 1.7 s to follow, because it
+                finishes what it is playing. This latency was accepted: a change
+                that builds up reads as an orchestra following its conductor.
+              </li>
+            </ul>
+
+            <h3>Listening test</h3>
+            <p>
+              An audio measure is not what a listener hears. In a blind test,
+              the listener heard two clips from the same moment and seed, and
+              picked the one that matched a described movement.
+            </p>
+            <div class="stats">
+              <div class="stat">
+                <strong>20/24</strong
+                ><span>All pairs · chance ≈ 1 in 1,300</span>
+              </div>
+              <div class="stat">
+                <strong>12/12</strong><span>Activity and stillness</span>
+              </div>
+              <div class="stat"><strong>5/6</strong><span>Height</span></div>
+              <div class="stat">
+                <strong>3/6</strong><span>Spread · at chance</span>
+              </div>
+            </div>
+            <p>
+              Spread was steered's strongest measured movement, but the question
+              "the hands spread wide" did not point listeners to it. Asked
+              instead which clip sounds more tense, the same listener picked the
+              wide clip in 9 of 12 pairs. The change is audible, but nothing
+              about spreading the hands suggests it.
+            </p>
+            <p>
+              On October 14, after playing the steered page with the camera, the
+              verdict was that it does feel like leading the music: the first
+              answer to October 4.
+            </p>
+          </div>
+        </section>
+
+        <section id="spine">
+          <div class="rail">
+            <div class="sticky"><b>04</b>Continuity</div>
+          </div>
+          <div class="body">
+            <h2>One continuous piece: the spine</h2>
+            <p>The steered page led the music, but it did not flow.</p>
+            <blockquote>
+              <p>It feels like some random music pieces joined together.</p>
+              <footer>Play test, October 15</footer>
+            </blockquote>
+            <p>
+              V2's first milestone gives the music a spine that keeps going
+              whatever the hands do:
+            </p>
+            <ul>
+              <li>
+                <strong>Bars and chords:</strong> a bar grid at 100 beats a
+                minute, and the chords Am, F, C, and G, one a bar.
+              </li>
+              <li>
+                <strong>The harmony opens around each chord:</strong> close
+                hands keep the melody on the chord's tones, wider hands add the
+                pentatonic scale, then the whole scale.
+              </li>
+              <li>
+                <strong>Changes land on bar lines,</strong> not on any frame.
+              </li>
+              <li>
+                <strong>Stillness thins the music and never stops it:</strong>
+                the level falls to about a third at once, and from the next
+                chord only its root and fifth may sound.
+              </li>
+              <li>
+                <strong>A silence guard:</strong> when MRT2 falls silent by
+                itself for 0.8 s, the spine strikes the chord being heard.
+              </li>
+            </ul>
+
+            <h3>Telling each chord early</h3>
+            <p>
+              MRT2 follows a new chord late. With chords told on their bar
+              lines, only 26% of the melody's energy was on the bar's chord
+              early in the bar. Six seeds were tried with the harmony told
+              ahead:
+            </p>
+            <figure>
+              <ul class="legend" aria-hidden="true">
+                <li><i class="s1"></i>Early in the bar</li>
+                <li><i class="s2"></i>Late in the bar</li>
+              </ul>
+              <div
+                class="chart"
+                id="chart-ahead"
+                role="img"
+                aria-label="Melody energy on the bar's chord. Told on the bar line: 26% early, 55% late. 0.8 s ahead: 48% and 74%. 1.2 s ahead: 60% and 98%. 1.6 s ahead: 82% and 48%."
+              ></div>
+              <figcaption>
+                <b>Fig. 4</b>The share of the melody's energy on the bar's
+                chord. At 1.2 s ahead, both halves of the bar are high; at 1.6
+                s, the next chord already arrives late in the bar. The spine
+                tells each chord 1.2 s ahead.
+              </figcaption>
+              <details>
+                <summary>Table</summary>
+                <div class="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Told ahead of the bar line</th>
+                        <th>Early in the bar</th>
+                        <th>Late in the bar</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>On the bar line</td>
+                        <td class="num">26%</td>
+                        <td class="num">55%</td>
+                      </tr>
+                      <tr>
+                        <td>0.8 s</td>
+                        <td class="num">48%</td>
+                        <td class="num">74%</td>
+                      </tr>
+                      <tr class="pick">
+                        <td>1.2 s</td>
+                        <td class="num">60%</td>
+                        <td class="num">98%</td>
+                      </tr>
+                      <tr>
+                        <td>1.6 s</td>
+                        <td class="num">82%</td>
+                        <td class="num">48%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </figure>
+
+            <h3>Listen: without and with the spine</h3>
+            <p>
+              The same 40-second scripted performance: it steers, rests twice,
+              and starts again.
+            </p>
+            <div class="clips two">
+              <div class="clip" data-src="media/free-100.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label">Without the spine</span>
+                  <span class="clip-time">0:40</span>
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+              <div class="clip" data-src="media/spine-100.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label">With the spine</span>
+                  <span class="clip-time">0:40</span>
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+            </div>
+            <p style="margin-top: 1.2rem">
+              Over six seeds, the clips without the spine were silent 18% of the
+              time, and those with it 1%. In a blind test, the spine was chosen
+              as the more continuous clip in six of six pairs, which happens by
+              chance once in 64 tries. The clips without the spine fall silent
+              when the hands rest, an obvious cue, so this shows that the
+              largest seam is gone, not yet that the music feels like one piece.
+            </p>
+
+            <h3>Texture</h3>
+            <p>
+              Played, the spine still sounded like individual piano fragments.
+              The controller was not the cause; the model was. With the hands
+              held constant and no chord changes at all, solo piano's note rate
+              still varied 27% from second to second. An ensemble varies less.
+            </p>
+            <div class="clips two">
+              <div class="clip" data-src="media/solo-piano-100.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label"
+                    >Solo piano <span class="clip-meta">varies 34%</span></span
+                  >
+                  <span class="clip-time">0:30</span>
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+              <div class="clip" data-src="media/ensemble-100.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label"
+                    >Piano, strings, and bass
+                    <span class="clip-meta">varies 18%</span></span
+                  >
+                  <span class="clip-time">0:30</span>
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+            </div>
+            <p style="margin-top: 1.2rem">
+              Hands held constant, chords on; each clip is brought to the same
+              loudness. The plain ensemble lost the energy control, so the
+              spine's styles now name instruments: cellos, double bass, and low
+              piano for low; violins and high piano for high; fast arpeggios and
+              pulsing staccato strings for lively. Height then moved the
+              register with an effect of 3.7, and activity moved the density
+              with 3.8, in six of six seeds.
+            </p>
+            <blockquote>
+              <p>This is GREAT!!!</p>
+              <footer>Play test, October 19, the ensemble spine</footer>
+            </blockquote>
+          </div>
+        </section>
+
+        <section id="conductor">
+          <div class="rail">
+            <div class="sticky"><b>05</b>V2</div>
+          </div>
+          <div class="body">
+            <h2>The conductor, and what it lost</h2>
+            <p>
+              V2's goal: anyone can lead one continuous, evolving piece of music
+              in five minutes, without playing a note. Its picture is an
+              orchestra you conduct with your hands. An AI composes and plays a
+              live score, and the gestures decide how it is played. The question
+              "notes or no notes" has a middle:
+            </p>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Level</th>
+                    <th>The player decides</th>
+                    <th>The model decides</th>
+                    <th>Example</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Note</td>
+                    <td>Every pitch and its timing</td>
+                    <td>Only the sound</td>
+                    <td>V1's lead, the theremin</td>
+                  </tr>
+                  <tr class="pick">
+                    <td>Intent</td>
+                    <td>A direction, a moment, a choice</td>
+                    <td>Every note</td>
+                    <td>V2</td>
+                  </tr>
+                  <tr>
+                    <td>Direction</td>
+                    <td>Higher, livelier, tenser, rest</td>
+                    <td>Everything else</td>
+                    <td>The steered page</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              A conductor works at the level of intent. The conductor page,
+              built on October 19 and 20, gives each gesture one fixed meaning
+              in a film-score world in D minor:
+            </p>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Gesture</th>
+                    <th>What the music does</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>The right hand's motion, bigger or smaller</td>
+                    <td>
+                      Louder or softer at once; fuller or thinner within a
+                      second or two
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>The right hand's motion, faster or slower</td>
+                    <td>Driving and rhythmic, or calm and sustained</td>
+                  </tr>
+                  <tr>
+                    <td>The left hand's place, left to right</td>
+                    <td>
+                      The violins, the brass, or the cellos and basses lead
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>The left hand's height</td>
+                    <td>How far that voice comes forward</td>
+                  </tr>
+                  <tr>
+                    <td>An open palm, or a pinch</td>
+                    <td>Long lines, or short notes</td>
+                  </tr>
+                  <tr>
+                    <td>A fist, or holding still</td>
+                    <td>After about 0.65 s, a hush to a quiet chord</td>
+                  </tr>
+                  <tr>
+                    <td>Both hands up, then down</td>
+                    <td>
+                      A swell while they are up; the next section lands on the
+                      beat after the drop
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Qwen writes the score a phrase ahead. It hears how the last phrase
+              was conducted, in words and numbers only, and the world's own plan
+              plays whenever its answer is late.
+            </p>
+
+            <h3>Three play tests</h3>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Version</th>
+                    <th>What was said</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="num">Oct 19</td>
+                    <td>A film score, Qwen as the arranger, and a clap</td>
+                    <td>
+                      "It has that film-score sound." But: "I don't know what my
+                      hands are actually controlling."
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="num">Oct 20</td>
+                    <td>The conductor</td>
+                    <td>
+                      It starts to come together: "the instrument itself is a
+                      generative result."
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="num">Oct 20</td>
+                    <td>
+                      The conductor, with drawn gestures and a louder level
+                    </td>
+                    <td>
+                      "I completely don't get it." The music went "back to being
+                      isolated musical snippets without any real subjectivity or
+                      consistency."
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Against the spine, the conductor removed what held the music
+              together and weakened the hands. The composer wrote new chords for
+              each phrase, and every change of voice or section was a new start
+              for MRT2. Over six seeds, the spine's height moved the register
+              with an effect of 3.7, and the conductor's left hand with 1.3. The
+              spine's activity moved the density with 3.8, and the conductor's
+              motion with 1.5.
+            </p>
+            <p>
+              Underneath both, nothing in Sway held a theme. MRT2's effective
+              receptive field is about 20 s, and nothing it is given names a
+              melody.
+            </p>
+            <p class="note">
+              The conductor is in review as
+              <a href="https://github.com/Audiofool934/sway/pull/17"
+                >Audiofool934/sway#17</a
+              >.
+            </p>
+          </div>
+        </section>
+
+        <section id="theme">
+          <div class="rail">
+            <div class="sticky"><b>06</b>Identity</div>
+          </div>
+          <div class="body">
+            <h2>A theme that returns</h2>
+            <p>
+              The theme test gives the spine a melody, and asks whether the
+              music then sounds like one piece with its own identity.
+            </p>
+            <ul>
+              <li>
+                <strong>The theme</strong> is four bars over Am, F, C, and G.
+              </li>
+              <li>
+                <strong>MRT2 is given it as notes.</strong> Each note is struck
+                on its first frame and then held. From middle C up, every other
+                pitch is silenced, so the theme is the top line. Below middle C
+                the harmony stays free, and MRT2 accompanies.
+              </li>
+              <li>
+                <strong>It leaves and returns:</strong> the theme for four bars,
+                eight bars away, the theme, four bars away, and the theme.
+              </li>
+            </ul>
+            <p>
+              MRT2 answers a struck note within about 0.1 s. A chord, by
+              contrast, has to be told 1.2 s ahead.
+            </p>
+            <figure>
+              <ul class="legend" aria-hidden="true">
+                <li><i class="s1 dotkey"></i>With the theme</li>
+                <li><i class="s2 dotkey"></i>Without it</li>
+              </ul>
+              <div
+                class="chart"
+                id="chart-theme"
+                role="img"
+                aria-label="Melody energy on the theme's note, early in each note, for six seeds. With the theme: 90, 89, 88, 82, 86, and 81%. Without it: 12, 21, 12, 22, 18, and 27%."
+              ></div>
+              <figcaption>
+                <b>Fig. 5</b>The share of the melody's energy, from middle C up,
+                on the theme note's pitch class in the note's first 0.3 s. Six
+                pairs over all three statements of the theme. Each pair branches
+                from one moment with the same random choices; only the notes
+                MRT2 is given differ.
+              </figcaption>
+              <details>
+                <summary>Table</summary>
+                <div class="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Seed</th>
+                        <th>With the theme</th>
+                        <th>Without it</th>
+                        <th>Later in the note, with / without</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="num">100</td>
+                        <td class="num">90%</td>
+                        <td class="num">12%</td>
+                        <td class="num">42% / 15%</td>
+                      </tr>
+                      <tr>
+                        <td class="num">101</td>
+                        <td class="num">89%</td>
+                        <td class="num">21%</td>
+                        <td class="num">51% / 14%</td>
+                      </tr>
+                      <tr>
+                        <td class="num">102</td>
+                        <td class="num">88%</td>
+                        <td class="num">12%</td>
+                        <td class="num">58% / 15%</td>
+                      </tr>
+                      <tr>
+                        <td class="num">103</td>
+                        <td class="num">82%</td>
+                        <td class="num">22%</td>
+                        <td class="num">48% / 18%</td>
+                      </tr>
+                      <tr>
+                        <td class="num">104</td>
+                        <td class="num">86%</td>
+                        <td class="num">18%</td>
+                        <td class="num">38% / 17%</td>
+                      </tr>
+                      <tr>
+                        <td class="num">105</td>
+                        <td class="num">81%</td>
+                        <td class="num">27%</td>
+                        <td class="num">21% / 19%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </figure>
+            <p>
+              The same 24 bars and the same movement, with and without the
+              theme. Both clips are brought to the same loudness.
+            </p>
+            <div class="clips two">
+              <div class="clip" data-src="media/no-theme-100.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label">Without the theme</span>
+                  <span class="clip-time">0:58</span>
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+              <div class="clip" data-src="media/theme-100.mp3">
+                <button class="clip-play" type="button"></button>
+                <div class="clip-head">
+                  <span class="clip-label">With the theme</span>
+                  <span class="clip-time">0:58</span>
+                </div>
+                <input
+                  class="clip-seek"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
+            </div>
+            <p style="margin-top: 1.2rem">
+              Comparing the pairs blind proved tiring, so the test has no
+              listening result yet, and the theme became playable instead. On
+              the steered page it returns for four bars every twelve, and the
+              hand's height still moves it an octave up or down.
+            </p>
+            <blockquote>
+              <p>
+                When the theme returns, it clearly switches, but overall it is
+                stronger than before.
+              </p>
+              <footer>Play test, October 20, translated from Chinese</footer>
+            </blockquote>
+            <p class="note">
+              The theme is in review as
+              <a href="https://github.com/Audiofool934/sway/pull/19"
+                >Audiofool934/sway#19</a
+              >. The work in progress eases into and out of the theme over a
+              bar.
+            </p>
+          </div>
+        </section>
+
+        <section id="system">
+          <div class="rail">
+            <div class="sticky"><b>07</b>System</div>
+          </div>
+          <div class="body">
+            <h2>How it runs</h2>
+            <p>
+              Everything except the composer runs on one Apple Silicon Mac.
+              Models stay off the immediate path: what answers a gesture at once
+              is made in the browser.
+            </p>
+            <figure>
+              <div class="system">
+                <div class="box">
+                  <h4>The browser</h4>
+                  <p class="where">Chrome · the camera stays here</p>
+                  <ol>
+                    <li>The camera image, mirrored behind the stage</li>
+                    <li>MediaPipe finds each hand's landmarks</li>
+                    <li>Gestures become a few controls</li>
+                    <li>The volume and the swell answer at once</li>
+                    <li>The streamed audio plays</li>
+                  </ol>
+                </div>
+                <div class="wire" aria-hidden="true">
+                  <span>Controls</span>
+                  <svg viewBox="0 0 40 12">
+                    <path d="M0 6H38M33 1l5 5-5 5" />
+                  </svg>
+                  <svg viewBox="0 0 40 12">
+                    <path d="M40 6H2M7 1L2 6l5 5" />
+                  </svg>
+                  <span>Audio</span>
+                </div>
+                <div class="box">
+                  <h4>The server</h4>
+                  <p class="where">Python and MLX · loopback only</p>
+                  <ol>
+                    <li>The spine: bars, chords told 1.2 s early, the theme</li>
+                    <li>MRT2 renders each 40 ms frame in about 22 ms</li>
+                    <li>A GPU filler keeps the clock up between frames</li>
+                    <li>Leveling to a steady loudness</li>
+                  </ol>
+                </div>
+                <div class="wire" aria-hidden="true">
+                  <span>Music data</span>
+                  <svg viewBox="0 0 40 12">
+                    <path d="M0 6H38M33 1l5 5-5 5" />
+                  </svg>
+                  <svg viewBox="0 0 40 12">
+                    <path d="M40 6H2M7 1L2 6l5 5" />
+                  </svg>
+                  <span>A plan</span>
+                </div>
+                <div class="box dashed">
+                  <h4>The composer</h4>
+                  <p class="where">Qwen · cloud · a phrase ahead</p>
+                  <ol>
+                    <li>The next section, its chords, and a caption</li>
+                    <li>Never sees the camera</li>
+                    <li>A built-in plan plays when it is late</li>
+                  </ol>
+                </div>
+              </div>
+              <figcaption>
+                <b>Fig. 6</b>The steered page. The browser sends its controls
+                over a WebSocket every 40 ms, and the server streams the audio
+                back. In V1, the lead and the drums are synthesized in the
+                browser instead.
+              </figcaption>
+            </figure>
+            <p>
+              A live stream renders one 40 ms frame at a time, so the GPU idles
+              for about half of each frame. After about 25 seconds of that,
+              macOS lowers the GPU clock until a frame takes about 42 ms, and
+              the stream falls behind. Between frames, the server now runs small
+              matrix products until 4 ms before the next frame, and frames take
+              a median of 22 ms.
+            </p>
+          </div>
+        </section>
+
+        <section id="next">
+          <div class="rail">
+            <div class="sticky"><b>08</b>Next</div>
+          </div>
+          <div class="body">
+            <h2>What comes next</h2>
+            <ol>
+              <li>
+                <strong>The theme, played by hand,</strong> with smoother seams
+                where it enters and leaves.
+              </li>
+              <li>
+                <strong>The world designer:</strong> a language model writes a
+                world from the player's words, such as "a rainy noir chase
+                through Tokyo": its key, tempo, chords, three voices, and
+                sections. The gestures keep their meaning in every world, and
+                each world is checked by ear and by measurement before play.
+              </li>
+              <li>
+                <strong>Keeping a phrase,</strong> which the composer brings
+                back later, varied.
+              </li>
+              <li><strong>New players,</strong> in a five-minute test.</li>
+            </ol>
+            <p>
+              The five-minute test is the bar for V2. A first-time player, with
+              only the start screen, within five minutes:
+            </p>
+            <ul>
+              <li>says they led the music;</li>
+              <li>can say what each hand controls;</li>
+              <li>can point to a moment they caused;</li>
+              <li>hears one piece, not pieces joined together;</li>
+              <li>wants to play again.</li>
+            </ul>
+            <h3>Open questions</h3>
+            <ul>
+              <li>
+                Can players control the size and the speed of their motion
+                separately?
+              </li>
+              <li>
+                Can every world have three voices that MRT2 plays distinctly
+                enough to point at?
+              </li>
+              <li>
+                Does keeping a phrase feel like leading, or like curating?
+              </li>
+              <li>
+                Can a kept phrase become notes reliably enough to vary, when
+                dense textures confuse the note finder?
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="timeline">
+          <div class="rail">
+            <div class="sticky"><b>09</b>Log</div>
+          </div>
+          <div class="body">
+            <h2>Timeline</h2>
+            <ol class="timeline">
+              <li>
+                <time datetime="2026-09-26">Sep 26</time
+                ><span
+                  >First prototype: camera to Qwen to MRT2 text prompts.</span
+                >
+              </li>
+              <li>
+                <time datetime="2026-09-27">Sep 27</time
+                ><span
+                  >Paused. A gesture took 8 to 14 seconds to change the
+                  sound.</span
+                >
+              </li>
+              <li>
+                <time datetime="2026-09-28">Sep 28</time
+                ><span
+                  >Restarted as V1: a hand-played lead, a band hand, and
+                  lessons.</span
+                >
+              </li>
+              <li>
+                <time datetime="2026-10-01">Oct 1</time
+                ><span>V1 merged; the first play test.</span>
+              </li>
+              <li class="turn">
+                <time datetime="2026-10-04">Oct 4</time
+                ><span
+                  >Second play test: stable, but it does not feel like leading
+                  the music.</span
+                >
+              </li>
+              <li>
+                <time datetime="2026-10-05">Oct 5</time
+                ><span>The generative theremin.</span>
+              </li>
+              <li class="turn">
+                <time datetime="2026-10-07">Oct 7</time
+                ><span
+                  >Motion as music versus motion to music; the first steering
+                  measurements.</span
+                >
+              </li>
+              <li>
+                <time datetime="2026-10-13">Oct 13</time
+                ><span
+                  >Listening test: 20 of 24 right. The steering latency is
+                  accepted.</span
+                >
+              </li>
+              <li class="turn">
+                <time datetime="2026-10-14">Oct 14</time
+                ><span>The steered page feels like leading the music.</span>
+              </li>
+              <li>
+                <time datetime="2026-10-15">Oct 15</time
+                ><span>V1 called OK; V2's design begins.</span>
+              </li>
+              <li class="turn">
+                <time datetime="2026-10-19">Oct 19</time
+                ><span
+                  >The spine wins six of six blind pairs; the ensemble spine
+                  plays as one piece.</span
+                >
+              </li>
+              <li>
+                <time datetime="2026-10-19">Oct 19</time
+                ><span>A film score with an arranger, then the conductor.</span>
+              </li>
+              <li>
+                <time datetime="2026-10-20">Oct 20</time
+                ><span
+                  >The conductor's play tests, the silence guard, and the theme,
+                  tested and then played.</span
+                >
+              </li>
+            </ol>
+          </div>
+        </section>
+
+        <section id="credits">
+          <div class="rail">
+            <div class="sticky"><b>10</b>Context</div>
+          </div>
+          <div class="body">
+            <h2>Related work and credits</h2>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Work</th>
+                    <th>What Sway learns from it</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Max Mathews' Radio Baton</td>
+                    <td>
+                      Conducting tempo and dynamics alone already feels like
+                      leading.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Magenta's Piano Genie</td>
+                    <td>A model can turn a rough contour into good notes.</td>
+                  </tr>
+                  <tr>
+                    <td>Google's Blob Opera</td>
+                    <td>
+                      Few controls, an instant reward, and a model that does the
+                      harmony.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>François Pachet's Continuator, Magenta's AI Duet</td>
+                    <td>
+                      A model that answers in the player's style feels
+                      collaborative.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Sway tries to combine conducting, a composer that listens, and
+              worlds designed from the player's words.
+            </p>
+            <h3>Models</h3>
+            <ul>
+              <li>
+                <a href="https://github.com/magenta/magenta-realtime"
+                  >Magenta RealTime 2</a
+                >
+                (Google) writes the music. Its weights are distributed under CC
+                BY 4.0; Sway's adapter adapts Apache 2.0 code from the Magenta
+                RealTime project.
+              </li>
+              <li>
+                <a
+                  href="https://www.alibabacloud.com/help/en/model-studio/text-generation"
+                  >Qwen</a
+                >
+                (Alibaba Cloud) composes, through its hosted API.
+              </li>
+              <li>
+                <a
+                  href="https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/web_js"
+                  >MediaPipe Hand Landmarker</a
+                >
+                (Google) tracks the hands in the browser.
+              </li>
+            </ul>
+            <p class="note">
+              Every clip on this page comes from a scripted performance, not
+              from hands. The V1 clip also has the browser's synthesized lead
+              and drums; every other clip is MRT2 alone. Sway uses the models
+              without changing their weights. See the
+              <a
+                href="https://github.com/Audiofool934/sway/blob/main/THIRD_PARTY_NOTICES.md"
+                >third-party notices</a
+              >. No license for original Sway code has been selected.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="foot">
+        <span>Sway · Everett (Audiofool) · 2026</span>
+        <span
+          >Updated October 23, 2026 ·
+          <a href="https://github.com/Audiofool934/sway/tree/main/site"
+            >Page source</a
+          ></span
+        >
+      </footer>
+    </div>
+  </body>
+</html>
