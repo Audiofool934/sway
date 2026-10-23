@@ -4,6 +4,7 @@
 
 The [project status](docs/project-status.md) is the map: where the work stands and what comes next.
 The [V1 plan](docs/v1-plan.md) defines the instrument, the rules it is built by, and the milestones.
+The [project page](https://audiofool934.github.io/sway/) tells the story so far, with the measurements and audio.
 
 Someone with no musical training should be able to make a piece they want to keep.
 One hand plays a melody on a pitch ladder, with quicker pinches making stronger notes and leaning toward the camera swelling a held note.
