@@ -46,7 +46,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --test tests/*.test.js
-      - run: node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,css}'
+      - run: node_modules/.bin/prettier --check 'web/*.{js,css,html}' 'web/instrument/*.{js,css}' 'site/*.{js,css,html}'
 
   whitespace:
     name: Whitespace
