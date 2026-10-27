@@ -21,6 +21,16 @@ V1 is served at `/` and the theremin experiment at `/theremin.html`.
 Only one theremin window can generate at a time.
 Stop the server with Ctrl-C when finished.
 
+### Qwen configuration
+
+Store `api_key`, `workspace_id`, `region`, and `model` in `~/.config/sway/qwen.json`, with file permissions `0600`.
+Supported regions are `beijing`, `singapore`, and `us-east-1` (US Virginia).
+Use the key and workspace from the same region; Sway builds the region's workspace endpoint when `workspace_id` is set, or its shared DashScope endpoint when it is empty.
+The default model is `qwen3.8-max`.
+`DASHSCOPE_API_KEY`, `SWAY_QWEN_WORKSPACE_ID`, `SWAY_QWEN_REGION`, and `SWAY_QWEN_MODEL` override the corresponding file fields.
+`sway doctor` checks this configuration locally; a successful model request is still needed to verify access.
+See the [Bailian endpoint reference](https://help.aliyun.com/zh/model-studio/base-url) for region and workspace requirements.
+
 ## Checks
 
 ```bash
@@ -125,7 +135,7 @@ Hand features carry 21 mirrored, smoothed image landmarks, centred on the same p
 The mirrored live video remains visible with reduced saturation and brightness so the performer and room provide spatial context behind the instrument.
 Hand accents use only the tracked bones and six small markers per hand; no inferred surfaces, particles, or trails are drawn.
 `POST /api/harmony/start` begins a piece's model stream, and `POST /api/harmony/bar` returns one bar of 16-bit stereo PCM at 48 kHz; bars for a piece that has since been replaced get HTTP 409.
-With real MRT2 assets present, `tests/test_harmony.py` also renders two bars and checks that they stay in key.
+With real MRT2 assets present, `tests/test_harmony.py` also renders two bars with each of five seeds and checks that each bar's median over the seeds stays in key.
 `POST /api/compose` returns Qwen's plan for the next cycle, and `GET /api/compose/status` says whether Qwen is configured without revealing the key; the tests replace Qwen with a mock transport, so they make no billable requests.
 
 ## Data and evidence

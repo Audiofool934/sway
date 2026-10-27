@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from sway.qwen import QwenConfig, qwen_status
 
 
@@ -27,6 +29,29 @@ def test_invalid_config_never_echoes_values(credentials):
         assert "test-secret-do-not-echo" not in json.dumps(result)
 
 
-def test_api_key_can_use_regional_endpoint_without_workspace(credentials):
-    credentials.write_text(json.dumps({"api_key": "test-secret-do-not-echo", "region": "beijing"}))
-    assert QwenConfig.load().endpoint == "https://dashscope.aliyuncs.com/compatible-mode/v1"
+@pytest.mark.parametrize(
+    ("region", "workspace", "host"),
+    [
+        ("beijing", "", "dashscope.aliyuncs.com"),
+        ("singapore", "", "dashscope-intl.aliyuncs.com"),
+        ("us-east-1", "", "dashscope-us.aliyuncs.com"),
+        ("beijing", "llm-test", "llm-test.cn-beijing.maas.aliyuncs.com"),
+        ("singapore", "llm-test", "llm-test.ap-southeast-1.maas.aliyuncs.com"),
+        ("us-east-1", "ws-test", "ws-test.us-east-1.maas.aliyuncs.com"),
+    ],
+)
+def test_api_key_routes_to_its_region_and_workspace(credentials, region, workspace, host):
+    credentials.write_text(
+        json.dumps(
+            {"api_key": "test-secret-do-not-echo", "region": region, "workspace_id": workspace}
+        )
+    )
+    assert QwenConfig.load().endpoint == f"https://{host}/compatible-mode/v1"
+
+
+def test_environment_can_select_us_workspace(credentials, monkeypatch):
+    monkeypatch.setenv("SWAY_QWEN_REGION", "us-east-1")
+    monkeypatch.setenv("SWAY_QWEN_WORKSPACE_ID", "ws-us-test")
+    config = QwenConfig.load()
+    assert config.endpoint == "https://ws-us-test.us-east-1.maas.aliyuncs.com/compatible-mode/v1"
+    assert qwen_status() == {"configured": True, "model": "qwen3.8-max", "region": "us-east-1"}

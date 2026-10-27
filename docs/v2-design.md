@@ -96,7 +96,7 @@ Against the spine, the conductor removed what held the music together and weaken
 
 Underneath both, nothing in Sway holds a theme.
 MRT2's effective receptive field is about 20 s, and nothing it is given names a melody; in the study of Magenta RealTime's first version, users said it could drop a melody with no way to get it back.
-So the next test is offline: the spine with a theme given to MRT2 as notes, which leaves and returns, against the same spine without it.
+So the next test is offline: the spine with a theme given to MRT2 as notes, which leaves and returns, against the same spine without it ([the theme test](steered-page.md#the-theme-test)).
 
 Milestone 1 traced the steered page's discontinuity to four causes: nothing held the music together, changes landed on any frame, stillness stopped the music, and the style corners were different textures.
 

@@ -199,6 +199,8 @@
       // A preference test asks for a judgement, so no answer is right: the page counts
       // how often each trial's `answer` clip was chosen, without saying right or wrong.
       const PREFERENCE = __PREFERENCE__;
+      const INTRO = __INTRO__;
+      const CHOSEN = __CHOSEN__;
       const KEY = "sway-listening-" + location.pathname;
       const load = () => {
         try {
@@ -216,9 +218,9 @@
       const $ = (id) => document.getElementById(id);
       if (PREFERENCE) {
         $("intro").textContent =
+          INTRO ??
           "Both clips in a pair play the same scripted movement with the same random choices; only the instrument differs. Listen to both, then pick the clip that answers the question. There is no right answer.";
-        $("done-note").textContent =
-          "The table counts how often you chose the clip with the spine. Copy the results to send them back.";
+        $("done-note").textContent = `The table counts how often you chose the clip with ${CHOSEN ?? "the spine"}. Copy the results to send them back.`;
       }
       const audio = { x: new Audio(), y: new Audio() };
       const heard = { x: false, y: false };
@@ -272,7 +274,7 @@
         $("trial").hidden = false;
         $("done").hidden = true;
         $("progress").textContent =
-          `Pair ${answers.length + 1} of ${TRIALS.length}`;
+          `Question ${answers.length + 1} of ${TRIALS.length}`;
         $("question").textContent = trial.question;
         $("verdict").textContent = "";
         heard.x = heard.y = false;
@@ -282,6 +284,11 @@
           audio[side].src = trial[side];
           $("fill-" + side).style.width = "0";
           $("play-" + side).textContent = "Play " + side.toUpperCase();
+        }
+        if (trial.again) {
+          // A second question about the pair just heard: it need not be heard again.
+          heard.x = heard.y = true;
+          $("answer-x").disabled = $("answer-y").disabled = false;
         }
       }
 

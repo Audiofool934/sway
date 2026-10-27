@@ -1,6 +1,6 @@
 # Project status
 
-Updated: October 20, 2026, Seattle time.
+Updated: October 27, 2026, Seattle time.
 Dates are in Seattle time; the V1 plan and the motion-to-music note were dated in Singapore time.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
@@ -113,6 +113,13 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 4. **The theme test,** on its own branch: whether a theme that MRT2 is given as notes, and that leaves and returns, makes the spine sound like one piece with its own identity.
    The [V2 design](v2-design.md#what-we-have-learned) gives the reasons.
    It runs offline, as a blind listening test, before any more is built on the conductor.
+   Built on October 20 ([guide](steered-page.md#the-theme-test)): MRT2 plays the theme's notes, 81% to 90% of the melody early in each note against 12% to 27% without it.
+   Everett found the blind pairs tiring and asked to go on without the answers, so the theme is now playable at `steered.html?variant=theme` ([guide](steered-page.md#the-theme-played)).
+   Everett played it the same day: when the theme returns, it clearly switches, but overall it is stronger than before.
+   Four offline runs then measured the theme's seams ([guide](steered-page.md#the-themes-seams)).
+   The exit jumps about twice as much as the spine alone, easing over a bar made both seams larger, and inner voices smoothed the return's register but not the exit.
+   So the ramp is removed, and inner voices are an option, off by default.
+   Nobody has listened to the seam clips, and the next step is not decided.
 
 ## Working rules
 
@@ -160,6 +167,10 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 | October 19      | The conductor built: fixed gestures, the film score as a world, and the composer kept to the score.                                          |
 | October 20      | Everett played the conductor; a gesture guide and a steady, louder level added.                                                              |
 | October 20      | MRT2's silences traced to calm styles; the spine strikes the chord after 0.8 s of silence.                                                   |
+| October 20      | The theme test: MRT2 plays the theme's notes 81% to 90% early in each note; the theme made playable.                                         |
+| October 20      | Everett played the theme: it switches when it returns, but it is stronger overall.                                                           |
+| October 20      | Four seam runs: the exit jumps most, and easing over a bar makes both seams larger.                                                          |
+| October 22      | On the new Mac mini, MRT2's key test judges the median over five seeds, and Qwen is reached in US Virginia.                                  |
 
 ## Where things are
 
@@ -167,5 +178,5 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 - Recordings and test evidence are in `outputs/` and `work/`, which Git ignores.
   The [data map](development.md#data-and-evidence) lists the current ones.
 - The Qwen credential is in `~/.config/sway/qwen.json`, outside the repository.
-- On `world-arranger` on October 20, 138 Python tests and 141 JavaScript tests passed.
-- At this update, Everett's own `sway serve` was running in his terminal; no agent-started Sway process was.
+- On `theme-anchor` on October 27, on the Mac mini, 159 Python tests and 141 JavaScript tests passed, including the real MRT2 key test.
+- At this update, no Sway process was running.
