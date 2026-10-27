@@ -307,6 +307,59 @@ Checked on October 20 in headless Chrome with the real model, with 40 seconds of
 Everett played it the same day.
 In his words, translated from Chinese: when the theme returns, it clearly switches, but overall it is stronger than before.
 
+### The theme's seams
+
+Everett heard the theme switch when it returned.
+So on October 20, four offline runs measured the seams: how much the music changes across the bar line where the theme returns or leaves.
+
+- **A seam** compares the 1.5 s before the bar line with the 1.5 s from 0.1 s after it, in loudness, density, brightness, and register.
+- **Each clip** has two returns and two exits.
+  Each number is the mean over those seams and over seeds 100 to 105, measured before the levels are matched.
+- **The clips without the theme** are measured at the same times, so they show how much the spine changes there by itself.
+  They are the same clips in all four runs.
+
+| Run              | What changes in the theme                                                                                                                             | On the theme, early / later in the note |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `seams-ramp0`    | Nothing: the test as above, with note guidance 3. Its clips are the six pairs' clips, bit for bit.                                                    | 86% / 43%                               |
+| `seams-ramp1`    | For one bar before and after each statement, from middle C up only the chord's tones may play, and the note guidance moves between the spine's and 3. | 88% / 48%                               |
+| `seams-g1`       | Note guidance 1.                                                                                                                                      | 80% / 40%                               |
+| `seams-g1-inner` | Note guidance 1, and inner voices: the chord's tones from middle C to a minor third below the theme's note stay free.                                 | 76% / 27%                               |
+
+Without the theme, 19% of the melody is on the theme's note early in the note, and 16% later.
+The commands were not recorded.
+`g1` is read as note guidance 1 (`--strength 1`) from the folder name and from the options that the code had at the time.
+
+| Seam              | Run               | Loudness, dB | Density, spectral flux | Brightness, octaves | Register, semitones |
+| ----------------- | ----------------- | ------------ | ---------------------- | ------------------- | ------------------- |
+| The theme returns | Without the theme | 4.28         | 9.74                   | 0.29                | 6.47                |
+|                   | `seams-ramp0`     | 3.96         | 7.99                   | 0.43                | 6.00                |
+|                   | `seams-ramp1`     | 3.34         | 19.30                  | 0.30                | 5.84                |
+|                   | `seams-g1`        | 3.51         | 8.61                   | 0.35                | 6.66                |
+|                   | `seams-g1-inner`  | 4.30         | 7.91                   | 0.44                | 3.30                |
+| The theme leaves  | Without the theme | 1.76         | 7.35                   | 0.28                | 4.04                |
+|                   | `seams-ramp0`     | 3.58         | 17.49                  | 0.49                | 5.09                |
+|                   | `seams-ramp1`     | 6.92         | 27.76                  | 0.84                | 7.15                |
+|                   | `seams-g1`        | 3.29         | 15.29                  | 0.41                | 6.12                |
+|                   | `seams-g1-inner`  | 5.88         | 20.33                  | 0.63                | 5.62                |
+
+- **The exit is the larger seam.**
+  When the theme leaves, every pitch from middle C up is free again at once.
+  Its loudness jump is twice the spine's alone, and its density jump 2.4 times.
+- **The return measures close to the spine alone,** except brightness: 0.43 octaves against 0.29.
+  So these measures do not show the switch that Everett heard in the live variant.
+- **Easing over a bar made both seams larger:** the density jump rose to 19.30 at the return and 27.76 at the exit.
+  So the ramp is removed.
+- **Note guidance 1 changed the seams little:** the exit's density jump fell from 17.49 to 15.29, and the theme early in the note fell from 86% to 80%.
+- **Inner voices** halved the register jump at the return, 3.30 against 6.00.
+  But they made the exit larger, 5.88 dB and 20.33, and the theme held less later in the note, 27% against 40%.
+
+None of the four makes the exit as smooth as the spine alone.
+Inner voices stay as an option, off by default: `uv run --locked python -m sway.theme --inner --out <new folder>`.
+The live variant does not use them.
+Nobody has listened to the seam clips yet; they are in `outputs/theme-2026-10-20/seams-*`.
+All four runs were made on the old development Mac, an M2 Pro.
+MRT2 plays a fixed seed differently on the Mac mini, so a new run there will not repeat these numbers exactly.
+
 ## The model thread
 
 With mlx 0.31.2, once one thread has run MRT2, another thread fails with "There is no Stream(gpu, 1) in current thread".

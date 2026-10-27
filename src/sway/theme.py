@@ -71,9 +71,8 @@ class Themed(Spine):
     is struck on its first frame and held after, so the theme is the top line. Below
     middle C the spine's harmony stays free, and MRT2 accompanies. MRT2 is told each
     note `ahead` frames early, with note guidance `strength`; `calibrate` chooses both.
-    For `ramp` bars before and after each statement, MRT2 is eased into and out of it:
-    from middle C up it may play only the chord's tones, and the note guidance moves
-    between the spine's and `strength`.
+    With `inner`, the chord's tones from middle C to a minor third below the theme's note
+    stay free too, so that MRT2 may keep inner voices under the theme.
     """
 
     name = "theme"
@@ -84,13 +83,13 @@ class Themed(Spine):
     # theremin's.
     ahead = 0
     strength = 3.0
-    ramp = 0
+    inner = False
 
     def __init__(
-        self, engine, form=(), *, start=WARMUP_BARS, ahead=ahead, strength=strength, ramp=ramp
+        self, engine, form=(), *, start=WARMUP_BARS, ahead=ahead, strength=strength, inner=inner
     ):
         super().__init__(engine)
-        self.ahead, self.strength, self.ramp = ahead, strength, ramp
+        self.ahead, self.strength, self.inner = ahead, strength, inner
         self.line = []  # One statement of the theme: (pitch, struck) for each frame.
         frames_per_beat = self.bar_frames // self.beats_per_bar
         for bar in THEME:
@@ -129,42 +128,26 @@ class Themed(Spine):
         bar = frame // self.bar_frames - self.start_bar
         return self.line[bar % len(THEME) * self.bar_frames + frame % self.bar_frames]
 
-    def nearness(self, frame: int) -> float:
-        """1 in the theme's bars, falling to 0 over `ramp` bars before and after them."""
-        bar = frame // self.bar_frames
-        if self.has_theme(bar):
-            return 1.0
-        span = self.ramp * self.bar_frames
-        near = 0.0
-        for n in range(1, self.ramp + 1):
-            if self.has_theme(bar + n):  # The theme starts `until` frames from now.
-                until = (bar + n) * self.bar_frames - frame
-                near = max(near, 1 - until / (span + 1))
-            if self.has_theme(bar - n):  # It ended `since` frames ago.
-                since = frame - (bar - n + 1) * self.bar_frames + 1
-                near = max(near, 1 - since / (span + 1))
-        return near
-
     melody = MELODY  # The lowest pitch that only the theme may play.
 
     def notes(self, move):
         tokens = super().notes(move)
-        frame = self.frame + self.ahead
-        note = self.theme_at(frame)
+        note = self.theme_at(self.frame + self.ahead)
         if note is not None:
             pitch, struck = note
+            free = tokens == FREE
             tokens[self.melody :] = SILENT
+            if self.inner:
+                tones = {tone % 12 for tone in self.harmony[1]}
+                for under in range(self.melody, pitch - 2):
+                    if free[under] and under % 12 in tones:
+                        tokens[under] = FREE
             tokens[pitch] = STRUCK if struck else HELD
-        elif self.nearness(frame) > 0:
-            tones = {tone % 12 for tone in self.harmony[1]}
-            for pitch in range(self.melody, len(tokens)):
-                if tokens[pitch] == FREE and pitch % 12 not in tones:
-                    tokens[pitch] = SILENT
         return tokens
 
     def render(self, move: Move) -> np.ndarray:
-        near = self.nearness(self.frame + self.ahead)
-        self.guidance = Spine.guidance + (self.strength - Spine.guidance) * near
+        theme = self.theme_at(self.frame + self.ahead) is not None
+        self.guidance = self.strength if theme else Spine.guidance
         return super().render(move)
 
 
@@ -330,7 +313,7 @@ class Takes:
         *,
         ahead=Themed.ahead,
         strength=Themed.strength,
-        ramp=Themed.ramp,
+        inner=Themed.inner,
         script=SCRIPT,
     ):
         variant = self.variant
@@ -342,7 +325,7 @@ class Takes:
             self.moments[seed] = variant.snapshot()
         variant.restore(self.moments[seed], seed)
         variant.form = form
-        variant.ahead, variant.strength, variant.ramp = ahead, strength, ramp
+        variant.ahead, variant.strength, variant.inner = ahead, strength, inner
         moves, previous = [], script[0][1]
         for bars, move in script:
             moves += glide(previous, move, bars * variant.bar_frames * FRAME)
@@ -381,7 +364,7 @@ def calibrate(engine, seeds, aheads=(0, 3, 6, 10), strengths=(1.0, 3.0)) -> list
 
 
 def run(
-    out: Path, engine, seeds, *, ahead=Themed.ahead, strength=Themed.strength, ramp=Themed.ramp
+    out: Path, engine, seeds, *, ahead=Themed.ahead, strength=Themed.strength, inner=Themed.inner
 ) -> dict:
     """The clips with and without the theme, their measures, and a page to compare them."""
     takes = Takes(engine)
@@ -392,7 +375,7 @@ def run(
     pairs, measures = [], {}
     for seed in seeds:
         clips = {
-            "theme": takes.play(seed, FORM, ahead=ahead, strength=strength, ramp=ramp),
+            "theme": takes.play(seed, FORM, ahead=ahead, strength=strength, inner=inner),
             "free": takes.play(seed, (False,) * len(FORM)),
         }
         for name, audio in zip(clips, matched(*clips.values()), strict=True):
@@ -495,7 +478,7 @@ def main():
         "--strength", type=float, default=Themed.strength, help="Note guidance in the theme"
     )
     parser.add_argument(
-        "--ramp", type=int, default=Themed.ramp, help="Bars eased into and out of the theme"
+        "--inner", action="store_true", help="Keep the chord's tones free under the theme"
     )
     args = parser.parse_args()
     out = Path(args.out).expanduser().resolve()
@@ -514,7 +497,7 @@ def main():
             strength = "-" if row["strength"] is None else f"{row['strength']:.0f}"
             print(f"| {told} | {strength} | {_pct(row['early'])} | {_pct(row['late'])} |")
         return
-    measures = run(out, engine, seeds, ahead=args.ahead, strength=args.strength, ramp=args.ramp)
+    measures = run(out, engine, seeds, ahead=args.ahead, strength=args.strength, inner=args.inner)
     (out / "measures.json").write_text(json.dumps(measures, indent=2) + "\n")
     table = summary(measures, seeds)
     (out / "summary.md").write_text(table + "\n")
