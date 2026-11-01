@@ -21,6 +21,27 @@ The downloaded [Magenta RealTime 2 weights](https://huggingface.co/google/magent
 The local adapter uses the Small exported model and MusicCoCa resources at revision `010aa0dcb0dfd27b24f0ad07b4dad63e8f9521cc`.
 Consult that model card for its attribution, terms, and limitations.
 
+## Stable Audio 3
+
+The score variant of the steered page plays its score with Stability AI's [Stable Audio 3](https://github.com/Stability-AI/stable-audio-3), in the project's official MLX version.
+Stable Audio 3 is installed apart from Sway, with its own Python environment, and Sway bundles neither its code nor its weights.
+`src/sway/sa3_worker.py` runs in that environment and imports its modules at run time.
+Its audio encoding, decoding, and window rendering are adapted from the project's `optimized/mlx/scripts/sa3_mlx.py`.
+Copyright 2026 Stability AI.
+The code is licensed under the MIT License, reproduced in [third_party/STABLE_AUDIO_3_LICENSE](third_party/STABLE_AUDIO_3_LICENSE).
+
+Inspected source revision: `77e0398`.
+
+The weights are downloaded separately from [stabilityai/stable-audio-3-optimized](https://huggingface.co/stabilityai/stable-audio-3-optimized).
+Their use is governed by the [Stability AI Community License](https://stability.ai/license).
+The text encoder in those weights, T5Gemma, is from Google.
+Consult those terms before using the score variant's output beyond personal use.
+
+## The macOS General MIDI sound bank
+
+The score variant's sampler, `src/sway/sampler.swift`, plays the General MIDI sound bank that ships with macOS, `gs_instruments.dls`, through Apple's `AVAudioUnitSampler`.
+Sway does not copy or distribute the bank.
+
 ## Qwen
 
 V1's optional band composer calls Alibaba's hosted Qwen3.8-Max API with musical data only.

@@ -1,6 +1,6 @@
 # Project status
 
-Updated: October 30, 2026, Seattle time.
+Updated: November 1, 2026, Seattle time.
 Dates are in Seattle time; the V1 plan and the motion-to-music note were dated in Singapore time.
 This page is the map of Sway: what exists, where it lives, what is open, and what comes next.
 Update it when a piece of work starts or lands.
@@ -32,11 +32,12 @@ Numbers such as #3 are pull requests on GitHub.
 
 ## Pages
 
-| URL              | What it is                                                                              | State                                                           |
-| ---------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `/`              | V1: the lead hand plays a pitch ladder, and the band hand sets energy, cuts, and loops. | Current. MRT2 plays the harmony, and Qwen can compose the band. |
-| `/theremin.html` | The hands shape MRT2's live sound directly.                                             | Experiment. Its interface is in Chinese.                        |
-| `/steered.html`  | A film score that the player conducts and Qwen composes.                                | V2. Milestone 1 merged October 19; milestone 2 in review.       |
+| URL                           | What it is                                                                              | State                                                           |
+| ----------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `/`                           | V1: the lead hand plays a pitch ladder, and the band hand sets energy, cuts, and loops. | Current. MRT2 plays the harmony, and Qwen can compose the band. |
+| `/theremin.html`              | The hands shape MRT2's live sound directly.                                             | Experiment. Its interface is in Chinese.                        |
+| `/steered.html`               | A film score that the player conducts and Qwen composes.                                | V2. Milestone 1 merged October 19; milestone 2 in review.       |
+| `/steered.html?variant=score` | A score that Sway writes from the hands, a bar at a time, which Stable Audio 3 plays.   | Built November 1 on `score-variant`; not yet played by Everett. |
 
 The Qwen gesture ensemble and Flow pages from September 26 and 27, their pipeline, and their documents were removed on October 7.
 The [documentation index](README.md) says how to find them in Git.
@@ -140,6 +141,12 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
    With 4 steps and 2.4 s of music before each piece, a window takes about 1 s instead of 1.9 s on the same machine, and measures as well; whether it sounds as good is for listening.
    SA3 follows a change of texture in its own bar, and a change of register in its own bar but less: the pieces keep 50% to 64% of the bass's change.
    The tests' page is `outputs/renderers-2026-10-29/tests/index.html`; nobody has listened to it.
+   On November 1 Everett chose to build the live version; in his words, translated from Chinese: "start building."
+   It is the score variant, `steered.html?variant=score`, on the branch `score-variant` ([guide](steered-page.md#the-score-variant)).
+   Sway writes each bar from the hands, the macOS sampler plays it, and SA3 redraws it in its own process, with 4 steps and 2.4 s of music before each bar.
+   In two scripted five-minute takes in headless Chrome, with a fake camera, no bar was late and the browser never ran out of audio.
+   A change of the hands reached the music in 1.5 to 4.1 s, 2.6 s at the median.
+   A 100 s recording is `outputs/score-2026-11-01/live-probe-100s.wav`; nobody has played or heard the variant yet.
 
 ## Working rules
 
@@ -196,6 +203,7 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 | October 29      | SA3 in pieces, as live: it keeps up on the Mac mini, and at noise 0.3 its joins measure like one clip.                                       |
 | October 30      | Everett chose noise 0.3 for SA3: "0.3 is enough."                                                                                            |
 | October 30      | Three offline tests: pieces need a tail, 4 steps halve a window, and SA3 follows a texture change in its own bar.                            |
+| November 1      | The score variant: Sway writes each bar from the hands, and SA3 plays it live; in 10 scripted minutes no bar was late.                       |
 
 ## Where things are
 
@@ -203,5 +211,5 @@ On October 15 he called V1 OK and began V2's design; V1's remaining play tests a
 - Recordings and test evidence are in `outputs/` and `work/`, which Git ignores.
   The [data map](development.md#data-and-evidence) lists the current ones.
 - The Qwen credential is in `~/.config/sway/qwen.json`, outside the repository.
-- On `theme-anchor` on October 27, on the Mac mini, 159 Python tests and 141 JavaScript tests passed, including the real MRT2 key test.
+- On `score-variant` on November 1, on the Mac mini, 187 Python tests and 141 JavaScript tests passed, including the real MRT2 key test and the real macOS sampler.
 - At this update, no Sway process was running.

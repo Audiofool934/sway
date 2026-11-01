@@ -30,6 +30,7 @@ The music follows a gesture within a second or two, except the volume and the sw
 
 `?variant=spine` and `?variant=free` play the earlier, steered designs: height sets the register, movement the energy, spread the harmony, and stillness thins the music.
 `?variant=theme` plays the spine with a theme that returns every twelve bars ([The theme, played](#the-theme-played)).
+`?variant=score` plays a score that Sway writes from the hands, a bar at a time, and Stable Audio 3 renders ([The score variant](#the-score-variant)); it needs Stable Audio 3 on this Mac.
 
 End the take to save it as a WAV file.
 Escape also ends it, and a take stops after five minutes.
@@ -40,6 +41,7 @@ Escape also ends it, and a take stops after five minutes.
   Activity below 0.05 is stillness.
 - `src/sway/steered.py` plays V2's spine (`steering.Spine`), one 40 ms frame for each control.
   `?variant=free` plays the page as it was on October 14, without the spine, for comparison (`steering.Live`).
+- `src/sway/scored.py` plays the score variant: `src/sway/score.py` writes each bar, the macOS sampler plays it, and Stable Audio 3 redraws it, each in its own process.
 - `src/sway/stream.py` and `web/stream-page.js` are shared with the theremin page: one window at a time, the camera, streamed audio, and recording.
 - The page plays the model's output without its own gain or filter, so what is heard is what the model wrote.
 
@@ -572,6 +574,84 @@ What the numbers show:
 4. **Not yet tested:** a score that a live hand changes at any bar, register changes on other chords than F to C, and the windows' timing while the camera, hand tracking, and browser share the GPU.
 
 The page is `outputs/renderers-2026-10-29/tests/index.html`, with a tab for each test; `work/renderers/tests.py` writes it, and `raw/pieces-timings.json` keeps each window's timings.
+
+### The score variant
+
+On November 1 Everett chose to build the live version; in his words, translated from Chinese: "start building."
+`steered.html?variant=score` plays it.
+Sway writes the score from the hands, a bar at a time, and SA3 plays it with the offline tests' choices: noise 0.3, 4 steps, 2.4 s of music before each bar, and a guessed tail.
+
+Each bar is made in four steps:
+
+1. **The score.**
+   `src/sway/score.py` writes the bar from the hands as they are when the bar is decided, at the page's thresholds of 0.35 and 0.65.
+   It keeps the comparison's score: a violin melody over piano, strings, cellos, and basses, on Night Drive's four chords.
+   The theme plays four bars in every twelve, as on the theme variant, with the comparison's two away lines between.
+   - **Activity sets the texture,** as test 3 changed it: stillness holds the chord's root and fifth and rests the melody; calm movement holds chords; flowing movement plays arpeggios in eighths; lively movement plays sixteenths over pizzicato strings and a bass in quarters.
+   - **Height moves the melody, the piano, and the strings an octave down or up,** and high also lifts the bass and the cellos.
+     The melody moves too, because test 3 heard the register less through SA3 than in the score.
+   - **Spread opens the piano's harmony:** triads; then a seventh or a sixth from the pentatonic scale, as Am7, Fmaj7, C6, and G6; then the ninth as well.
+2. **The sampler.**
+   `src/sway/sampler.swift` plays the bar with the General MIDI bank that ships with macOS, in its own process.
+   It plays from the downbeat of the bar before, so that notes and reverb ring on into the bar, to 0.56 s into the bar after, which it plays as if the hands stay where they are.
+3. **SA3.**
+   `src/sway/sa3_worker.py` runs in SA3's own Python, with the Medium model loaded once.
+   One window holds 2.4 s of the music already played, kept, then the bar and the guessed 0.56 s from the sampler, redrawn from noise 0.3 in 4 steps.
+4. **The join.**
+   `src/sway/scored.py` crossfades the bar into the music over the 40 ms before its join, converts it from 44.1 to 48 kHz, and queues it for the page.
+   The conversion is a windowed-sinc filter: up to 18 kHz its error is about -100 dB, and it removes the images above 22 kHz by about 85 dB.
+
+How the bars keep time:
+
+- A bar is decided when the music queued for the page falls to the slowest of the last four bars' render times, plus 0.3 s: about 1.3 s.
+  The first bar after the first window is decided 0.3 s earlier still: by then the GPU has idled for about 3.5 s, and in the first take after the server started, that bar's window took 1.18 s against a median of 0.91 s.
+- The page receives 40 ms frames, as from the other variants.
+  The volume answers stillness at once, as on the spine: it falls to about a third while the hands are still, and comes back as soon as they move.
+- If SA3 has not finished a bar when it is due, the sampler's bar plays instead, and the bar counts as late.
+- The sampler and SA3 stay loaded from one take to the next.
+  The first take after the server starts waits about 7 s for them: about 1 s to load SA3, 3 to 5 s to compile its windows, and 1 s for the first window.
+- `&steps=`, `&context=` in seconds, `&model=small`, and `&noise=` change how SA3 renders; a value out of range keeps its default.
+  For example, `steered.html?variant=score&steps=8&context=4.8` plays October 29's setting.
+- SA3 is found in `~/Developer/stable-audio-3/optimized/mlx`, or where `SWAY_SA3_DIR` points.
+  Only weights already on this Mac are loaded; nothing is downloaded.
+
+One finding about the sampler: a reset of its audio engine leaves the reverb ringing, and a restart changes the sound, so that the same score played about 10 dB louder.
+So before each request the sampler stops every note and renders 4 s of silence, which takes about 15 ms.
+Its first render is then the same, sample for sample, as the comparison's offline sampler, and a request after notes starts below -110 dBFS.
+
+#### Ten scripted minutes in headless Chrome
+
+On November 1 headless Chrome played the page in two takes of five minutes, the page's limit.
+Its fake camera played `work/finger-drumming.y4m`, so the page tracked real hands while it drew the stage and played the audio, as it would live.
+A script in the page replaced the height, activity, and spread in every control that the page sent with a schedule: every 5 to 12 s, one or two of the three moved to another band, and now and then the hands were still.
+A remote desktop session was connected throughout, as on October 30.
+For about 30 s in the second take, the test suite also ran, with MRT2's real key test on the GPU.
+The script, its log, and the results are in `outputs/score-2026-11-01/`.
+
+| Take | Bars after the first window | Late | Frames with nothing to send | Browser underruns | Decided before the music ran out: median | SA3 window: median / slowest | Spare when SA3 finished: least / median |
+| ---- | --------------------------- | ---- | --------------------------- | ----------------- | ---------------------------------------- | ---------------------------- | --------------------------------------- |
+| 1    | 124                         | 0    | 0                           | 0                 | 1.26 s                                   | 0.91 / 1.18 s                | 0.02 / 0.30 s                           |
+| 2    | 124                         | 0    | 0                           | 0                 | 1.27 s                                   | 0.90 / 1.20 s                | 0.07 / 0.30 s                           |
+
+- **No bar was late, and no frame was missing,** in either take, and the browser's buffer did not run empty while a take played.
+- **A bar was decided about 1.26 s before the music queued for the page ran out.**
+  The sampler took about 0.05 s and SA3 about 0.91 s, so about 0.3 s was spare.
+- **Only two bars came within 0.1 s of late.**
+  One was the first bar after the first window, in the first take after the server started; the extra lead for that bar came from it, and was added after this run.
+  The other came when the test suite started MRT2 on the GPU; the lead then grew to 1.57 s by itself, and no bar was late.
+- **The page's hand tracking runs on the CPU,** so in the browser only the drawing of the stage shares the GPU with SA3.
+
+From a change of the hands to its first bar in the browser, over 70 changes, took 1.5 to 4.1 s, with a median of 2.6 s and 3.6 s at the 90th percentile.
+This counts from the change to the first stats message that names the new state for the bar being sent, plus the browser's queue of 0.12 to 0.17 s, so it is accurate to about 0.2 s.
+The offline tests estimated 1.6 to 4.0 s with a browser buffer of 0.32 s; the buffer measured here is about half that.
+
+After the run, the same code without the server or the browser played 100 s that move through every texture, register, and harmony, into `outputs/score-2026-11-01/live-probe-100s.wav`; none of its 41 bars was late.
+
+Not yet done:
+
+- Everett has not played or heard it.
+- Whether 4 steps and 2.4 s sound as good as October 29's setting: `&steps=8&context=4.8` plays that one for comparison.
+- A take with a real camera and a player's own hands; here, the hands that the server followed were scripted.
 
 ## The model thread
 

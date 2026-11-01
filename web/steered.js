@@ -10,14 +10,26 @@ import { GestureGuide } from "./gesture-guide.js";
 // By default the player conducts a film score (docs/v2-design.md). `?variant=spine`
 // plays V2's first milestone, Night Drive's chords on repeat, `?variant=free` the page
 // as it was on October 14, without the spine, and `?variant=theme` the spine with a
-// theme that returns every twelve bars; all three are steered, not conducted.
-// `?hand=left` lets a left-handed player conduct with the left hand.
+// theme that returns every twelve bars. `?variant=score` plays a score that Sway
+// writes from the hands, which Stable Audio 3 renders (sway.scored); its stream takes
+// the page's own query, so `&steps=`, `&context=`, `&model=`, and `&noise=` reach it.
+// All four are steered, not conducted. `?hand=left` lets a left-handed player conduct
+// with the left hand.
 const params = new URLSearchParams(location.search);
 const variant = params.get("variant");
-const earlier = ["spine", "free", "theme"].includes(variant);
+const earlier = ["spine", "free", "theme", "score"].includes(variant);
 const free = variant === "free";
-const themed = variant === "theme";
+const scored = variant === "score";
+const themed = variant === "theme" || scored;
 const leftHanded = params.get("hand") === "left";
+const label = scored
+  ? "Score"
+  : themed
+    ? "Theme"
+    : earlier
+      ? "Steered"
+      : "Film score";
+const idle = `${label} · ready`;
 const LEAD = 1.2; // Seconds by which the server tells the model ahead (steering.Spine).
 
 const level = (x, words) => words[x < 0.35 ? 0 : x < 0.65 ? 1 : 2];
@@ -169,12 +181,22 @@ const conducting = {
 };
 
 // The earlier, steered variants' words for where the hands are taking the music.
+const HARMONY = scored
+  ? ["Plain chords", "Sevenths", "Ninths"]
+  : ["On the chord", "Pentatonic", "Whole scale"];
 const steering = {
   Controls: SteeredControls,
-  hint: {
-    camera: `Height sets the register${themed ? " and the theme's octave" : ""} · Movement sets the energy · Hands apart open the harmony · Stillness ${free ? "rests" : "thins the music"}`,
-    pointer: `Hold and move · Height sets the register${themed ? " and the theme's octave" : ""} · Left to right opens the harmony · Speed sets the energy · Release to ${free ? "rest" : "thin the music"}`,
-  },
+  hint: scored
+    ? {
+        camera:
+          "Height moves the melody and the ensemble · Movement sets the texture · Hands apart add sevenths and ninths · Stillness thins the music · The score follows within a few seconds",
+        pointer:
+          "Hold and move · Height moves the melody and the ensemble · Speed sets the texture · Left to right adds sevenths and ninths · Release to thin the music",
+      }
+    : {
+        camera: `Height sets the register${themed ? " and the theme's octave" : ""} · Movement sets the energy · Hands apart open the harmony · Stillness ${free ? "rests" : "thins the music"}`,
+        pointer: `Hold and move · Height sets the register${themed ? " and the theme's octave" : ""} · Left to right opens the harmony · Speed sets the energy · Release to ${free ? "rest" : "thin the music"}`,
+      },
   glow: (state) => state.activity,
   swing: (state) => state.spread,
   show(state, $, model) {
@@ -188,7 +210,7 @@ const steering = {
         : [
             level(state.activity, ["Calm", "Flowing", "Lively"]),
             level(state.height, ["Low", "Middle", "High"]),
-            level(state.spread, ["On the chord", "Pentatonic", "Whole scale"]),
+            level(state.spread, HARMONY),
           ].join(" · ");
     $("first-meter").style.width = `${state.height * 100}%`;
     $("second-meter").style.width = `${state.activity * 100}%`;
@@ -245,42 +267,64 @@ if (earlier) {
 // The page's markup describes the film score; the steered variants say what they do.
 function showSteeredIntro() {
   const $ = (id) => document.getElementById(id);
-  const name = themed ? "theme" : "steered";
+  const name = scored ? "score" : themed ? "theme" : "steered";
   document.title = `Sway · ${name[0].toUpperCase()}${name.slice(1)}`;
   document.querySelector(".brand span").textContent = name;
-  $("status").textContent = themed ? "Theme · ready" : "Steered · ready";
-  document.querySelector("#intro .eyebrow").textContent =
-    "YOUR HANDS STEER · THE MODEL WRITES";
+  $("status").textContent = idle;
+  document.querySelector("#intro .eyebrow").textContent = scored
+    ? "YOUR HANDS STEER · SWAY WRITES · STABLE AUDIO PLAYS"
+    : "YOUR HANDS STEER · THE MODEL WRITES";
   $("title").textContent = themed
     ? "Lead the music, and hear its theme return."
     : "Lead the music where it goes.";
-  document.querySelector("#intro .description").textContent = themed
-    ? "The model, generated on this Mac, plays a theme and writes everything around it. Your hands set the direction, and the music follows within a second or two."
-    : "Every note comes from the model, generated on this Mac. Your hands set the direction, and the music follows within a second or two.";
-  const steps = [
-    [
-      "Raise or lower your hands",
-      `The music moves to a higher or a lower register${themed ? ", and the theme with it" : ""}.`,
-    ],
-    [
-      "Move more, or less",
-      "Quick, wide movement makes it lively. Slow movement keeps it calm.",
-    ],
-    [
-      "Spread your hands apart",
-      "Close hands keep the melody on the chord. Wide hands open it to the whole scale, with more tension.",
-    ],
-    [
-      "Hold still",
-      free
-        ? "The music rests. Move again to bring it back."
-        : "The music thins to a quiet chord. Move again to grow it back.",
-    ],
-  ];
+  document.querySelector("#intro .description").textContent = scored
+    ? "Sway writes the score from your hands, a bar at a time, and Stable Audio 3 plays it, generated on this Mac. The volume follows your hands at once; the music follows within two to four seconds."
+    : themed
+      ? "The model, generated on this Mac, plays a theme and writes everything around it. Your hands set the direction, and the music follows within a second or two."
+      : "Every note comes from the model, generated on this Mac. Your hands set the direction, and the music follows within a second or two.";
+  const steps = scored
+    ? [
+        [
+          "Raise or lower your hands",
+          "The melody and the ensemble move an octave up or down.",
+        ],
+        [
+          "Move more, or less",
+          "Quick movement brings sixteenths and pizzicato. Slow movement holds long chords.",
+        ],
+        [
+          "Spread your hands apart",
+          "Close hands keep the piano's chords plain. Wide hands add sevenths and ninths.",
+        ],
+        [
+          "Hold still",
+          "The music thins to a quiet chord, and the melody rests. Move again to grow it back.",
+        ],
+      ]
+    : [
+        [
+          "Raise or lower your hands",
+          `The music moves to a higher or a lower register${themed ? ", and the theme with it" : ""}.`,
+        ],
+        [
+          "Move more, or less",
+          "Quick, wide movement makes it lively. Slow movement keeps it calm.",
+        ],
+        [
+          "Spread your hands apart",
+          "Close hands keep the melody on the chord. Wide hands open it to the whole scale, with more tension.",
+        ],
+        [
+          "Hold still",
+          free
+            ? "The music rests. Move again to bring it back."
+            : "The music thins to a quiet chord. Move again to grow it back.",
+        ],
+      ];
   if (themed)
     steps.unshift([
       "Listen for the theme",
-      "Every twelve bars the music plays its theme for four bars. The page shows when it returns.",
+      `Every twelve bars the ${scored ? "violin" : "music"} plays its theme for four bars. The page shows when it returns.`,
     ]);
   document.querySelector("#intro .guide").replaceChildren(
     ...steps.map(([title, text], index) => {
@@ -305,8 +349,8 @@ function showSteeredIntro() {
 }
 
 startStreamPage({
-  stream: "steered",
-  query: earlier ? `?variant=${variant}` : "",
+  stream: scored ? "score" : "steered",
+  query: scored ? location.search : earlier ? `?variant=${variant}` : "",
   Controls: mode.Controls,
   audio: { expression: false },
   text: {
@@ -318,7 +362,7 @@ startStreamPage({
       camera: "Bring your hands into view to conduct",
       pointer: "Hold the stage and move to conduct",
     },
-    busy: "This page needs MRT2 on this Mac, and only one performance window can play at a time. Close the other window and try again.",
+    busy: `This page needs ${scored ? "Stable Audio 3" : "MRT2"} on this Mac, and only one performance window can play at a time. Close the other window and try again.`,
     stopped: "The sound stopped. Please start again.",
     stoppedSave:
       "The sound stopped. You can save what you played and try again.",
@@ -330,15 +374,11 @@ startStreamPage({
     },
     ended: "That take has ended. Save it, or play another.",
     ending: "Letting the last notes ring",
-    idle: themed
-      ? "Theme · ready"
-      : earlier
-        ? "Steered · ready"
-        : "Film score · ready",
+    idle,
     hidden: "The performance stopped when you left the page. You can save it.",
     handsGone: "Bring your hands back into view",
     playing: themed
-      ? "Theme · playing"
+      ? `${label} · playing`
       : earlier
         ? "Steered · generating"
         : "Film score · conducting",
