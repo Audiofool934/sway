@@ -37,13 +37,14 @@ class StreamService:
     The renderer has `start(seed)`, which returns details for the page,
     `render(control)`, which returns 40 ms of stereo float32 audio and its stats, and
     `idle(until)`, which keeps the GPU busy between frames (`MusicEngine.keep_busy`).
-    Subclasses name the stream and its controls, say whether the model is installed,
-    and say how a controller that went silent is released.
+    Subclasses name the stream and its controls, say whether the model is installed and
+    what is missing if not, and say how a controller that went silent is released.
     """
 
     name = "stream"
     control: type[BaseModel]
     busy = "A performance is already open"
+    missing = "Local MRT2 assets are missing"
 
     def __init__(self, renderer):
         self.renderer = renderer
@@ -87,7 +88,7 @@ class StreamService:
             await websocket.close(code=1008, reason=self.busy)
             return
         if not self.ready():
-            await websocket.close(code=1008, reason="Local MRT2 assets are missing")
+            await websocket.close(code=1008, reason=self.missing)
             return
         owner = object()
         self.owner = owner

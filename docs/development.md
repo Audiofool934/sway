@@ -15,6 +15,12 @@ Do not treat a dependency upgrade as routine cleanup without rerunning a real mo
 `uv run --locked sway setup` installs the tracking assets, browser dependencies, and MRT2.
 `--instrument-only` skips MRT2; V1 then plays its synthesized pad, and the theremin and steered pages cannot start.
 `uv run --locked sway doctor` checks local assets and credential configuration without calling Qwen; only missing V1 assets make it fail.
+It also says whether the score variant's Stable Audio 3 and `swiftc` are found.
+
+The score variant of the steered page, `steered.html?variant=score`, also needs Stable Audio 3's MLX version and its Medium weights.
+Install it apart from Sway, with its own Python, in `~/Developer/stable-audio-3/optimized/mlx`, or set `SWAY_SA3_DIR` to its folder.
+Sway never installs it or downloads its weights.
+On first use the server builds the variant's sampler from `src/sway/sampler.swift` with `swiftc`, into `.cache/sampler/`.
 
 The server listens on `127.0.0.1:8765` by default.
 V1 is served at `/` and the theremin experiment at `/theremin.html`.
@@ -112,6 +118,16 @@ The steered page ([guide](steered-page.md)):
 | `tests/steered-controls.test.js`, `tests/test_steered.py`                     | Controls, claps, validation, stream ownership, and the one model thread.                          |
 | `tests/test_arranger.py`, `tests/test_piece.py`, `conductor-controls.test.js` | The world, the composer's prompt and checks, phrases, gestures, moving on, loudness, and silence. |
 
+The score variant of the steered page ([guide](steered-page.md#the-score-variant)):
+
+| Path                                          | Responsibility                                                                                               |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `src/sway/score.py`                           | The score that Sway writes for each bar from the hands: chords, melody, texture, register, and harmony.      |
+| `src/sway/scored.py`, `/api/score/stream`     | Decides each bar in time, has the sampler and SA3 render it, joins it to the music, and streams it.          |
+| `src/sway/sampler.swift`                      | The macOS General MIDI sampler as a process: one render for each request, each from silence.                 |
+| `src/sway/sa3_worker.py`                      | Stable Audio 3 as a process, in its own Python: one window for each request.                                 |
+| `tests/test_score.py`, `tests/test_scored.py` | The score's choices, each window's layout, the joins, late bars, settings, the stream, and the real sampler. |
+
 Shared by the theremin and steered pages:
 
 | Path                 | Responsibility                                                                                 |
@@ -143,14 +159,18 @@ With real MRT2 assets present, `tests/test_harmony.py` also renders two bars wit
 These are default locations on the development machine.
 All repository-local paths in this table are ignored by Git.
 
-| Location                        | Contents                                                                      |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| `.cache/models/`                | Downloaded MRT2 and MediaPipe assets.                                         |
-| `outputs/v1-ready-2026-10-03/`  | V1 candidate test results, browser recordings, exports, and UI screenshots.   |
-| `outputs/theremin-2026-10-05/`  | Theremin test scripts, replays, recordings, and screenshots.                  |
-| `outputs/v1-settle-2026-10-14/` | The October 14 20-minute V1 run: script, recording, statistics, and analysis. |
-| `work/finger-drumming.y4m`      | The recorded drumming clip used as a fake camera in headless browser checks.  |
-| `~/.config/sway/qwen.json`      | Private Qwen credential and region configuration outside the repository.      |
+| Location                        | Contents                                                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.cache/models/`                | Downloaded MRT2 and MediaPipe assets.                                                                                                             |
+| `.cache/sampler/`               | The score variant's sampler, built from `src/sway/sampler.swift` on first use.                                                                    |
+| `outputs/v1-ready-2026-10-03/`  | V1 candidate test results, browser recordings, exports, and UI screenshots.                                                                       |
+| `outputs/theremin-2026-10-05/`  | Theremin test scripts, replays, recordings, and screenshots.                                                                                      |
+| `outputs/v1-settle-2026-10-14/` | The October 14 20-minute V1 run: script, recording, statistics, and analysis.                                                                     |
+| `outputs/renderers-2026-10-29/` | The renderer comparison: renders, measures, its pages, October 30's offline tests in `tests/`, and `manifest.json` with the commands.             |
+| `outputs/score-2026-11-01/`     | The score variant's first runs: the headless Chrome run's script, its log and results, and a short recording.                                     |
+| `work/finger-drumming.y4m`      | The recorded drumming clip used as a fake camera in headless browser checks.                                                                      |
+| `work/renderers/`               | The renderer comparison's script, its sampler, the SA3 piece renderer, the offline tests' script and page, and a server that lets its pages seek. |
+| `~/.config/sway/qwen.json`      | Private Qwen credential and region configuration outside the repository.                                                                          |
 
 V1's finished pieces are browser downloads, and the theremin saves each take's WAV the same way.
 

@@ -14,6 +14,7 @@ from .config import (
     MRT_REPO,
     MRT_REVISION,
     ROOT,
+    SA3_DIR,
     VISION_ASSETS,
     VISION_DIR,
 )
@@ -83,6 +84,12 @@ def doctor():
                 "missing_required_assets": missing,
                 "missing_music_assets": music,
                 "qwen": qwen_status(),
+                "score_variant": {
+                    "stable_audio_3": str(SA3_DIR)
+                    if (SA3_DIR / ".venv" / "bin" / "python").exists()
+                    else "missing",
+                    "swiftc": shutil.which("swiftc") or "missing",
+                },
                 "free_disk_gb": round(shutil.disk_usage(ROOT).free / 1024**3, 1),
             },
             indent=2,

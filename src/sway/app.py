@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import composer, harmony, steered, theremin
+from . import composer, harmony, scored, steered, theremin
 from .config import ROOT, VISION_DIR
 from .qwen import qwen_status
 from .schema import ComposeRequest, HarmonyBar, HarmonyStart
@@ -25,6 +25,7 @@ COMPOSER = None
 async def lifespan(app):
     yield
     await steered.SERVICE.aclose()
+    await scored.SERVICE.aclose()
     if COMPOSER is not None:
         await COMPOSER.aclose()
 
@@ -32,6 +33,7 @@ async def lifespan(app):
 app = FastAPI(title="Sway", lifespan=lifespan, docs_url=None, redoc_url=None)
 app.include_router(theremin.router)
 app.include_router(steered.router)
+app.include_router(scored.router)
 
 
 def same_origin(origin, host):
