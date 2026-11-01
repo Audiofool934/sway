@@ -360,6 +360,219 @@ Nobody has listened to the seam clips yet; they are in `outputs/theme-2026-10-20
 All four runs were made on the old development Mac, an M2 Pro.
 MRT2 plays a fixed seed differently on the Mac mini, so a new run there will not repeat these numbers exactly.
 
+### Renderers
+
+If Sway gives the melody, the chords, and the form, MRT2's part is to play them.
+On October 29 an offline comparison asked whether MRT2 is the best renderer for that.
+Five versions play one score: the theme test's 24 bars and movement, with a melody in every bar.
+
+- **The away line** fills the bars between the theme's statements: first the theme's climb turned downward, ending open on D, then the first note of each of the theme's bars, held for the bar.
+- **MRT2, theme only** is the theme test as above: given the theme, and free between its statements.
+- **MRT2, whole melody** is given the away line too, so from middle C up it always plays a given line, and its note guidance stays 3 across the seams.
+- **The sampler** plays the whole score with the General MIDI sound bank that ships with macOS, `gs_instruments.dls`, with a large-hall reverb.
+  As in MRT2's theme bars, only the melody sounds from middle C up.
+  Its accompaniment follows the movement: piano arpeggios in eighths over held strings, then sixteenths over pizzicato strings, then held chords.
+- **SA3** is Stable Audio 3 Medium with the SAME-L decoder, redrawing the sampler's audio from noise level 0.3 or 0.5, with a prompt that names the instruments, the key, and the tempo.
+  It takes no notes: it keeps the score only by starting from the sampler's audio.
+- MRT2 and SA3 played seeds 100 to 105; the sampler has no seed.
+
+A first try on seed 100 chose the noise levels.
+From 0.7, SA3 left the chords: 31% of the notes below middle C were on the bar's chord, against 92% at 0.5 and 96% at 0.3.
+
+The comparison needed a new measure.
+The pitch analysis hears a melody note that is an overtone of the bass, such as A4 over A2, as part of the bass.
+So the theme test's share of the melody on the theme's note reads only 78% early in the note for the sampler, which plays every note exactly; it compares runs of one renderer, not renderers.
+Here each beat's pitch classes are correlated with the sampler's, so 1.00 is the written score.
+
+| Version            | Agrees with the score: theme bars / away bars | Loudness change at a bar line, dB: theme starts or stops / other | Silent | Render time for 57.6 s |
+| ------------------ | --------------------------------------------- | ---------------------------------------------------------------- | ------ | ---------------------- |
+| MRT2, theme only   | 0.37 / 0.03                                   | 4.0 / 2.8                                                        | 2.2%   | 17.1 s                 |
+| MRT2, whole melody | 0.40 / 0.37                                   | 4.4 / 3.7                                                        | 2.6%   | 17.0 s                 |
+| Sampler            | 1.00 / 1.00                                   | 0.4 / 0.7                                                        | 0%     | 1.0 s                  |
+| SA3, noise 0.3     | 0.87 / 0.86                                   | 0.3 / 1.0                                                        | 0%     | 8.0 s                  |
+| SA3, noise 0.5     | 0.70 / 0.78                                   | 1.0 / 1.3                                                        | 0%     | 8.6 s                  |
+
+- **Agreement** is the mean over the seeds.
+- **The loudness change** is measured as for the seams, over 1.5 s on each side, and is the median over the seeds and bar lines.
+  MRT2 jumps by more than 10 dB at about one bar line in six, up to 41 dB, so a mean would follow those few.
+  The two bar lines where the movement changes are in neither group.
+
+What the numbers show:
+
+- **MRT2 follows a given away line as closely as the theme:** its away bars agree 0.37 with the line, against 0.03 when free, and its theme bars 0.37 to 0.40.
+  It agrees less than SA3 by design: it writes its own accompaniment within the notes it may play.
+- **MRT2's seams are mostly its change from bar to bar.**
+  On the Mac mini, its loudness changes across any bar line by a median 2.8 to 3.7 dB, and across the theme's by 4.0 to 4.4 dB.
+  The sampler and SA3 change by 0.3 to 1.3 dB.
+  Part of that calm is the sampler's arrangement, which is the same in every bar of a section, and which SA3 starts from.
+- **Giving MRT2 the whole melody did not make its bar lines smoother.**
+- **MRT2 still falls silent** 2.2% to 2.6% of the time, 9.6% in one seed, with the spine's silence guard.
+- **SA3 keeps the score closest at noise 0.3:** it agrees 0.87 and 0.86, and changes across bar lines about as little as the sampler.
+  At 0.5 it agrees 0.70 and 0.78.
+- **All three are fast enough offline on the M6:** MRT2 renders 57.6 s in 17 s, one 40 ms frame at a time, 3.4 times faster than real time; SA3 in about 8 s, loading its models each time; the sampler in 1 s.
+- **On the theme test's measure, MRT2 repeats October 20:** 84% and 85% of the melody on the theme's note early in the note, against 86% on the M2 Pro.
+
+The numbers cannot say which version sounds better or more alive.
+Everett listened the same day.
+In his words, translated from Chinese: SA3 is more stable, and it sounds better.
+He did not name a noise level.
+
+- The sampler's General MIDI sounds are a floor; a good sample library would sound better.
+- SA3 redraws a finished clip here; [SA3 in pieces](#sa3-in-pieces) renders it as a live player would.
+- MRT2's notes follow the spine's allowed notes and the movement; the sampler's arrangement and the away line were written for this comparison.
+
+The page is `outputs/renderers-2026-10-29/index.html`.
+It plays the five versions of one seed in step: switching keeps the position, so the same bar can be heard in another renderer.
+The script is local and not in Git: `work/renderers/compare.py`, with `sampler.swift` for the sampler and `serve.py`, which serves the page with byte ranges so that its audio can seek.
+`outputs/renderers-2026-10-29/manifest.json` keeps the commands, timings, and versions.
+
+### SA3 in pieces
+
+Live, SA3 would render each piece of music while the one before it plays, not a whole clip at once.
+So on October 29 the same score was rendered piece by piece, in pieces of 4 bars and of 1 bar, at noise 0.3 and 0.5, for seeds 100 to 105.
+
+- **Each window** holds about 4.8 s of the music already rendered, then the piece and 0.56 s after it from the sampler's audio.
+  SA3 keeps the rendered part, pasted back at every step, and redraws the rest from the sampler's audio at the noise level: the combination of inpainting and audio to audio that Stable Audio 3's Gradio app uses.
+- **The piece is kept** and joined with a 40 ms crossfade; the 0.56 s after it is dropped.
+  A join sits at the last latent before the bar line, up to 93 ms early.
+- **Every window has the same length,** because the MLX model is built for one latent length.
+  The first window has no music before it, so it redraws its whole length and keeps the pieces that fit.
+- **The models are loaded once:** the prompt's encoding, the codec, and the DiT.
+
+| Version           | Agrees with the score: theme bars / away bars | Loudness change at the joins, dB: pieces / one clip there | Dip at the joins, dB: pieces / one clip there | Render a window: median / slowest | Piece  |
+| ----------------- | --------------------------------------------- | --------------------------------------------------------- | --------------------------------------------- | --------------------------------- | ------ |
+| One clip, 0.3     | 0.87 / 0.86                                   | -                                                         | -                                             | -                                 | 57.6 s |
+| 4-bar pieces, 0.3 | 0.84 / 0.84                                   | 1.0 / 0.7                                                 | 2.7 / 1.4                                     | 2.4 / 2.6 s                       | 9.6 s  |
+| 1-bar pieces, 0.3 | 0.84 / 0.86                                   | 0.9 / 1.0                                                 | 1.3 / 1.2                                     | 1.5 / 1.5 s                       | 2.4 s  |
+| One clip, 0.5     | 0.70 / 0.78                                   | -                                                         | -                                             | -                                 | 57.6 s |
+| 4-bar pieces, 0.5 | 0.62 / 0.62                                   | 1.4 / 1.6                                                 | 2.1 / 3.4                                     | 2.4 / 4.0 s                       | 9.6 s  |
+| 1-bar pieces, 0.5 | 0.43 / 0.41                                   | 2.6 / 1.4                                                 | 3.5 / 1.1                                     | 1.6 / 1.9 s                       | 2.4 s  |
+
+- **The joins** are measured as the bar lines are, over 1.5 s on each side, and by a dip: how much quieter the 50 ms around the join are than the music on either side.
+  Each is the median over the joins and seeds, next to the one clip measured at the same moments, where nothing joins.
+- **The render times** leave out each clip's first window, which redraws more; the first window of all took 3.7 s, because it also loaded the DiT.
+
+What the numbers show:
+
+- **SA3 keeps up on the Mac mini:** a 4-bar window, 15 s of audio, renders in 2.2 to 4.0 s, for a piece of 9.6 s; a 1-bar window, 7.8 s, in 1.5 to 1.9 s, for a piece of 2.4 s.
+  Nothing else was running; live, the camera and the browser share the machine.
+- **At noise 0.3, the pieces measure like the one clip:** they agree 0.84 with the score against 0.87, and their loudness changes across the joins about as much as the one clip's at the same moments.
+  The 4-bar joins dip 1.3 dB more.
+- **At noise 0.5, 4-bar pieces hold, but 1-bar pieces drift:** they agree 0.43 with the score, and their loudness changes across the other bar lines by a median 2.8 dB, against 1.4 for the one clip.
+  The likely cause is that with more noise, each short piece follows the music before it more than the sampler's audio, so the drift adds up from bar to bar.
+
+On October 30 Everett chose noise 0.3; in his words, translated from Chinese: "0.3 is enough."
+He did not say whether he heard the joins.
+The page is `outputs/renderers-2026-10-29/pieces/index.html`: seven versions, with ticks above the bars where the pieces join.
+`work/renderers/sa3_pieces.py` renders the pieces with Stable Audio 3's own Python, and `compare.py --pieces` measures them and writes the page; `raw/pieces-timings.json` keeps each window's timings.
+
+### Offline tests before the live page
+
+On October 30, after Everett chose noise 0.3, a plan was given for SA3 to play on this page in 1-bar pieces.
+In it, the server decides each bar's score from the hands, the sampler plays the bar, SA3 redraws it in one window, and the 40 ms frames reach the browser as they do now.
+Before building it, Everett chose to run three offline tests, all at noise 0.3 in 1-bar pieces, for seeds 100 to 105:
+
+1. **Without the tail:** each window drew 0.56 s of the next bar after its piece, but live, the next bar is not yet decided.
+2. **Faster:** a window took 1.5 s of the 2.4 s bar, so fewer steps, less music before each piece, and the small model were tried.
+3. **Following the hands:** live, the score changes at a bar line when the hands move, so does SA3 change in that bar?
+
+`sa3_pieces.py` gained an option for each, and `work/renderers/tests.py` renders test 3's score, measures all three, and writes one page with a tab for each: `outputs/renderers-2026-10-29/tests/index.html`.
+A remote desktop session used the GPU during the runs, so windows took about a quarter longer than on October 29: 1.93 s instead of 1.49 s for October 29's setting, with the same audio bit for bit.
+All the times below were measured on October 30.
+
+#### Without the tail
+
+| Version          | Agrees with the score: theme / away | Loudness change at the joins, dB: pieces / one clip there | Dip at the joins, dB: pieces / one clip there | Render a window |
+| ---------------- | ----------------------------------- | --------------------------------------------------------- | --------------------------------------------- | --------------- |
+| One clip         | 0.87 / 0.86                         | -                                                         | -                                             | -               |
+| With the tail    | 0.84 / 0.86                         | 0.9 / 1.0                                                 | 1.3 / 1.2                                     | 1.94 s          |
+| Without the tail | 0.80 / 0.85                         | 0.8 / 1.0                                                 | 6.4 / 1.2                                     | 1.90 s          |
+
+- **Without the tail, every join dips:** the 50 ms around it are 6.4 dB quieter than the music on either side, against 1.3 dB with the tail.
+- **The dip sits on the join:** averaged over the joins, the level falls 14.5 dB 10 ms before the join, and stays 3 dB down from 20 ms before it to 60 ms after.
+  The one clip and the pieces with the tail dip only 3 to 4 dB just before each downbeat, where the notes of a bar end.
+  This suggests that SA3 ends each window quietly when nothing follows it, and that the next window continues from that quiet.
+- **So a live window needs a tail.**
+  The next bar is not decided when a piece is drawn, so live, the tail must be a guess; test 3 tries one.
+  Another way, not tried, is to let each window redraw the last latent or two of the piece before it, at the cost of up to 0.19 s more delay.
+
+#### Faster
+
+| Setting                           | Agrees with the score: theme / away | Loudness change at the joins, dB: pieces / one clip there | Dip at the joins, dB: pieces / one clip there | Window audio | Render a window: median / slowest | Paced, one window a bar |
+| --------------------------------- | ----------------------------------- | --------------------------------------------------------- | --------------------------------------------- | ------------ | --------------------------------- | ----------------------- |
+| 8 steps, 4.8 s before, as Oct. 29 | 0.84 / 0.86                         | 0.9 / 1.0                                                 | 1.3 / 1.2                                     | 7.8 s        | 1.94 / 1.97 s                     | 1.95 / 2.01 s           |
+| 6 steps                           | 0.85 / 0.86                         | 0.9 / 1.0                                                 | 1.9 / 1.2                                     | 7.8 s        | 1.65 / 1.91 s                     | -                       |
+| 4 steps                           | 0.87 / 0.90                         | 0.9 / 1.0                                                 | 1.5 / 1.2                                     | 7.8 s        | 1.20 / 1.24 s                     | 1.21 / 1.23 s           |
+| 4 steps, 2.4 s before             | 0.88 / 0.89                         | 0.7 / 1.0                                                 | 0.5 / 1.2                                     | 5.4 s        | 0.94 / 1.00 s                     | -                       |
+| Small model                       | 0.86 / 0.86                         | 1.2 / 1.0                                                 | 1.2 / 1.2                                     | 7.8 s        | 0.53 / 0.59 s                     | 0.56 / 0.57 s           |
+
+- **The steps are most of a window's time.**
+  Timed once with 84 latents, a window took 0.25 s to encode, 1.39 s for 8 steps, and 0.25 s to decode.
+  So 4 steps save about 0.7 s, and 2.4 s of music before the piece instead of 4.8 s saves about 0.25 s more.
+  Compiling the DiT with MLX saved about 5%, and was left out.
+- **Fewer steps cost nothing that the measures find:** with 4 steps the pieces agree with the score a little more, and their joins change and dip about as much.
+  With 4 steps and 2.4 s before each piece, a window takes 0.94 s, under half the bar, and its joins dip least, 0.5 dB.
+- **The small model,** Stable Audio 3 Small-Music with its SAME-S decoder, takes 0.53 s a window and measures close to the Medium model.
+- **Pacing one window a bar, as live, did not slow the windows.**
+  The GPU idled 0.4 to 1.8 s between windows, and macOS did not lower its clock as it did for MRT2's 40 ms frames ([the GPU filler](#the-gpu-filler)).
+  The remote desktop session also used the GPU, so this does not rule out a slowdown when nothing else does.
+- **The measures do not judge the sound.**
+  Agreement measures how close a version stays to the sampler, so a version that agrees more may also sound more like the sampler.
+  Which settings sound good enough is for listening.
+
+#### Following the hands
+
+Test 3's score has the comparison's melody, chords, and form, but its accompaniment changes every two bars after the first four, as the hands would change it.
+The texture and the register take turns:
+
+- **The texture** goes from still to fast, as the activity would set it: still holds only the root and the fifth; slow, medium, and fast are the comparison's calmer, moderate, and livelier sections.
+- **The register** moves the piano and the strings an octave down or up, as the height would set it.
+  The high register also lifts the bass and the cellos an octave; the low one leaves them, since the bass cannot go lower.
+
+A second render plays each bar as the bar before it: the score a bar late.
+Live, the tail after a piece must guess the next bar, and the natural guess is that the hands stay where they are.
+So for the guessed tails, the tail before each change comes from the late render, and is wrong there.
+
+| Version              | Agrees with the score: theme / away | Density at texture changes: change bar / bar after | Loudness at texture changes: change bar / bar after | Register, by the bass: share of the score's / seeds where the same bar fits better | Dip at the joins, dB: pieces / one clip there |
+| -------------------- | ----------------------------------- | -------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------- |
+| The score a bar late | 0.98 / 0.96                         | 0.05 / 0.98                                        | 0.04 / 0.99                                         | -25% / 0%                                                                          | -                                             |
+| One clip             | 0.86 / 0.80                         | 1.14 / 0.98                                        | 1.03 / 0.97                                         | 84% / 67%                                                                          | -                                             |
+| Pieces, tail known   | 0.84 / 0.79                         | 1.28 / 0.99                                        | 0.91 / 0.88                                         | 60% / 100%                                                                         | 1.5 / 1.8                                     |
+| Pieces, tail guessed | 0.84 / 0.79                         | 1.32 / 1.00                                        | 0.95 / 0.91                                         | 64% / 100%                                                                         | 1.2 / 1.8                                     |
+| Pieces, no tail      | 0.84 / 0.79                         | 1.36 / 1.09                                        | 0.98 / 0.94                                         | 50% / 100%                                                                         | 6.8 / 1.8                                     |
+
+- **Density and loudness** are the project's steering features, averaged over each beat and taken relative to the bars on the same chord.
+  At each of the five texture changes, the move from the bar before into the change bar, and into the bar after, is compared with the score's by least squares over the changes and seeds: 1.00 moves as far as the score.
+- **The register is judged by the bass:** the share of each bar's power below 120 Hz.
+  Each bar's share is fitted on its chord, its texture, and its register; the effect from low to high is compared with the score's, and the fit on the bar's own register with a fit on the register of the bar before.
+  Bar by bar does not work for the register here: every register change falls on the change from F to C, which moves the bass by itself.
+
+What the numbers show:
+
+- **The texture changes in its own bar.**
+  In the change bar, density moves 1.14 to 1.36 times as far as the score's, and loudness 0.91 to 1.03 times; the score played a bar late moves 0.05 and 0.04 there.
+- **The register follows in its own bar too, but less.**
+  The pieces keep 50% to 64% of the score's change in the bass from the low register to the high, and the one clip 84%; in every seed, the pieces fit their own bar's register better than the bar before's.
+  The notes themselves may move less: by the mean pitch of the notes from C2 to F#4, the one clip and the pieces with a tail kept 14% to 36% of the score's move.
+  But that measure gave the late score 75% and could not tell it from the score, so it cannot be trusted here.
+- **The guessed tail costs nothing measurable.**
+  The pieces follow the changes as they do with the known tail.
+  At the 60 joins before a change, where the guess is wrong, their loudness change and dip differ from the one clip's by a median of 0.4 dB or less, as with the known tail.
+- **Without the tail, the joins dip again,** 6.8 dB, as in test 1.
+
+#### What the tests mean for the live plan
+
+1. **Keep a tail, and guess it from the hands as they are.**
+   It costs no delay, and a wrong guess before a change did no harm.
+2. **Render with 4 steps and 2.4 s of music before each piece,** if it sounds as good: a window then takes about 1 s, so a bar can be decided about 1.6 s before it plays, with the 0.32 s browser buffer and 0.3 s to spare.
+   A gesture then reaches the music in 1.6 to 4.0 s, 2.8 s on average, against 2.6 to 5.0 s with October 29's setting on the same machine; the volume still answers at once.
+   The small model would take another 0.4 s off, if it sounds good enough.
+3. **The register is heard less through SA3 than in the score.**
+   If the height should be heard clearly, the score may need to move more than the accompaniment's octave, for example the melody's octave as well.
+4. **Not yet tested:** a score that a live hand changes at any bar, register changes on other chords than F to C, and the windows' timing while the camera, hand tracking, and browser share the GPU.
+
+The page is `outputs/renderers-2026-10-29/tests/index.html`, with a tab for each test; `work/renderers/tests.py` writes it, and `raw/pieces-timings.json` keeps each window's timings.
+
 ## The model thread
 
 With mlx 0.31.2, once one thread has run MRT2, another thread fails with "There is no Stream(gpu, 1) in current thread".

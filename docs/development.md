@@ -143,14 +143,16 @@ With real MRT2 assets present, `tests/test_harmony.py` also renders two bars wit
 These are default locations on the development machine.
 All repository-local paths in this table are ignored by Git.
 
-| Location                        | Contents                                                                      |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| `.cache/models/`                | Downloaded MRT2 and MediaPipe assets.                                         |
-| `outputs/v1-ready-2026-10-03/`  | V1 candidate test results, browser recordings, exports, and UI screenshots.   |
-| `outputs/theremin-2026-10-05/`  | Theremin test scripts, replays, recordings, and screenshots.                  |
-| `outputs/v1-settle-2026-10-14/` | The October 14 20-minute V1 run: script, recording, statistics, and analysis. |
-| `work/finger-drumming.y4m`      | The recorded drumming clip used as a fake camera in headless browser checks.  |
-| `~/.config/sway/qwen.json`      | Private Qwen credential and region configuration outside the repository.      |
+| Location                        | Contents                                                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.cache/models/`                | Downloaded MRT2 and MediaPipe assets.                                                                                                             |
+| `outputs/v1-ready-2026-10-03/`  | V1 candidate test results, browser recordings, exports, and UI screenshots.                                                                       |
+| `outputs/theremin-2026-10-05/`  | Theremin test scripts, replays, recordings, and screenshots.                                                                                      |
+| `outputs/v1-settle-2026-10-14/` | The October 14 20-minute V1 run: script, recording, statistics, and analysis.                                                                     |
+| `outputs/renderers-2026-10-29/` | The renderer comparison: renders, measures, its pages, October 30's offline tests in `tests/`, and `manifest.json` with the commands.             |
+| `work/finger-drumming.y4m`      | The recorded drumming clip used as a fake camera in headless browser checks.                                                                      |
+| `work/renderers/`               | The renderer comparison's script, its sampler, the SA3 piece renderer, the offline tests' script and page, and a server that lets its pages seek. |
+| `~/.config/sway/qwen.json`      | Private Qwen credential and region configuration outside the repository.                                                                          |
 
 V1's finished pieces are browser downloads, and the theremin saves each take's WAV the same way.
 
